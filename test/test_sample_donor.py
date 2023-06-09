@@ -15,6 +15,10 @@ class TestSampleDonor(unittest.TestCase):
     def test_get_sample_donor_id(self):
         self.assertEqual(SampleDonor("test").identifier, "test")
 
+    def test_sample_donor_to_fhir_identifier(self):
+        donor = SampleDonor("unique_org_id")
+        self.assertEqual(donor.to_fhir().identifier.value, donor.identifier)
+
 
 if __name__ == '__main__':
     unittest.main()
