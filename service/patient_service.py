@@ -1,3 +1,5 @@
+import uuid
+
 from fhirclient.models.bundle import Bundle, BundleEntry
 
 from persistence.sample_donor_repository import SampleDonorRepository
@@ -9,6 +11,8 @@ class PatientService:
 
     def get_all_patients_in_fhir(self) -> Bundle:
         bundle = Bundle()
+        bundle.type = "transaction"
+        bundle.id = uuid.uuid4()
         bundle.entry = []
         for donor in self._sample_donor_repository.get_all():
             entry = BundleEntry()

@@ -12,7 +12,9 @@ class TestPatientService(unittest.TestCase):
     patient_service = PatientService(SampleDonorRepository())
 
     def test_get_all_patients_in_fhir_returns_bundle(self):
-        self.assertIsInstance(self.patient_service.get_all_patients_in_fhir(), Bundle)
+        bundle = self.patient_service.get_all_patients_in_fhir()
+        self.assertIsInstance(bundle, Bundle)
+        self.assertEqual("transaction", bundle.type)
 
     @patch('persistence.sample_donor_repository.SampleDonorRepository.get_all')
     def test_get_all_patients_in_fhir_entry(self, get_all_mock):
