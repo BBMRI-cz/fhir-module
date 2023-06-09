@@ -22,7 +22,7 @@ class TestPatientService(unittest.TestCase):
         bundle = self.patient_service.get_all_patients_in_fhir()
         self.assertEqual(1, len(bundle.entry))
         self.assertEqual("Patient", bundle.entry[0].resource.resource_type)
-        self.assertEqual("newId", bundle.entry[0].resource.identifier.value)
+        self.assertEqual("newId", bundle.entry[0].resource.identifier[0].value)
 
 
 if __name__ == '__main__':

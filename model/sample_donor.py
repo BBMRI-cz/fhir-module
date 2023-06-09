@@ -22,4 +22,4 @@ class SampleDonor:
     def __create_fhir_identifier(self):
         fhir_identifier = Identifier()
         fhir_identifier.value = self.identifier
-        return fhir_identifier
+        return [fhir_identifier]
