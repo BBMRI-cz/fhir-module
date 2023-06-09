@@ -1,6 +1,7 @@
 import uuid
 
 from fhirclient.models.identifier import Identifier
+from fhirclient.models.meta import Meta
 from fhirclient.models.patient import Patient
 
 
@@ -16,6 +17,8 @@ class SampleDonor:
 
     def to_fhir(self) -> Patient:
         fhir_patient = Patient()
+        fhir_patient.meta = Meta()
+        fhir_patient.meta.profile = ["https://fhir.bbmri.de/StructureDefinition/Patient"]
         fhir_patient.identifier = self.__create_fhir_identifier()
         return fhir_patient
 
