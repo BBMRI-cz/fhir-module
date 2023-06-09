@@ -1,7 +1,6 @@
 import uuid
 
 from fhirclient.models.bundle import Bundle, BundleEntry, BundleEntryRequest
-from fhirclient.models.meta import Meta
 from fhirclient.models.resource import Resource
 
 from persistence.sample_donor_repository import SampleDonorRepository
@@ -11,6 +10,7 @@ class PatientService:
     def __init__(self, sample_donor_repo: SampleDonorRepository):
         self._sample_donor_repository = sample_donor_repo
 
+    """Fetches all patients/sample donors from the repository in a FHIR format"""
     def get_all_patients_in_fhir(self) -> Bundle:
         bundle = self.__build_bundle()
         for i, sample_donor in enumerate(self._sample_donor_repository.get_all()):
