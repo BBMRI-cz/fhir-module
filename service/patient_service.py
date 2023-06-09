@@ -1,4 +1,4 @@
-from fhirclient.models.bundle import Bundle
+from fhirclient.models.bundle import Bundle, BundleEntry
 
 from persistence.sample_donor_repository import SampleDonorRepository
 
@@ -9,5 +9,9 @@ class PatientService:
 
     def get_all_patients_in_fhir(self) -> Bundle:
         bundle = Bundle()
-        self._sample_donor_repository.get_all()
+        bundle.entry = []
+        for donor in self._sample_donor_repository.get_all():
+            entry = BundleEntry()
+            entry.resource = donor.to_fhir()
+            bundle.entry.append(entry)
         return bundle
