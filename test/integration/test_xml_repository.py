@@ -36,3 +36,11 @@ class TestXMLRepo(unittest.TestCase):
             counter += 1
         self.assertEqual(1, counter)
 
+    @patchfs
+    def test_get_all_with_empty_repository_throws_no_errors(self, fake_fs):
+        fake_fs.create_dir(self.dir_path)
+        counter = 0
+        for _ in SampleDonorXMLFilesRepository().get_all():
+            counter += 1
+        self.assertEqual(0, counter)
+
