@@ -2,3 +2,5 @@ FhirClient~=4.1.0
 mock~=5.0.2
 requests~=2.28.2
 xmltodict~=0.13.0
+pytest
+pytest-cov==4.0.0
