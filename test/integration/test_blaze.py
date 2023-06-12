@@ -16,7 +16,7 @@ class SampleDonorRepoStub(SampleDonorRepository):
 
 
 class TestBlazeStore(unittest.TestCase):
-    blaze_service = BlazeService(PatientService(SampleDonorRepoStub()))
+    blaze_service = BlazeService(PatientService(SampleDonorRepoStub()), 'http://localhost:8080/fhir')
 
     def test_upload_all_patients(self):
         self.assertEqual(200, self.blaze_service.initial_upload_of_all_patients())

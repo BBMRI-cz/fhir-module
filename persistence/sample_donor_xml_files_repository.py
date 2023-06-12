@@ -8,7 +8,7 @@ from persistence.sample_donor_repository import SampleDonorRepository
 
 
 class SampleDonorXMLFilesRepository(SampleDonorRepository):
-    _dir_path = os.getenv("DIR_PATH")
+    _dir_path = os.getenv("DIR_PATH", "/Users/radovan.tomasik/Repositories/fhir-module/test/xml_data")
 
     def get_all(self) -> List[SampleDonor]:
         for dirEntry in os.scandir(self._dir_path):
