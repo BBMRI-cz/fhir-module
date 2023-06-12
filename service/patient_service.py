@@ -15,7 +15,7 @@ class PatientService:
         bundle = self.__build_bundle()
         for i, sample_donor in enumerate(self._sample_donor_repository.get_all()):
             patient = sample_donor.to_fhir()
-            bundle.entry.append(self.__build_bundle_entryfor_post(patient))
+            bundle.entry.append(self.__build_bundle_entry_for_post(patient))
         return bundle
 
     def __build_bundle(self) -> Bundle:
@@ -25,7 +25,7 @@ class PatientService:
         bundle.entry = []
         return bundle
 
-    def __build_bundle_entryfor_post(self, resource: Resource) -> BundleEntry:
+    def __build_bundle_entry_for_post(self, resource: Resource) -> BundleEntry:
         entry = BundleEntry()
         entry.resource = resource
         entry.request = BundleEntryRequest()

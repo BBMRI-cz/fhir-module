@@ -1,4 +1,5 @@
 import unittest
+from typing import List
 
 from model.sample_donor import SampleDonor
 from persistence.sample_donor_repository import SampleDonorRepository
@@ -8,13 +9,17 @@ from service.patient_service import PatientService
 from mock import patch
 
 
-class TestBlazeStore(unittest.TestCase):
-    blaze_service = BlazeService(PatientService(SampleDonorRepository()))
+class SampleDonorRepoStub(SampleDonorRepository):
 
-    @patch('persistence.sample_donor_repository.SampleDonorRepository.get_all')
-    def test_upload_all_patients(self, get_all_mock):
-        get_all_mock.return_value = [SampleDonor("newId"), SampleDonor("fakeId")]
-        self.assertEqual(200, self.blaze_service.upload_all_patients())
+    def get_all(self) -> List[SampleDonor]:
+        return [SampleDonor("newId"), SampleDonor("fakeId")]
+
+
+class TestBlazeStore(unittest.TestCase):
+    blaze_service = BlazeService(PatientService(SampleDonorRepoStub()))
+
+    def test_upload_all_patients(self):
+        self.assertEqual(200, self.blaze_service.initial_upload_of_all_patients())
 
 
 if __name__ == '__main__':
