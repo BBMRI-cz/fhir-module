@@ -1,4 +1,5 @@
 import uuid
+from typing import Generator
 
 from fhirclient.models.bundle import Bundle, BundleEntry, BundleEntryRequest
 from fhirclient.models.resource import Resource
@@ -11,6 +12,7 @@ class PatientService:
         self._sample_donor_repository = sample_donor_repo
 
     """Fetches all patients/sample donors from the repository in a FHIR bundle"""
+
     def get_all_patients_in_fhir_transaction(self) -> Bundle:
         bundle = self.__build_bundle()
         for i, sample_donor in enumerate(self._sample_donor_repository.get_all()):
@@ -32,3 +34,7 @@ class PatientService:
         entry.request.method = 'POST'
         entry.request.url = "Patient"
         return entry
+
+    def get_all(self) -> Generator:
+        for donor in self._sample_donor_repository.get_all():
+            yield donor

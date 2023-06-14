@@ -28,6 +28,13 @@ class TestPatientService(unittest.TestCase):
         self.assertEqual("Patient", bundle.entry[0].resource.resource_type)
         self.assertEqual("newId", bundle.entry[0].resource.identifier[0].value)
 
+    def test_get_all(self):
+        counter = 0
+        for donor in self.patient_service.get_all():
+            self.assertIsInstance(donor, SampleDonor)
+            counter += 1
+        self.assertEqual(2, counter)
+
 
 if __name__ == '__main__':
     unittest.main()
