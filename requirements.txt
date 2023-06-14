@@ -6,3 +6,5 @@ pytest~=7.3.2
 pytest-cov==4.0.0
 schedule~=1.2.0
 pyfakefs~=5.2.2
+django-scheduler~=0.10.1
+PyYAML~=6.0
