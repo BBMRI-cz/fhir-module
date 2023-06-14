@@ -11,14 +11,18 @@ class PatientService:
     def __init__(self, sample_donor_repo: SampleDonorRepository):
         self._sample_donor_repository = sample_donor_repo
 
-    """Fetches all patients/sample donors from the repository in a FHIR bundle"""
-
+    """Fetches all patients/sample donors from the repository as a FHIR bundle"""
     def get_all_patients_in_fhir_transaction(self) -> Bundle:
         bundle = self.__build_bundle()
         for i, sample_donor in enumerate(self._sample_donor_repository.get_all()):
             patient = sample_donor.to_fhir()
             bundle.entry.append(self.__build_bundle_entry_for_post(patient))
         return bundle
+
+    """Fetches all patients/sample donors from the repository"""
+    def get_all(self) -> Generator:
+        for donor in self._sample_donor_repository.get_all():
+            yield donor
 
     def __build_bundle(self) -> Bundle:
         bundle = Bundle()
@@ -34,7 +38,3 @@ class PatientService:
         entry.request.method = 'POST'
         entry.request.url = "Patient"
         return entry
-
-    def get_all(self) -> Generator:
-        for donor in self._sample_donor_repository.get_all():
-            yield donor
