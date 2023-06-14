@@ -16,10 +16,15 @@ class SampleDonorRepoStub(SampleDonorRepository):
 
 
 class TestBlazeStore(unittest.TestCase):
-    blaze_service = BlazeService(PatientService(SampleDonorRepoStub()), 'http://localhost:8080/fhir')
+
 
     def test_upload_all_patients(self):
-        self.assertEqual(200, self.blaze_service.initial_upload_of_all_patients())
+        blaze_service = BlazeService(PatientService(SampleDonorRepoStub()), 'http://localhost:8080/fhir')
+        self.assertEqual(200, blaze_service.initial_upload_of_all_patients())
+
+    def test_upload_all_patients_when_blaze_unreachable(self):
+        blaze_service = BlazeService(PatientService(SampleDonorRepoStub()), 'http://localhost:4444/fhir')
+        self.assertEqual(404, blaze_service.initial_upload_of_all_patients())
 
 
 if __name__ == '__main__':
