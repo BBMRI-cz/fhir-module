@@ -25,7 +25,7 @@ if __name__ == "__main__":
     res = requests.get(url="http://localhost:8080/fhir/Patient?_summary=count")
     blaze_service = BlazeService(PatientService(SampleDonorXMLFilesRepository()),
                                  os.getenv("BLAZE_URL", "http://localhost:8080/fhir/"))
-    if res.text.find("total") == 0:
+    if res.json().get("total") == 0:
         blaze_service.initial_upload_of_all_patients()
     else:
         logger.debug("Patients already present in the FHIR store.")
