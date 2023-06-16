@@ -11,3 +11,7 @@ handlers:
 root:
   level: DEBUG
   handlers: [console]
+
+default:
+  level: DEBUG
+  handlers: [ console ]

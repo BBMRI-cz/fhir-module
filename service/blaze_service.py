@@ -5,8 +5,10 @@ import requests
 
 from model.sample_donor import SampleDonor
 from service.patient_service import PatientService
+from util.custom_logger import setup_logger
 
-logger = logging.getLogger(__name__)
+setup_logger()
+logger = logging.getLogger()
 
 
 class BlazeService:
@@ -57,5 +59,5 @@ class BlazeService:
 
     def __upload_donor(self, donor: SampleDonor) -> int:
         res = requests.post(url=self._blaze_url + "/Patient", json=donor.to_fhir().as_json())
-        logger.info("Patient " + donor.identifier + "uploaded")
+        logger.info("Patient " + donor.identifier + " uploaded")
         return res.status_code

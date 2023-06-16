@@ -1,23 +1,15 @@
+import logging
 import os
 import time
-import logging
-import logging.config
+
 
 
 import requests
 import schedule
-import yaml
-
 from persistence.sample_donor_xml_files_repository import SampleDonorXMLFilesRepository
 from service.blaze_service import BlazeService
 from service.patient_service import PatientService
-
-
-def setup_logger():
-    with open('logging.yaml', 'r') as f:
-        log_cfg = yaml.safe_load(f.read())
-        logging.config.dictConfig(log_cfg)
-
+from util.custom_logger import setup_logger
 
 if __name__ == "__main__":
     setup_logger()
