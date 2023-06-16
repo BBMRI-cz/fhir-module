@@ -38,17 +38,24 @@ class BlazeService:
             return 0
 
     def is_present_in_blaze(self, identifier: str) -> bool:
-        return requests.get(url=self._blaze_url + "/Patient?identifier=" + identifier + "&_summary=count").json().get(
-            "total") > 0
+        try:
+            return requests.get(url=self._blaze_url + "/Patient?identifier=" + identifier + "&_summary=count")\
+                .json()\
+                .get(
+                "total") > 0
+        except TypeError:
+            return False
 
     def sync_patients(self):
         for donor in self._patient_service.get_all():
             if not self.is_present_in_blaze(donor.identifier):
                 try:
-                    print(self.__upload_donor(donor))
+                    self.__upload_donor(donor)
                 except requests.exceptions.ConnectionError:
                     logger.error("Cannot connect to blaze!")
                     return
 
     def __upload_donor(self, donor: SampleDonor) -> int:
-        return requests.post(url=self._blaze_url + "/Patient", json=donor.to_fhir().as_json()).status_code
+        res = requests.post(url=self._blaze_url + "/Patient", json=donor.to_fhir().as_json())
+        logger.info("Patient " + donor.identifier + "uploaded")
+        return res.status_code

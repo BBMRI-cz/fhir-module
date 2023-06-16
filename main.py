@@ -24,11 +24,13 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
     res = requests.get(url="http://localhost:8080/fhir/Patient?_summary=count")
     blaze_service = BlazeService(PatientService(SampleDonorXMLFilesRepository()),
-                                 os.getenv("BLAZE_URL", "http://localhost:8080/fhir/"))
+                                 os.getenv("BLAZE_URL", "http://localhost:8080/fhir"))
     if res.json().get("total") == 0:
         blaze_service.initial_upload_of_all_patients()
     else:
+        blaze_service.sync_patients()
         logger.debug("Patients already present in the FHIR store.")
+        schedule.every().day.do(blaze_service.sync_patients)
     while True:
         schedule.run_pending()
         time.sleep(1)
