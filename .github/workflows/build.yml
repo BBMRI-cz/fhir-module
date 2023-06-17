@@ -33,3 +33,35 @@ jobs:
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
+
+  integration-tests:
+    name: Run integration tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Blaze
+        run: docker run --name blaze -d -e JAVA_TOOL_OPTIONS=-Xmx2g -p 8080:8080 -p 8081:8081 -v blaze-data:/app/data samply/blaze:latest
+
+      - name: Wait for Blaze
+        run: .github/scripts/wait-for-url.sh  http://localhost:8080/health
+
+      - name: Docker Logs
+        run: docker logs blaze
+
+      - name: Run unit_tests
+        run: pytest test/integration
+
