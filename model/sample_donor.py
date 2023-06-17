@@ -19,12 +19,15 @@ class SampleDonor:
     def identifier(self) -> str:
         return self._identifier
 
+    """Administrative gender"""
     @property
     def gender(self) -> Gender:
         return self._gender
 
     @gender.setter
     def gender(self, gender: Gender):
+        if not isinstance(gender, Gender):
+            raise TypeError("Gender must be from a list of values: " + Gender.list())
         self._gender = gender
 
     def to_fhir(self) -> Patient:

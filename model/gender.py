@@ -7,3 +7,8 @@ class Gender(Enum):
     OTHER = 3
     UNKNOWN = 4
 
+    @classmethod
+    def list(cls):
+        return list(map(lambda c: c.value, cls))
+
+
