@@ -40,7 +40,7 @@ class TestBlazeStore(unittest.TestCase):
         blaze_service = BlazeService(PatientService(donor_repo), 'http://localhost:8080/fhir')
         blaze_service.initial_upload_of_all_patients()
         num_of_patients_before_sync = blaze_service.get_num_of_patients()
-        donor_repo.add(SampleDonor("uniqueNewPatient4"))
+        donor_repo.add(SampleDonor("uniqueNewPatient5"))
         blaze_service = BlazeService(PatientService(donor_repo), 'http://localhost:8080/fhir')
         blaze_service.sync_patients()
         self.assertEqual(num_of_patients_before_sync + 1, blaze_service.get_num_of_patients())
