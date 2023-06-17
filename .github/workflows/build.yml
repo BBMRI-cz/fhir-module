@@ -35,6 +35,7 @@ jobs:
         uses: codecov/codecov-action@v3
 
   integration-tests:
+    needs: unit-tests
     name: Run integration tests
     runs-on: ubuntu-latest
 
