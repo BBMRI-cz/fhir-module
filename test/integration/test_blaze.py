@@ -32,8 +32,8 @@ class TestBlazeStore(unittest.TestCase):
     def test_is_present_in_blaze(self):
         blaze_service = BlazeService(PatientService(SampleDonorRepoStub()), 'http://localhost:8080/fhir')
         blaze_service.initial_upload_of_all_patients()
-        self.assertTrue(blaze_service.is_present_in_blaze("fakeId"))
-        self.assertTrue(blaze_service.is_present_in_blaze("newId"))
+        self.assertTrue(blaze_service.is_patient_present_in_blaze("fakeId"))
+        self.assertTrue(blaze_service.is_patient_present_in_blaze("newId"))
 
     def test_sync_one_new_patient(self):
         donor_repo = SampleDonorRepoStub()
@@ -49,9 +49,9 @@ class TestBlazeStore(unittest.TestCase):
         donor_repo = SampleDonorRepoStub()
         blaze_service = BlazeService(PatientService(donor_repo), 'http://localhost:8080/fhir')
         blaze_service.initial_upload_of_all_patients()
-        self.assertTrue(blaze_service.is_present_in_blaze("fakeId"))
+        self.assertTrue(blaze_service.is_patient_present_in_blaze("fakeId"))
         blaze_service.delete_patient("fakeId")
-        self.assertFalse(blaze_service.is_present_in_blaze("fakeId"))
+        self.assertFalse(blaze_service.is_patient_present_in_blaze("fakeId"))
 
 
 if __name__ == '__main__':

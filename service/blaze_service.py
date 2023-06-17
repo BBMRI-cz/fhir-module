@@ -15,16 +15,21 @@ logger = logging.getLogger()
 
 
 class BlazeService:
-    """Blaze url must without a trailing /"""
-
     def __init__(self, patient_service: PatientService, blaze_url: str):
+        """
+        Class for interacting with a Blaze Store FHIR server
+        :param patient_service:
+        :param blaze_url: base url of the FHIR server. Must be without a trailing /
+        """
         self._patient_service = patient_service
         self._blaze_url = blaze_url
 
-    """This method posts all patients from the repository to the Blaze store. WARNING: can result in duplication of
-    patients. This method should be called only once, specifically if there are no patients in the FHIR server."""
-
     def initial_upload_of_all_patients(self) -> int:
+        """
+        This method posts all patients from the repository to the Blaze store. WARNING: can result in duplication of
+        patients. This method should be called only once, specifically if there are no patients in the FHIR server.
+        :return: status code
+        """
         bundle = self._patient_service.get_all_patients_in_fhir_transaction()
         try:
             response = requests.post(url=self._blaze_url,
@@ -35,14 +40,23 @@ class BlazeService:
             return 404
         return response.status_code
 
-    def get_num_of_patients(self):
+    def get_num_of_patients(self) -> int:
+        """
+        Get number of patients available in the Blaze store
+        :return: number of patients
+        """
         try:
             return requests.get(url=self._blaze_url + "/Patient?_summary=count").json().get("total")
         except requests.exceptions.ConnectionError:
             logger.error("Cannot connect to blaze!")
             return 0
 
-    def is_present_in_blaze(self, identifier: str) -> bool:
+    def is_patient_present_in_blaze(self, identifier: str) -> bool:
+        """
+        Checks if a patient is present in a blaze store
+        :param identifier: of the Patient
+        :return: true if present
+        """
         try:
             response = (requests.get(url=self._blaze_url + "/Patient?identifier=" + identifier + "&_summary=count")
                         .json()
@@ -52,8 +66,12 @@ class BlazeService:
             return False
 
     def sync_patients(self):
+        """
+        Syncs SampleDonors present in the repository and uploads them to the blaze store
+        :return:
+        """
         for donor in self._patient_service.get_all():
-            if not self.is_present_in_blaze(donor.identifier):
+            if not self.is_patient_present_in_blaze(donor.identifier):
                 try:
                     self.__upload_donor(donor)
                 except requests.exceptions.ConnectionError:
@@ -66,6 +84,11 @@ class BlazeService:
         return res.status_code
 
     def delete_patient(self, identifier: str):
+        """
+        Deletes a Patient in the Blaze store
+        :param identifier: of the Patient
+        :return:
+        """
         settings = {
             'app_id': 'my_web_app',
             'api_base': self._blaze_url
