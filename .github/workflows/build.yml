@@ -1,6 +1,8 @@
 name: CI build
 
 on:
+  schedule:
+    - cron: '0 10 * * *' # every day at 10am
   push:
     branches:
       - master
@@ -160,12 +162,6 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Docker meta
         id: docker-meta
         uses: docker/metadata-action@v4
@@ -181,7 +177,7 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
 
       - name: Build and push image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: .
           platforms: linux/amd64,linux/arm64
