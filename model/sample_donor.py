@@ -1,8 +1,11 @@
 import uuid
+from enum import Enum
 
 from fhirclient.models.identifier import Identifier
 from fhirclient.models.meta import Meta
 from fhirclient.models.patient import Patient
+
+from model.gender import Gender
 
 
 class SampleDonor:
@@ -10,10 +13,19 @@ class SampleDonor:
         if not isinstance(identifier, str):
             raise TypeError("Identifier must be string")
         self._identifier = identifier
+        self._gender: Gender = None
 
     @property
     def identifier(self) -> str:
         return self._identifier
+
+    @property
+    def gender(self) -> Gender:
+        return self._gender
+
+    @gender.setter
+    def gender(self, gender: Gender):
+        self._gender = gender
 
     def to_fhir(self) -> Patient:
         fhir_patient = Patient()
@@ -26,3 +38,7 @@ class SampleDonor:
         fhir_identifier = Identifier()
         fhir_identifier.value = self.identifier
         return [fhir_identifier]
+
+
+
+
