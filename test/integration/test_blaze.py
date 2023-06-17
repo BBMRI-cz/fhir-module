@@ -45,6 +45,14 @@ class TestBlazeStore(unittest.TestCase):
         blaze_service.sync_patients()
         self.assertEqual(num_of_patients_before_sync + 1, blaze_service.get_num_of_patients())
 
+    def test_delete_patient(self):
+        donor_repo = SampleDonorRepoStub()
+        blaze_service = BlazeService(PatientService(donor_repo), 'http://localhost:8080/fhir')
+        blaze_service.initial_upload_of_all_patients()
+        self.assertTrue(blaze_service.is_present_in_blaze("fakeId"))
+        blaze_service.delete_patient("fakeId")
+        self.assertFalse(blaze_service.is_present_in_blaze("fakeId"))
+
 
 if __name__ == '__main__':
     unittest.main()

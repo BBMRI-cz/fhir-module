@@ -2,6 +2,9 @@ import logging
 import os
 
 import requests
+from fhirclient import client
+from fhirclient.models.bundle import Bundle, BundleEntry
+from fhirclient.models.patient import Patient
 
 from model.sample_donor import SampleDonor
 from service.patient_service import PatientService
@@ -41,10 +44,10 @@ class BlazeService:
 
     def is_present_in_blaze(self, identifier: str) -> bool:
         try:
-            return requests.get(url=self._blaze_url + "/Patient?identifier=" + identifier + "&_summary=count")\
-                .json()\
-                .get(
-                "total") > 0
+            response = (requests.get(url=self._blaze_url + "/Patient?identifier=" + identifier + "&_summary=count")
+                        .json()
+                        .get("total"))
+            return response > 0
         except TypeError:
             return False
 
@@ -61,3 +64,14 @@ class BlazeService:
         res = requests.post(url=self._blaze_url + "/Patient", json=donor.to_fhir().as_json())
         logger.info("Patient " + donor.identifier + " uploaded")
         return res.status_code
+
+    def delete_patient(self, identifier: str):
+        settings = {
+            'app_id': 'my_web_app',
+            'api_base': self._blaze_url
+        }
+        smart = client.FHIRClient(settings=settings)
+        search = Patient.where(struct={"identifier": identifier})
+        patient: Patient
+        for patient in search.perform_resources(smart.server):
+            patient.delete(server=smart.server)
