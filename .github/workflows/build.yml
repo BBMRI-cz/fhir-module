@@ -130,7 +130,7 @@ jobs:
         run: docker logs blaze
 
       - name: Run FHIR-Module
-        run: docker run -d --network=system-test -e BLAZE_URL="http://blaze:8080/fhir" -e DIR_PATH="/opt/records" --mount type=bind,source="$(pwd)"/test/xml_data,target=/opt/records fhir_module:local
+        run: docker run -d --network=system-test -e BLAZE_URL="http://blaze:8080/fhir" -e DIR_PATH="/opt/records" --mount type=bind,source="$(pwd)"/test/xml_data,target=/opt/records fhir-module:latest
 
       - name: Verify upload succeeded
         run: .github/scripts/check-patient-exists.sh
