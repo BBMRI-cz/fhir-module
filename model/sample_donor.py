@@ -35,6 +35,8 @@ class SampleDonor:
         fhir_patient.meta = Meta()
         fhir_patient.meta.profile = ["https://fhir.bbmri.de/StructureDefinition/Patient"]
         fhir_patient.identifier = self.__create_fhir_identifier()
+        if self.gender is not None:
+            fhir_patient.gender = self._gender.name.lower()
         return fhir_patient
 
     def __create_fhir_identifier(self):

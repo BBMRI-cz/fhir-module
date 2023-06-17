@@ -27,14 +27,23 @@ class TestSampleDonor(unittest.TestCase):
         donor.gender = Gender.FEMALE
         self.assertEqual("female", donor.gender.name.lower())
 
-    def test_get_donor_gender(self):
+    def test_get_gender(self):
         donor = SampleDonor("unique_org_id")
         self.assertEqual(None, donor.gender)
 
-    def test_set_wrong_donor_gender(self):
+    def test_set_wrong_gender(self):
         donor = SampleDonor("unique_org_id")
         with self.assertRaises(TypeError):
             donor.gender = "tree"
+
+    def test_get_fhir_gender(self):
+        donor = SampleDonor("unique_org_id")
+        self.assertEqual(None, donor.to_fhir().gender)
+        donor.gender = Gender.MALE
+        self.assertEqual("male", donor.to_fhir().gender)
+        donor.gender = Gender.UNKNOWN
+        self.assertEqual("unknown", donor.to_fhir().gender)
+
 
 if __name__ == '__main__':
     unittest.main()
