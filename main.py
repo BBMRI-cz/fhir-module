@@ -1,3 +1,4 @@
+"""Main module"""
 import logging
 import os
 import time
@@ -17,7 +18,8 @@ if __name__ == "__main__":
     if blaze_service.get_num_of_patients() == 0:
         logger.info("Starting upload of patients...")
         blaze_service.initial_upload_of_all_patients()
-        logger.info("Number of patients successfully uploaded: " + str(blaze_service.get_num_of_patients()))
+        logger.info('Number of patients successfully uploaded: %s',
+                    blaze_service.get_num_of_patients())
     else:
         logger.debug("Patients already present in the FHIR store.")
         schedule.every().day.do(blaze_service.sync_patients)

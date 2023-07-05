@@ -1,5 +1,4 @@
-import uuid
-from enum import Enum
+"""Sample donor module"""
 
 from fhirclient.models.identifier import Identifier
 from fhirclient.models.meta import Meta
@@ -9,6 +8,7 @@ from model.gender import Gender
 
 
 class SampleDonor:
+    """Class representing a sample donor/patient"""
     def __init__(self, identifier: str):
         if not isinstance(identifier, str):
             raise TypeError("Identifier must be string")
@@ -17,20 +17,23 @@ class SampleDonor:
 
     @property
     def identifier(self) -> str:
+        """Institutional identifier"""
         return self._identifier
 
-    """Administrative gender"""
     @property
     def gender(self) -> Gender:
+        """Administrative gender"""
         return self._gender
 
     @gender.setter
     def gender(self, gender: Gender):
+        """Ser administrative gender"""
         if not isinstance(gender, Gender):
             raise TypeError("Gender must be from a list of values: " + Gender.list())
         self._gender = gender
 
     def to_fhir(self) -> Patient:
+        """Return sample donor representation in FHIR"""
         fhir_patient = Patient()
         fhir_patient.meta = Meta()
         fhir_patient.meta.profile = ["https://fhir.bbmri.de/StructureDefinition/Patient"]
@@ -40,10 +43,7 @@ class SampleDonor:
         return fhir_patient
 
     def __create_fhir_identifier(self):
+        """Create fhir identifier"""
         fhir_identifier = Identifier()
         fhir_identifier.value = self.identifier
         return [fhir_identifier]
-
-
-
-

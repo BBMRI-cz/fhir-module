@@ -1,25 +1,27 @@
+"""Module for handling sample donor persistence in XML files"""
 import os
-from pyexpat import ExpatError
 from typing import List
+from pyexpat import ExpatError
 
-import xmltodict as xmltodict
+import xmltodict
 
 from model.sample_donor import SampleDonor
 from persistence.sample_donor_repository import SampleDonorRepository
 
 
 class SampleDonorXMLFilesRepository(SampleDonorRepository):
-
+    """Class for handling sample donor stored in XML files"""
     def __init__(self):
         self._dir_path = os.getenv("DIR_PATH", "/mock_dir/")
         self._ids: set = set()
 
     def get_all(self) -> List[SampleDonor]:
-        for dirEntry in os.scandir(self._dir_path):
-            yield from self.parse_xml_file(dirEntry)
+        for dir_entry in os.scandir(self._dir_path):
+            yield from self.parse_xml_file(dir_entry)
 
-    def parse_xml_file(self, dir_entry: os.DirEntry):
-        with open(dir_entry) as xml_file:
+    def parse_xml_file(self, dir_entry: os.DirEntry) -> SampleDonor:
+        """Parse a Sample donor from an XML file"""
+        with open(dir_entry, encoding="UTF-8") as xml_file:
             try:
                 file_content = xmltodict.parse(xml_file.read())
                 donor = SampleDonor(file_content.get("patient", {}).get("@id", {}))
