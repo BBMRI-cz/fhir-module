@@ -7,3 +7,4 @@ pytest-cov==4.0.0
 schedule~=1.2.0
 pyfakefs~=5.2.2
 PyYAML~=6.0
+pylint
