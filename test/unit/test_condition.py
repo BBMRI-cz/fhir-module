@@ -36,3 +36,5 @@ class TestCondition(unittest.TestCase):
     def test_to_fhir_period_is_added_to_icd_10_code(self):
         condition = Condition("C188", "patient-ID")
         self.assertEqual("C18.8", condition.to_fhir().code.coding.code)
+        condition = Condition("A18", "patient-ID")
+        self.assertEqual("A18", condition.to_fhir().code.coding.code)
