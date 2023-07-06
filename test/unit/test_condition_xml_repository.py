@@ -10,8 +10,8 @@ class TestConditionXMLRepository(unittest.TestCase):
     samples = '<STS>' \
               '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
               '<diagnosis>C509</diagnosis>' \
-              '</diagnosisMaterial>'
-    '</STS>'
+              '</diagnosisMaterial>' \
+                '</STS>'
     content = '<patient xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' \
               'xmlns="http://www.bbmri.cz/schemas/biobank/data" xsi:noNamespaceSchemaLocation="exportNIS.xsd" ' \
               'id="9999">{sample}</patient>'.format(sample=samples)

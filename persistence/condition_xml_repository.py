@@ -7,6 +7,7 @@ import xmltodict
 
 from model.condition import Condition
 from persistence.condition_repository import ConditionRepository
+from persistence.xml_util import parse_xml_file, WrongXMLFormatError
 
 
 class ConditionXMLRepository(ConditionRepository):
@@ -17,18 +18,17 @@ class ConditionXMLRepository(ConditionRepository):
 
     def get_all(self) -> List[Condition]:
         for dir_entry in os.scandir(self._dir_path):
-            yield from self.parse_xml_file(dir_entry)
+            yield from self.__extract_condition_from_xml_file(dir_entry)
 
-    def parse_xml_file(self, dir_entry: os.DirEntry) -> Condition:
-        """Parse a Sample donor from an XML file"""
-        with open(dir_entry, encoding="UTF-8") as xml_file:
-            try:
-                file_content = xmltodict.parse(xml_file.read())
-                condition = Condition(patient_id=file_content.get("patient", {}).get("@id", {}),
-                                      icd_10_code=file_content.get("patient", {})
-                                      .get("STS", {})
-                                      .get("diagnosisMaterial", {})
-                                      .get("diagnosis", {}))
-                yield condition
-            except ExpatError:
-                print("Skipping file")
+    def __extract_condition_from_xml_file(self, dir_entry: os.DirEntry) -> Condition:
+        """Extracts Condition from an XML file"""
+        file_content = parse_xml_file(dir_entry)
+        try:
+            condition = Condition(patient_id=file_content.get("patient", {}).get("@id", {}),
+                                  icd_10_code=file_content.get("patient", {})
+                                  .get("STS", {})
+                                  .get("diagnosisMaterial", {})
+                                  .get("diagnosis", {}))
+        except WrongXMLFormatError:
+            return
+        yield condition

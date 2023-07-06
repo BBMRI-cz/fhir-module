@@ -8,7 +8,7 @@ import xmltodict
 
 
 def parse_xml_file(dir_entry: os.DirEntry) -> OrderedDict[str, Any]:
-    """Parse a Sample donor from an XML file"""
+    """Parse an XML file as an OrderedDictionary"""
     with open(dir_entry, encoding="UTF-8") as xml_file:
         try:
             file_content = xmltodict.parse(xml_file.read())
