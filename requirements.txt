@@ -8,3 +8,4 @@ schedule~=1.2.0
 pyfakefs~=5.2.2
 PyYAML~=6.0
 pylint
+icd10-cm
