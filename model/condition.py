@@ -32,7 +32,7 @@ class Condition:
         return condition
 
     def __icd_10_code_with_period(self) -> str:
-        """Returns icd-10 code with period, e.g. C188 to C18.8"""
+        """Returns icd-10 code with a period, e.g. C188 to C18.8"""
         code = self._icd_10_code
         if len(code) == 4 and "." not in code:
             return code[:3] + '.' + code[3:]
