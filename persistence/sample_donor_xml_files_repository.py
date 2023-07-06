@@ -10,7 +10,7 @@ from persistence.sample_donor_repository import SampleDonorRepository
 
 
 class SampleDonorXMLFilesRepository(SampleDonorRepository):
-    """Class for handling sample donor stored in XML files"""
+    """Class for handling sample donors stored in XML files"""
     def __init__(self):
         self._dir_path = os.getenv("DIR_PATH", "/mock_dir/")
         self._ids: set = set()
