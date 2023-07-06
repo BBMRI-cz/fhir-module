@@ -4,7 +4,6 @@ from typing import Generator
 from fhirclient.models.bundle import Bundle, BundleEntry, BundleEntryRequest
 from fhirclient.models.resource import Resource
 
-from model.sample_donor import SampleDonor
 from persistence.sample_donor_repository import SampleDonorRepository
 
 

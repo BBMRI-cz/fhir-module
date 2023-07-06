@@ -1,8 +1,8 @@
 """Module for representing a patient's condition."""
 import fhirclient.models.codeableconcept
 import fhirclient.models.coding
-import fhirclient.models.meta
 import fhirclient.models.condition as fhir_condition
+import fhirclient.models.meta
 import icd10
 
 

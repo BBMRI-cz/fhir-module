@@ -12,9 +12,11 @@ class TestConditionXMLRepository(unittest.TestCase):
               '<diagnosis>C509</diagnosis>' \
               '</diagnosisMaterial>' \
                 '</STS>'
+
     content = '<patient xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' \
               'xmlns="http://www.bbmri.cz/schemas/biobank/data" xsi:noNamespaceSchemaLocation="exportNIS.xsd" ' \
               'id="9999">{sample}</patient>'.format(sample=samples)
+
     dir_path = "/mock_dir/"
 
     @patchfs

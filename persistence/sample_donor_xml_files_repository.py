@@ -1,9 +1,6 @@
 """Module for handling sample donor persistence in XML files"""
 import os
 from typing import List
-from pyexpat import ExpatError
-
-import xmltodict
 
 from model.sample_donor import SampleDonor
 from persistence.sample_donor_repository import SampleDonorRepository

@@ -1,9 +1,6 @@
 """Module containing classes tied to condition persistence in XML files"""
 import os
-from pyexpat import ExpatError
 from typing import List
-
-import xmltodict
 
 from model.condition import Condition
 from persistence.condition_repository import ConditionRepository

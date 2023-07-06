@@ -1,8 +1,8 @@
 import logging
+import logging.config
 import os
 
 import yaml
-import logging.config
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 

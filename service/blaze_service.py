@@ -3,7 +3,6 @@ import os
 
 import requests
 from fhirclient import client
-from fhirclient.models.bundle import Bundle, BundleEntry
 from fhirclient.models.patient import Patient
 
 from model.sample_donor import SampleDonor

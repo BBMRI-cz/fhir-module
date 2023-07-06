@@ -10,8 +10,6 @@ from persistence.sample_donor_repository import SampleDonorRepository
 from service.blaze_service import BlazeService
 from service.patient_service import PatientService
 
-from mock import patch
-
 
 class SampleDonorRepoStub(SampleDonorRepository):
     donors = [SampleDonor("newId"), SampleDonor("fakeId")]
