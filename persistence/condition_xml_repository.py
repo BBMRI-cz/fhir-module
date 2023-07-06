@@ -2,6 +2,8 @@
 import os
 from typing import List
 
+from glom import glom
+
 from model.condition import Condition
 from persistence.condition_repository import ConditionRepository
 from persistence.xml_util import parse_xml_file, WrongXMLFormatError
@@ -21,11 +23,9 @@ class ConditionXMLRepository(ConditionRepository):
         """Extracts Condition from an XML file"""
         file_content = parse_xml_file(dir_entry)
         try:
-            condition = Condition(patient_id=file_content.get("patient", {}).get("@id", {}),
-                                  icd_10_code=file_content.get("patient", {})
-                                  .get("STS", {})
-                                  .get("diagnosisMaterial", {})
-                                  .get("diagnosis", {}))
+            for diagnosis in glom(file_content, '**.diagnosis'):
+                condition = Condition(patient_id=glom(file_content, 'patient.@id'),
+                                      icd_10_code=diagnosis)
+                yield condition
         except WrongXMLFormatError:
             return
-        yield condition

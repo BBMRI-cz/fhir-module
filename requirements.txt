@@ -9,3 +9,4 @@ pyfakefs~=5.2.2
 PyYAML~=6.0
 pylint
 icd10-cm
+glom
