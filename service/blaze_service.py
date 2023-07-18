@@ -2,8 +2,7 @@ import logging
 import os
 
 import requests
-from fhirclient import client
-from fhirclient.models.patient import Patient
+from fhirclient.models.bundle import Bundle
 from glom import glom
 
 from model.condition import Condition
@@ -32,9 +31,17 @@ class BlazeService:
         """
         This method posts all patients from the repository to the Blaze store. WARNING: can result in duplication of
         patients. This method should be called only once, specifically if there are no patients in the FHIR server.
-        :return: status code
+        :return: status code of the http request
         """
         bundle = self._patient_service.get_all_patients_in_fhir_transaction()
+        return self.__post_bundle(bundle=bundle)
+
+    def __post_bundle(self, bundle: Bundle) -> int:
+        """
+        Posts a bundle FHIR resource to Blaze store
+        :param bundle: FHIR resource
+        :return: http request status code
+        """
         try:
             response = requests.post(url=self._blaze_url,
                                      json=bundle.as_json(),
@@ -85,6 +92,11 @@ class BlazeService:
                     return
 
     def __upload_donor(self, donor: SampleDonor) -> int:
+        """
+        Uploads a SampleDonor to the Blaze store
+        :param donor: SampleDonor to upload
+        :return: Status code of the http request
+        """
         res = requests.post(url=self._blaze_url + "/Patient",
                             json=donor.to_fhir().as_json(),
                             auth=self._credentials)
@@ -104,8 +116,11 @@ class BlazeService:
             logger.info("Deleting" + url)
             return requests.delete(url=url).status_code
 
-    def sync_conditions(self):
-        """Syncs Conditions present in the Condition Repository"""
+    def sync_conditions(self) -> int:
+        """
+        Syncs Conditions present in the Condition Repository
+        :return: Status code of the http request
+        """
         condition: Condition
         for condition in self._condition_service.get_all():
             patient_fhir_id = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + condition.patient_id,
@@ -116,7 +131,7 @@ class BlazeService:
             logger.info("Condition " + condition.icd_10_code + " for patient: " + patient_fhir_id + " uploaded.")
             return res.status_code
 
-    def does_patient_have_condition(self, patient_identifier: str, icd_10_code: str) -> bool:
+    def patient_has_condition(self, patient_identifier: str, icd_10_code: str) -> bool:
         """Checks if patient already has a condition with specific ICD-10 code (use dot format)"""
         patient_fhir_id = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + patient_identifier)
                                .json(), "**.resource.id")[0]

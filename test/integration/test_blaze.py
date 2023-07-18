@@ -80,7 +80,7 @@ class TestBlazeStore(unittest.TestCase):
         self.blaze_service.initial_upload_of_all_patients()
         self.assertTrue(self.blaze_service.is_patient_present_in_blaze("fakeId"))
         self.blaze_service.sync_conditions()
-        self.assertTrue(self.blaze_service.does_patient_have_condition("fakeId", "C50.4"))
+        self.assertTrue(self.blaze_service.patient_has_condition("fakeId", "C50.4"))
 
     def test_delete_all_patients(self):
         for donor in SampleDonorRepoStub().get_all():
