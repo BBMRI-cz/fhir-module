@@ -9,6 +9,7 @@ from persistence.xml_util import parse_xml_file, WrongXMLFormatError
 
 class SampleDonorXMLFilesRepository(SampleDonorRepository):
     """Class for handling sample donors stored in XML files"""
+
     def __init__(self):
         self._dir_path = os.getenv("DIR_PATH", "/mock_dir/")
         self._ids: set = set()

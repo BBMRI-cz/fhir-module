@@ -45,4 +45,3 @@ class TestXMLRepo(unittest.TestCase):
         for _ in SampleDonorXMLFilesRepository().get_all():
             counter += 1
         self.assertEqual(0, counter)
-

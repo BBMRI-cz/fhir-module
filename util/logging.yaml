@@ -10,7 +10,7 @@ handlers:
     stream: ext://sys.stdout
 root:
   level: DEBUG
-  handlers: [console]
+  handlers: [ console ]
 
 default:
   level: DEBUG

@@ -103,6 +103,7 @@ class TestBlazeStore(unittest.TestCase):
         with self.assertRaises(PatientNotFoundError):
             self.assertFalse(self.blaze_service.
                              patient_has_condition("fakeId", "C50.4"))
+
     def test_delete_all_patients(self):
         for donor in SampleDonorRepoStub().get_all():
             self.blaze_service.delete_patient(donor.identifier)

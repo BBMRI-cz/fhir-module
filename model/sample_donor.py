@@ -9,6 +9,7 @@ from model.gender import Gender
 
 class SampleDonor:
     """Class representing a sample donor/patient"""
+
     def __init__(self, identifier: str):
         if not isinstance(identifier, str):
             raise TypeError("Identifier must be string")
