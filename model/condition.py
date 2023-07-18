@@ -2,8 +2,8 @@
 import fhirclient.models.codeableconcept
 import fhirclient.models.coding
 import fhirclient.models.condition as fhir_condition
-import fhirclient.models.meta
 import fhirclient.models.fhirreference
+import fhirclient.models.meta
 import icd10
 
 
