@@ -5,6 +5,7 @@ from typing import List
 import pytest
 import requests
 
+from exception.patient_not_found import PatientNotFoundError
 from model.condition import Condition
 from model.sample_donor import SampleDonor
 from persistence.condition_repository import ConditionRepository
@@ -97,6 +98,11 @@ class TestBlazeStore(unittest.TestCase):
         self.blaze_service.sync_conditions()
         self.assertTrue(self.blaze_service.patient_has_condition("fakeId", "C50.6"))
 
+    def test_sync_conditions_if_patient_not_present_skips(self):
+        self.blaze_service.sync_conditions()
+        with self.assertRaises(PatientNotFoundError):
+            self.assertFalse(self.blaze_service.
+                             patient_has_condition("fakeId", "C50.4"))
     def test_delete_all_patients(self):
         for donor in SampleDonorRepoStub().get_all():
             self.blaze_service.delete_patient(donor.identifier)

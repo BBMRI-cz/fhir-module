@@ -5,6 +5,7 @@ import requests
 from fhirclient.models.bundle import Bundle
 from glom import glom
 
+from exception.patient_not_found import PatientNotFoundError
 from model.condition import Condition
 from model.sample_donor import SampleDonor
 from service.condition_service import ConditionService
@@ -124,27 +125,43 @@ class BlazeService:
         counter = 0
         condition: Condition
         for condition in self._condition_service.get_all():
-            logger.info("Found condition: " + condition.icd_10_code)
-            if not self.patient_has_condition(patient_identifier=condition.patient_id,
-                                              icd_10_code=condition.icd_10_code):
-                patient_fhir_id = self.__get_fhir_id_of_donor(condition.patient_id)
-                res = requests.post(url=self._blaze_url + "/Condition",
-                                    json=condition.to_fhir(subject_id=patient_fhir_id).as_json(),
-                                    auth=self._credentials)
-                logger.info("Condition " + condition.icd_10_code
-                            + " for patient: " + patient_fhir_id + " uploaded.")
+            try:
+                patient_has_condition = self.patient_has_condition(patient_identifier=condition.patient_id,
+                                                                   icd_10_code=condition.icd_10_code)
+            except PatientNotFoundError:
+                logger.info("Patient with identifier: " + condition.patient_id
+                            + " not present in the FHIR store. Skipping...")
+                continue
+            if not patient_has_condition:
+                self.__upload_condition(condition)
                 counter += 1
         return counter
 
-    def __get_fhir_id_of_donor(self, patient_id: str):
+    def __upload_condition(self, condition):
+        patient_fhir_id = self.__get_fhir_id_of_donor(condition.patient_id)
+        requests.post(url=self._blaze_url + "/Condition",
+                      json=condition.to_fhir(subject_id=patient_fhir_id).as_json(),
+                      auth=self._credentials)
+        logger.info("Condition " + condition.icd_10_code
+                    + " for patient: " + patient_fhir_id + " uploaded.")
+
+    def __get_fhir_id_of_donor(self, patient_id: str) -> str:
+        """
+        Get Resource id for a patient with identifier.
+        :param patient_id: identifier of the sample donor
+        :return: FHIR resource id
+        """
         return glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + patient_id,
                                  auth=self._credentials)
                     .json(), "**.resource.id")[0]
 
     def patient_has_condition(self, patient_identifier: str, icd_10_code: str) -> bool:
         """Checks if patient already has a condition with specific ICD-10 code (use dot format)"""
-        patient_fhir_id = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + patient_identifier)
-                               .json(), "**.resource.id")[0]
+        try:
+            patient_fhir_id = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + patient_identifier)
+                                   .json(), "**.resource.id")[0]
+        except IndexError:
+            raise PatientNotFoundError
         search_url = f"{self._blaze_url}/Condition?patient={patient_fhir_id}" \
                      f"&code=http://hl7.org/fhir/sid/icd-10|{icd_10_code}"
         return requests.get(search_url, auth=self._credentials).json().get("total") > 0
