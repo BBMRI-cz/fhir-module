@@ -3,6 +3,7 @@ import fhirclient.models.codeableconcept
 import fhirclient.models.coding
 import fhirclient.models.condition as fhir_condition
 import fhirclient.models.meta
+import fhirclient.models.fhirreference
 import icd10
 
 
@@ -20,15 +21,22 @@ class Condition:
         """Get ICD-10 code"""
         return self._icd_10_code
 
-    def to_fhir(self) -> fhir_condition.Condition:
+    @property
+    def patient_id(self) -> str:
+        """Get donor identifier"""
+        return self._patient_id
+
+    def to_fhir(self, subject_id: str) -> fhir_condition.Condition:
         """Return condition's representation as a FHIR resource."""
         condition = fhir_condition.Condition()
         condition.meta = fhirclient.models.meta.Meta()
         condition.meta.profile = ["https://fhir.bbmri.de/StructureDefinition/Condition"]
         condition.code = fhirclient.models.codeableconcept.CodeableConcept()
-        condition.code.coding = fhirclient.models.coding.Coding()
-        condition.code.coding.code = self.__icd_10_code_with_period()
-        condition.code.coding.system = "http://hl7.org/fhir/sid/icd-10"
+        condition.code.coding = [fhirclient.models.coding.Coding()]
+        condition.code.coding[0].code = self.__icd_10_code_with_period()
+        condition.code.coding[0].system = "http://hl7.org/fhir/sid/icd-10"
+        condition.subject = fhirclient.models.fhirreference.FHIRReference()
+        condition.subject.reference = "Patient/" + subject_id
         return condition
 
     def __icd_10_code_with_period(self) -> str:

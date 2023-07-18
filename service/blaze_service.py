@@ -4,8 +4,11 @@ import os
 import requests
 from fhirclient import client
 from fhirclient.models.patient import Patient
+from glom import glom
 
+from model.condition import Condition
 from model.sample_donor import SampleDonor
+from service.condition_service import ConditionService
 from service.patient_service import PatientService
 from util.custom_logger import setup_logger
 
@@ -14,13 +17,14 @@ logger = logging.getLogger()
 
 
 class BlazeService:
-    def __init__(self, patient_service: PatientService, blaze_url: str):
+    def __init__(self, patient_service: PatientService, condition_service: ConditionService, blaze_url: str):
         """
         Class for interacting with a Blaze Store FHIR server
         :param patient_service:
         :param blaze_url: base url of the FHIR server. Must be without a trailing /
         """
         self._patient_service = patient_service
+        self._condition_service = condition_service
         self._blaze_url = blaze_url
 
     def initial_upload_of_all_patients(self) -> int:
@@ -79,21 +83,36 @@ class BlazeService:
 
     def __upload_donor(self, donor: SampleDonor) -> int:
         res = requests.post(url=self._blaze_url + "/Patient", json=donor.to_fhir().as_json())
-        logger.info("Patient " + donor.identifier + " uploaded")
+        logger.info("Patient " + donor.identifier + " uploaded.")
         return res.status_code
 
-    def delete_patient(self, identifier: str):
+    def delete_patient(self, identifier: str) -> int:
         """
         Deletes a Patient in the Blaze store
         :param identifier: of the Patient
-        :return:
+        :return: Status code of the http request
         """
-        settings = {
-            'app_id': 'my_web_app',
-            'api_base': self._blaze_url
-        }
-        smart = client.FHIRClient(settings=settings)
-        search = Patient.where(struct={"identifier": identifier})
-        patient: Patient
-        for patient in search.perform_resources(smart.server):
-            patient.delete(server=smart.server)
+        list_of_full_urls = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + identifier)
+                                 .json(), "**.fullUrl")
+        for url in list_of_full_urls:
+            logger.info("Deleting" + url)
+            return requests.delete(url=url).status_code
+
+    def sync_conditions(self):
+        """Syncs Conditions present in the Condition Repository"""
+        condition: Condition
+        for condition in self._condition_service.get_all():
+            patient_fhir_id = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + condition.patient_id)
+                                   .json(), "**.resource.id")[0]
+            print(patient_fhir_id)
+            res = requests.post(url=self._blaze_url + "/Condition",
+                                json=condition.to_fhir(subject_id=patient_fhir_id).as_json())
+            logger.info("Condition " + condition.icd_10_code + " for patient: " + patient_fhir_id + " uploaded.")
+            return res.status_code
+
+    def does_patient_have_condition(self, patient_identifier: str, icd_10_code: str) -> bool:
+        """Checks if patient already has a condition with specific ICD-10"""
+        patient_fhir_id = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + patient_identifier)
+                               .json(), "**.resource.id")[0]
+        search_url = f"{self._blaze_url}/Condition?patient={patient_fhir_id}&code=http://hl7.org/fhir/sid/icd-10|{icd_10_code}"
+        return requests.get(search_url).json().get("total") > 0

@@ -8,10 +8,10 @@ from persistence.condition_xml_repository import ConditionXMLRepository
 
 class TestConditionXMLRepository(unittest.TestCase):
     sample = '<STS>' \
-              '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
-              '<diagnosis>C509</diagnosis>' \
-              '</diagnosisMaterial>' \
-              '</STS>'
+             '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
+             '<diagnosis>C509</diagnosis>' \
+             '</diagnosisMaterial>' \
+             '</STS>'
 
     samples = '<STS>' \
               '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
@@ -49,6 +49,7 @@ class TestConditionXMLRepository(unittest.TestCase):
                             .format(sample=self.sample))
         conditions = list(ConditionXMLRepository().get_all())
         self.assertEqual(3, len(conditions))
+
 
 if __name__ == '__main__':
     unittest.main()
