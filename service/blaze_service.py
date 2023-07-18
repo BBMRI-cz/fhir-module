@@ -26,6 +26,7 @@ class BlazeService:
         self._patient_service = patient_service
         self._condition_service = condition_service
         self._blaze_url = blaze_url
+        self._credentials = (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))
 
     def initial_upload_of_all_patients(self) -> int:
         """
@@ -37,7 +38,7 @@ class BlazeService:
         try:
             response = requests.post(url=self._blaze_url,
                                      json=bundle.as_json(),
-                                     auth=(os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", "")))
+                                     auth=self._credentials)
         except requests.exceptions.ConnectionError:
             logger.error("Cannot connect to blaze!")
             return 404
@@ -49,7 +50,8 @@ class BlazeService:
         :return: number of patients
         """
         try:
-            return requests.get(url=self._blaze_url + "/Patient?_summary=count").json().get("total")
+            return requests.get(url=self._blaze_url + "/Patient?_summary=count",
+                                auth=self._credentials).json().get("total")
         except requests.exceptions.ConnectionError:
             logger.error("Cannot connect to blaze!")
             return 0
@@ -61,7 +63,8 @@ class BlazeService:
         :return: true if present
         """
         try:
-            response = (requests.get(url=self._blaze_url + "/Patient?identifier=" + identifier + "&_summary=count")
+            response = (requests.get(url=self._blaze_url + "/Patient?identifier=" + identifier + "&_summary=count",
+                                     auth=self._credentials)
                         .json()
                         .get("total"))
             return response > 0
@@ -82,7 +85,9 @@ class BlazeService:
                     return
 
     def __upload_donor(self, donor: SampleDonor) -> int:
-        res = requests.post(url=self._blaze_url + "/Patient", json=donor.to_fhir().as_json())
+        res = requests.post(url=self._blaze_url + "/Patient",
+                            json=donor.to_fhir().as_json(),
+                            auth=self._credentials)
         logger.info("Patient " + donor.identifier + " uploaded.")
         return res.status_code
 
@@ -92,7 +97,8 @@ class BlazeService:
         :param identifier: of the Patient
         :return: Status code of the http request
         """
-        list_of_full_urls = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + identifier)
+        list_of_full_urls = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + identifier,
+                                              auth=self._credentials)
                                  .json(), "**.fullUrl")
         for url in list_of_full_urls:
             logger.info("Deleting" + url)
@@ -102,10 +108,11 @@ class BlazeService:
         """Syncs Conditions present in the Condition Repository"""
         condition: Condition
         for condition in self._condition_service.get_all():
-            patient_fhir_id = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + condition.patient_id)
+            patient_fhir_id = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + condition.patient_id,
+                                                auth=self._credentials)
                                    .json(), "**.resource.id")[0]
             res = requests.post(url=self._blaze_url + "/Condition",
-                                json=condition.to_fhir(subject_id=patient_fhir_id).as_json())
+                                json=condition.to_fhir(subject_id=patient_fhir_id).as_json(), auth=self._credentials)
             logger.info("Condition " + condition.icd_10_code + " for patient: " + patient_fhir_id + " uploaded.")
             return res.status_code
 
