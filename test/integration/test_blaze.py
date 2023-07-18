@@ -30,6 +30,9 @@ class ConditionRepoStub(ConditionRepository):
     def get_all(self) -> List[Condition]:
         return self.conditions
 
+    def add(self, condition: Condition):
+        self.conditions.append(condition)
+
 
 class TestBlazeStore(unittest.TestCase):
 
@@ -81,6 +84,17 @@ class TestBlazeStore(unittest.TestCase):
         self.assertTrue(self.blaze_service.is_patient_present_in_blaze("fakeId"))
         self.blaze_service.sync_conditions()
         self.assertTrue(self.blaze_service.patient_has_condition("fakeId", "C50.4"))
+
+    def test_sync_one_new_condition(self):
+        condition_repo = ConditionRepoStub()
+        self.blaze_service.initial_upload_of_all_patients()
+        self.blaze_service.sync_conditions()
+        self.assertFalse(self.blaze_service.patient_has_condition("fakeId", "C39.4"))
+        condition_repo.add(Condition(patient_id="fakeId", icd_10_code="C394"))
+        self.blaze_service = BlazeService(PatientService(SampleDonorRepoStub()),
+                                          blaze_url='http://localhost:8080/fhir',
+                                          condition_service=ConditionService(condition_repo))
+        self.assertTrue(self.blaze_service.patient_has_condition("fakeId", "C39.4"))
 
     def test_delete_all_patients(self):
         for donor in SampleDonorRepoStub().get_all():

@@ -13,6 +13,12 @@ class TestConditionXMLRepository(unittest.TestCase):
              '</diagnosisMaterial>' \
              '</STS>'
 
+    wrong_diagnosis = '<STS>' \
+                      '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
+                      '<diagnosis>C394</diagnosis>' \
+                      '</diagnosisMaterial>' \
+                      '</STS>'
+
     samples = '<STS>' \
               '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
               '<diagnosis>C508</diagnosis>' \
@@ -42,13 +48,22 @@ class TestConditionXMLRepository(unittest.TestCase):
         self.assertEqual(2, len(conditions))
 
     @patchfs
-    def test_get_all_from_two_file_with_three_conditions(self, fake_fs):
+    def test_get_all_from_two_files_with_three_conditions(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.samples))
         fake_fs.create_file(self.dir_path + "mock_file2.xml", contents=self.content
                             .format(sample=self.sample))
         conditions = list(ConditionXMLRepository().get_all())
         self.assertEqual(3, len(conditions))
+
+    @patchfs
+    def test_get_all_with_wrong_icd_10_string_skips(self, fake_fs):
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.samples))
+        fake_fs.create_file(self.dir_path + "mock_file2.xml", contents=self.content
+                            .format(sample=self.wrong_diagnosis))
+        conditions = list(ConditionXMLRepository().get_all())
+        self.assertEqual(2, len(conditions))
 
 
 if __name__ == '__main__':
