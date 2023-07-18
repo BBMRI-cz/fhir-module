@@ -104,7 +104,6 @@ class BlazeService:
         for condition in self._condition_service.get_all():
             patient_fhir_id = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + condition.patient_id)
                                    .json(), "**.resource.id")[0]
-            print(patient_fhir_id)
             res = requests.post(url=self._blaze_url + "/Condition",
                                 json=condition.to_fhir(subject_id=patient_fhir_id).as_json())
             logger.info("Condition " + condition.icd_10_code + " for patient: " + patient_fhir_id + " uploaded.")
