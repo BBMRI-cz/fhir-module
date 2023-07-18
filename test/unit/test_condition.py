@@ -27,14 +27,14 @@ class TestCondition(unittest.TestCase):
 
     def test_to_fhir(self):
         condition = Condition("C18.8", "patient-ID")
-        self.assertIsInstance(condition.to_fhir(), fhirclient.models.condition.Condition)
+        self.assertIsInstance(condition.to_fhir("fake_fhir_id"), fhirclient.models.condition.Condition)
 
     def test_to_fhir_valid_icd_10_code(self):
         condition = Condition("C18.8", "patient-ID")
-        self.assertEqual("C18.8", condition.to_fhir().code.coding.code)
+        self.assertEqual("C18.8", condition.to_fhir("fake_fhir_id").code.coding[0].code)
 
     def test_to_fhir_period_is_added_to_icd_10_code(self):
         condition = Condition("C188", "patient-ID")
-        self.assertEqual("C18.8", condition.to_fhir().code.coding.code)
+        self.assertEqual("C18.8", condition.to_fhir("fake_fhir_id").code.coding[0].code)
         condition = Condition("A18", "patient-ID")
-        self.assertEqual("A18", condition.to_fhir().code.coding.code)
+        self.assertEqual("A18", condition.to_fhir("fake_fhir_id").code.coding[0].code)
