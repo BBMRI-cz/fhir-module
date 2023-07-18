@@ -24,9 +24,12 @@ if __name__ == "__main__":
         blaze_service.initial_upload_of_all_patients()
         logger.info('Number of patients successfully uploaded: %s',
                     blaze_service.get_num_of_patients())
+        logger.info("Starting upload of conditions...")
+        blaze_service.sync_conditions()
     else:
         logger.debug("Patients already present in the FHIR store.")
         schedule.every().day.do(blaze_service.sync_patients)
+        schedule.every().day.do(blaze_service.sync_conditions())
     while True:
         schedule.run_pending()
         time.sleep(1)
