@@ -110,8 +110,9 @@ class BlazeService:
             return res.status_code
 
     def does_patient_have_condition(self, patient_identifier: str, icd_10_code: str) -> bool:
-        """Checks if patient already has a condition with specific ICD-10"""
+        """Checks if patient already has a condition with specific ICD-10 code (use dot format)"""
         patient_fhir_id = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + patient_identifier)
                                .json(), "**.resource.id")[0]
-        search_url = f"{self._blaze_url}/Condition?patient={patient_fhir_id}&code=http://hl7.org/fhir/sid/icd-10|{icd_10_code}"
+        search_url = f"{self._blaze_url}/Condition?patient={patient_fhir_id}" \
+                     f"&code=http://hl7.org/fhir/sid/icd-10|{icd_10_code}"
         return requests.get(search_url).json().get("total") > 0
