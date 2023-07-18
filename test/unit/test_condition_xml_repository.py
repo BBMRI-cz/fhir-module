@@ -15,7 +15,7 @@ class TestConditionXMLRepository(unittest.TestCase):
 
     wrong_diagnosis = '<STS>' \
                       '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
-                      '<diagnosis>C394</diagnosis>' \
+                      '<diagnosis>wrong</diagnosis>' \
                       '</diagnosisMaterial>' \
                       '</STS>'
 

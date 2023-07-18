@@ -113,7 +113,7 @@ class BlazeService:
                                               auth=self._credentials)
                                  .json(), "**.fullUrl")
         for url in list_of_full_urls:
-            logger.info("Deleting" + url)
+            logger.info("Deleting " + url)
             return requests.delete(url=url).status_code
 
     def sync_conditions(self) -> int:
