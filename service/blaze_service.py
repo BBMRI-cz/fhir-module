@@ -119,17 +119,27 @@ class BlazeService:
     def sync_conditions(self) -> int:
         """
         Syncs Conditions present in the Condition Repository
-        :return: Status code of the http request
+        :return: Number of conditions uploaded
         """
+        counter = 0
         condition: Condition
         for condition in self._condition_service.get_all():
-            patient_fhir_id = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + condition.patient_id,
-                                                auth=self._credentials)
-                                   .json(), "**.resource.id")[0]
-            res = requests.post(url=self._blaze_url + "/Condition",
-                                json=condition.to_fhir(subject_id=patient_fhir_id).as_json(), auth=self._credentials)
-            logger.info("Condition " + condition.icd_10_code + " for patient: " + patient_fhir_id + " uploaded.")
-            return res.status_code
+            logger.info("Found condition: " + condition.icd_10_code)
+            if not self.patient_has_condition(patient_identifier=condition.patient_id,
+                                              icd_10_code=condition.icd_10_code):
+                patient_fhir_id = self.__get_fhir_id_of_donor(condition.patient_id)
+                res = requests.post(url=self._blaze_url + "/Condition",
+                                    json=condition.to_fhir(subject_id=patient_fhir_id).as_json(),
+                                    auth=self._credentials)
+                logger.info("Condition " + condition.icd_10_code
+                            + " for patient: " + patient_fhir_id + " uploaded.")
+                counter += 1
+        return counter
+
+    def __get_fhir_id_of_donor(self, patient_id: str):
+        return glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + patient_id,
+                                 auth=self._credentials)
+                    .json(), "**.resource.id")[0]
 
     def patient_has_condition(self, patient_identifier: str, icd_10_code: str) -> bool:
         """Checks if patient already has a condition with specific ICD-10 code (use dot format)"""
@@ -137,4 +147,4 @@ class BlazeService:
                                .json(), "**.resource.id")[0]
         search_url = f"{self._blaze_url}/Condition?patient={patient_fhir_id}" \
                      f"&code=http://hl7.org/fhir/sid/icd-10|{icd_10_code}"
-        return requests.get(search_url).json().get("total") > 0
+        return requests.get(search_url, auth=self._credentials).json().get("total") > 0

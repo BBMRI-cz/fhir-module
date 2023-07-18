@@ -23,7 +23,7 @@ class TestCondition(unittest.TestCase):
         condition = Condition("C18.8", "patient-ID")
         self.assertEqual("C18.8", condition.icd_10_code)
         condition = Condition("C188", "patient-ID")
-        self.assertEqual("C188", condition.icd_10_code)
+        self.assertEqual("C18.8", condition.icd_10_code)
 
     def test_to_fhir(self):
         condition = Condition("C18.8", "patient-ID")

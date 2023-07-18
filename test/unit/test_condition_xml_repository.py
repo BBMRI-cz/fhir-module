@@ -38,7 +38,7 @@ class TestConditionXMLRepository(unittest.TestCase):
                             .format(sample=self.sample))
         for condition in ConditionXMLRepository().get_all():
             self.assertIsInstance(condition, Condition)
-            self.assertEqual("C509", condition.icd_10_code)
+            self.assertEqual("C50.9", condition.icd_10_code)
 
     @patchfs
     def test_get_all_from_one_file_with_two_conditions(self, fake_fs):

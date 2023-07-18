@@ -18,8 +18,8 @@ class Condition:
 
     @property
     def icd_10_code(self) -> str:
-        """Get ICD-10 code"""
-        return self._icd_10_code
+        """Get ICD-10 code with period"""
+        return self.__icd_10_code_with_period()
 
     @property
     def patient_id(self) -> str:
