@@ -16,7 +16,7 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
     blaze_url = os.getenv("BLAZE_URL", "http://localhost:8080/fhir")
     logger.info("Starting FHIR_Module...")
-    if is_endpoint_available(endpoint_url=blaze_url, wait_time=60, max_attempts=10):
+    if is_endpoint_available(endpoint_url=blaze_url, wait_time=10, max_attempts=3):
         blaze_service = BlazeService(patient_service=PatientService(SampleDonorXMLFilesRepository()),
                                      condition_service=ConditionService(ConditionXMLRepository()),
                                      blaze_url=blaze_url)
