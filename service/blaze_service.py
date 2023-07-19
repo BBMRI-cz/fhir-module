@@ -34,21 +34,20 @@ class BlazeService:
         """Starts the sync between the repositories and the Blaze store"""
         logger.info("Starting sync with Blaze 🔥!")
         if self.get_num_of_patients() == 0:
-            logger.info("Starting upload of patients...")
             self.initial_upload_of_all_patients()
-            logger.info('Number of patients successfully uploaded: %s',
-                        self.get_num_of_patients())
             self.sync_conditions()
-            logger.info("Sync completed")
         else:
             logger.debug("Patients already present in the FHIR store.")
+        self.__initialize_scheduler()
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+
+    def __initialize_scheduler(self):
         logger.info("Initializing scheduler...")
         schedule.every().week.do(self.sync_patients)
         schedule.every().week.do(self.sync_conditions)
         logger.info("Scheduler initialized.")
-        while True:
-            schedule.run_pending()
-            time.sleep(1)
 
     def initial_upload_of_all_patients(self) -> int:
         """
@@ -56,8 +55,12 @@ class BlazeService:
         patients. This method should be called only once, specifically if there are no patients in the FHIR server.
         :return: status code of the http request
         """
+        logger.info("Starting upload of patients...")
         bundle = self._patient_service.get_all_patients_in_fhir_transaction()
-        return self.__post_bundle(bundle=bundle)
+        status_code = self.__post_bundle(bundle=bundle)
+        logger.info('Number of patients successfully uploaded: %s',
+                    self.get_num_of_patients())
+        return status_code
 
     def __post_bundle(self, bundle: Bundle) -> int:
         """
