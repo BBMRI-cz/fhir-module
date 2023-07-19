@@ -1,7 +1,9 @@
 import logging
 import os
+import time
 
 import requests
+import schedule
 from fhirclient.models.bundle import Bundle
 from glom import glom
 
@@ -27,6 +29,7 @@ class BlazeService:
         self._condition_service = condition_service
         self._blaze_url = blaze_url
         self._credentials = (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))
+
 
     def initial_upload_of_all_patients(self) -> int:
         """
@@ -117,12 +120,12 @@ class BlazeService:
             logger.info("Deleting " + url)
             return requests.delete(url=url).status_code
 
-    def sync_conditions(self) -> int:
+    def sync_conditions(self):
         """
         Syncs Conditions present in the Condition Repository
         :return: Number of conditions uploaded
         """
-        counter = 0
+        logger.info("Starting upload of conditions...")
         condition: Condition
         for condition in self._condition_service.get_all():
             try:
@@ -134,8 +137,6 @@ class BlazeService:
                 continue
             if not patient_has_condition:
                 self.__upload_condition(condition)
-                counter += 1
-        return counter
 
     def __upload_condition(self, condition):
         patient_fhir_id = self.__get_fhir_id_of_donor(condition.patient_id)
@@ -165,3 +166,20 @@ class BlazeService:
         search_url = f"{self._blaze_url}/Condition?patient={patient_fhir_id}" \
                      f"&code=http://hl7.org/fhir/sid/icd-10|{icd_10_code}"
         return requests.get(search_url, auth=self._credentials).json().get("total") > 0
+
+    def sync(self):
+        """Starts the sync between the repositories and the Blaze store"""
+        if self.get_num_of_patients() == 0:
+            logger.info("Starting upload of patients...")
+            self.initial_upload_of_all_patients()
+            logger.info('Number of patients successfully uploaded: %s',
+                        self.get_num_of_patients())
+
+            self.sync_conditions()
+        else:
+            logger.debug("Patients already present in the FHIR store.")
+            schedule.every().week.do(self.sync_patients)
+            schedule.every().week.do(self.sync_conditions())
+        while True:
+            schedule.run_pending()
+            time.sleep(1)

@@ -5,6 +5,7 @@ import os
 import yaml
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+logger = logging.getLogger(__name__)
 
 
 def setup_logger():

@@ -36,6 +36,5 @@ class ConditionXMLRepository(ConditionRepository):
                 except TypeError:
                     logger.info("Parsed string is not a valid ICD-10 code. Skipping...")
                     return
-
         except WrongXMLFormatError:
             return
