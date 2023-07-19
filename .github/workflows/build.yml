@@ -110,7 +110,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          tags: fhir-module:latest
+          tags: ghcr.io/bbmri-cz/fhir-module:latest
           outputs: type=docker,dest=/tmp/fhir-module.tar
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -145,17 +145,14 @@ jobs:
       - name: Create docker network
         run: docker network create system-test
 
-      - name: Run Blaze
-        run: docker run --network=system-test --name blaze -d -e JAVA_TOOL_OPTIONS=-Xmx2g -p 8080:8080 -p 8081:8081 -v blaze-data:/app/data samply/blaze:latest
+      - name: Run sandbox in dev env
+        run: docker compose --profile dev up -d
 
       - name: Wait for Blaze
         run: .github/scripts/wait-for-url.sh  http://localhost:8080/health
 
       - name: Docker Logs
         run: docker logs blaze
-
-      - name: Run FHIR-Module
-        run: docker run -d --network=system-test --name fhir-module -e BLAZE_URL="http://blaze:8080/fhir" -e DIR_PATH="/opt/records" --mount type=bind,source="$(pwd)"/test/xml_data,target=/opt/records fhir-module:latest
 
       - name: Docker Logs
         run: sleep 2 && docker logs fhir-module
