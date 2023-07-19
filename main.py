@@ -9,7 +9,7 @@ from service.blaze_service import BlazeService
 from service.condition_service import ConditionService
 from service.patient_service import PatientService
 from util.custom_logger import setup_logger
-from util.htttp_util import is_endpoint_available
+from util.http_util import is_endpoint_available
 
 if __name__ == "__main__":
     setup_logger()
