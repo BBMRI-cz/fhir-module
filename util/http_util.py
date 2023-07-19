@@ -1,8 +1,12 @@
+import logging
 import time
 
 import requests
 
-from util.custom_logger import logger
+from util.custom_logger import setup_logger
+
+setup_logger()
+logger = logging.getLogger()
 
 
 def is_endpoint_available(endpoint_url, max_attempts=10, wait_time=60) -> bool:
@@ -10,10 +14,11 @@ def is_endpoint_available(endpoint_url, max_attempts=10, wait_time=60) -> bool:
     Check for the availability of a http endpoint
     :param endpoint_url: URL for the endpoint
     :param max_attempts: max number of attempts for connection retries
-    :param wait_time: time in between unsuccessful connection attempts
+    :param wait_time: seconds in between unsuccessful connection attempts
     :return: true if reachable, false otherwise
     """
     attempts = 0
+    logger.info(f"Attempting to reach endpoint: '{endpoint_url}'.")
     while attempts < max_attempts:
         try:
             response = requests.get(endpoint_url)
