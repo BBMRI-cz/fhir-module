@@ -30,6 +30,25 @@ class BlazeService:
         self._blaze_url = blaze_url
         self._credentials = (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))
 
+    def sync(self):
+        """Starts the sync between the repositories and the Blaze store"""
+        logger.info("Starting sync with Blaze 🔥!")
+        if self.get_num_of_patients() == 0:
+            logger.info("Starting upload of patients...")
+            self.initial_upload_of_all_patients()
+            logger.info('Number of patients successfully uploaded: %s',
+                        self.get_num_of_patients())
+            self.sync_conditions()
+            logger.info("Sync completed")
+        else:
+            logger.debug("Patients already present in the FHIR store.")
+        logger.info("Initializing scheduler...")
+        schedule.every().week.do(self.sync_patients)
+        schedule.every().week.do(self.sync_conditions)
+        logger.info("Scheduler initialized.")
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
 
     def initial_upload_of_all_patients(self) -> int:
         """
@@ -123,7 +142,6 @@ class BlazeService:
     def sync_conditions(self):
         """
         Syncs Conditions present in the Condition Repository
-        :return: Number of conditions uploaded
         """
         logger.info("Starting upload of conditions...")
         condition: Condition
@@ -143,8 +161,8 @@ class BlazeService:
         requests.post(url=self._blaze_url + "/Condition",
                       json=condition.to_fhir(subject_id=patient_fhir_id).as_json(),
                       auth=self._credentials)
-        logger.info("Condition " + condition.icd_10_code
-                    + " for patient: " + patient_fhir_id + " uploaded.")
+        logger.debug(f"Condition {condition.icd_10_code} successfully uploaded for patient"
+                     f"with FHIR id: {patient_fhir_id} and org. id: {condition.patient_id}.")
 
     def __get_fhir_id_of_donor(self, patient_id: str) -> str:
         """
@@ -166,20 +184,3 @@ class BlazeService:
         search_url = f"{self._blaze_url}/Condition?patient={patient_fhir_id}" \
                      f"&code=http://hl7.org/fhir/sid/icd-10|{icd_10_code}"
         return requests.get(search_url, auth=self._credentials).json().get("total") > 0
-
-    def sync(self):
-        """Starts the sync between the repositories and the Blaze store"""
-        if self.get_num_of_patients() == 0:
-            logger.info("Starting upload of patients...")
-            self.initial_upload_of_all_patients()
-            logger.info('Number of patients successfully uploaded: %s',
-                        self.get_num_of_patients())
-
-            self.sync_conditions()
-        else:
-            logger.debug("Patients already present in the FHIR store.")
-            schedule.every().week.do(self.sync_patients)
-            schedule.every().week.do(self.sync_conditions())
-        while True:
-            schedule.run_pending()
-            time.sleep(1)
