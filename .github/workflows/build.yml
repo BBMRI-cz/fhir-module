@@ -155,7 +155,7 @@ jobs:
         run: docker logs blaze
 
       - name: Docker Logs
-        run: sleep 2 && docker logs fhir-module
+        run: sleep 20 && docker logs fhir-module
 
       - name: Verify upload succeeded
         run: .github/scripts/check-patient-exists.sh
