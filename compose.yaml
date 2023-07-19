@@ -1,16 +1,22 @@
-name: fhir-integration
 version: "3.9"
 
 services:
   fhir-module:
+    build: .
     container_name: fhir-module
-    image: "ghcr.io/bbmri-cz/fhir-module"
+    profiles:
+      - dev
     networks:
       - fhir-integration
     restart: always
     environment:
       BLAZE_URL: "http://blaze:8080/fhir"
       DIR_PATH: "/opt/records"
+    volumes:
+      - type: bind
+        source: "test/xml_data"
+        target: "/opt/records"
+
 
   blaze:
     container_name: blaze
@@ -25,11 +31,6 @@ services:
       LOG_LEVEL: "debug"
     ports:
       - "8080:8080"
-    volumes:
-      - "blaze-data:/app/data"
-
-volumes:
-  blaze-data:
 
 networks:
   fhir-integration:
