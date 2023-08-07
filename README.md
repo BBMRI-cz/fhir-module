@@ -2,29 +2,58 @@
 
 [![CI build](https://github.com/BBMRI-cz/fhir-module/actions/workflows/build.yml/badge.svg)](https://github.com/BBMRI-cz/Data-Integration-Module/actions/workflows/build.yml) [![codecov](https://codecov.io/gh/BBMRI-cz/fhir-module/branch/master/graph/badge.svg?token=3eklJNhIS5)](https://codecov.io/gh/BBMRI-cz/fhir-module) [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-360/) [![Linter: pylint](https://img.shields.io/badge/Linter-pylint-yellowgreen)](https://github.com/pylint-dev/pylint)
 
-The BBMRI-ERIC FHIR module is a container based application connecting biobanks
+The [BBMRI-ERIC](https://www.bbmri-eric.eu/) FHIR module is a container based application connecting biobanks
 to other IT tools and services in our ecosystem on a local level.
 ## Goal
 
 The goal of this project is to create a highly customizable data integration tool for biobanks that are a
-part of BBMRI-ERIC.
+part of BBMRI-ERIC. This tool should support ETL processes by providing the following functionality:
+
+- Data harmonization to [HL7 FHIR](https://www.hl7.org/fhir/) (under development)
+- Data quality validation (coming soon)
+- Reporting and monitoring (coming soon)
 
 ## State
 
-Supports syncing of patients between a [Blaze FHIR store](https://github.com/samply/blaze) and an XML file repository.
+Supports syncing of patients between a [Blaze FHIR store](https://github.com/samply/blaze) and a repository of XML files
+stored on a regular filesystem.
 Currently, the XML files must have the same structure as this [test file](./test/xml_data/MMCI_1.xml).
+
+## Quick Start
+
+Prerequisites:
+
+- [Docker engine v24.0.0](https://docs.docker.com/engine/release-notes/24.0/#2400)
+- [Docker compose v2.20](https://docs.docker.com/compose/release-notes/#2200)
+
+To spin up an instance of the FHIR module along with [Blaze](https://github.com/samply/blaze) clone the repository and
+run the following command:
+
+```shell
+docker compose --profile dev up -d
+```
+
+## Contributing
+
+Because the FHIR module is an open source software pull requests are of course welcome! For further information please
+read our [contributing guidelines](docs/CONTRIBUTING.md)!
+
+Found a security vulnerability? Please refer to our [security policy](docs/SECURITY.md).
+
+For instructions on how to set up the development environment refer to the
+[corresponding chapter](docs/CONTRIBUTING.md#development-environment).
 
 ## Development
 
-_Instructions on how to contribute to the development._
+## License
 
-### Development environment set up
+Copyright 2023 BBMRI community.
 
-_**Python Interpreter:**_ 3.11
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+License. You may obtain a copy of the License at
 
-[Blaze store as a docker container](https://github.com/samply/blaze#docker)
+http://www.apache.org/licenses/LICENSE-2.0
 
-[BlazeCTL](https://github.com/samply/blazectl): a command line tool for interacting with a Blaze store
-
-[FHIR Test data generator](https://github.com/samply/bbmri-fhir-gen): a command line tool for generating FHIR test data
-according to the [BBMRI.de FHIR profile](https://simplifier.net/bbmri.de).
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "
+AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
+language governing permissions and limitations under the License.
