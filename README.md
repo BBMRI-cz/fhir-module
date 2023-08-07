@@ -1,4 +1,6 @@
-# FHIR module [![CI build](https://github.com/BBMRI-cz/fhir-module/actions/workflows/build.yml/badge.svg)](https://github.com/BBMRI-cz/Data-Integration-Module/actions/workflows/build.yml) [![codecov](https://codecov.io/gh/BBMRI-cz/fhir-module/branch/master/graph/badge.svg?token=3eklJNhIS5)](https://codecov.io/gh/BBMRI-cz/fhir-module) [![linting: pylint](https://img.shields.io/badge/linting-pylint-yellowgreen)](https://github.com/pylint-dev/pylint)
+# FHIR module
+
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-360/) [![CI build](https://github.com/BBMRI-cz/fhir-module/actions/workflows/build.yml/badge.svg)](https://github.com/BBMRI-cz/Data-Integration-Module/actions/workflows/build.yml) [![codecov](https://codecov.io/gh/BBMRI-cz/fhir-module/branch/master/graph/badge.svg?token=3eklJNhIS5)](https://codecov.io/gh/BBMRI-cz/fhir-module) [![Linter: pylint](https://img.shields.io/badge/Linter-pylint-yellowgreen)](https://github.com/pylint-dev/pylint)
 
 ## Goal
 
