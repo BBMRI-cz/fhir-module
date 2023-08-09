@@ -33,14 +33,15 @@ run the following command:
 docker compose --profile dev up -d
 ```
 
+For additional information about deployment, refer to the [Deployment documentation](docs/DEPLOYMENT.md).
 ## Contributing
 
-Because the FHIR module is an open source software pull requests are of course welcome! For further information please
+Because the FHIR module is an open source software pull requests are of course welcome! For further information, please
 read our [contributing guidelines](docs/CONTRIBUTING.md)!
 
 Found a security vulnerability? Please refer to our [security policy](docs/SECURITY.md).
 
-For instructions on how to set up the development environment refer to the
+For instructions on how to set up the development environment, refer to the
 [corresponding chapter](docs/CONTRIBUTING.md#development-environment).
 
 ## Development
