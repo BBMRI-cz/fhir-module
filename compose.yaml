@@ -6,9 +6,10 @@ services:
     container_name: fhir-module
     profiles:
       - dev
+      - prod
     networks:
       - fhir-integration
-    restart: always
+    restart: no
     environment:
       BLAZE_URL: "http://blaze:8080/fhir"
       DIR_PATH: "/opt/records"

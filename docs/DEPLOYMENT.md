@@ -19,7 +19,22 @@ List of prerequisites for running the application on one of the supported operat
 ## Docker deployment
 
 Inside the container, the application runs under a non-root user as an additional security measure.
+For deploying to production,
+configure the application using environment variables (documentation bellow) and run the following command:
 
+```shell
+docker compose --profile prod up -d
+```
+
+This will pull the latest image and start the application. To check the logs run:
+
+```shell
+docker logs fhir-module -f
+```
+
+if connection to the Blaze was successful, you should see the following line:
+
+` Starting sync with Blaze 🔥!`
 ### Environment variables
 
 The FHIR module is configured via environment variables, all of which can be found below. To override the default value,
