@@ -22,6 +22,7 @@ class Sample:
         return self._donor_id
 
     def to_fhir(self):
+        """Return sample representation in FHIR."""
         specimen = Specimen()
         specimen.meta = Meta()
         specimen.meta.profile = ["https://fhir.bbmri.de/StructureDefinition/Specimen"]
@@ -29,7 +30,7 @@ class Sample:
         return specimen
 
     def __create_fhir_identifier(self):
-        """Create fhir identifier"""
+        """Create fhir identifier."""
         fhir_identifier = Identifier()
         fhir_identifier.value = self.identifier
         return [fhir_identifier]
