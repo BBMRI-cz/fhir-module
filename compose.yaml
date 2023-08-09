@@ -9,7 +9,7 @@ services:
       - prod
     networks:
       - fhir-integration
-    restart: no
+    restart: always
     environment:
       BLAZE_URL: "http://blaze:8080/fhir"
       DIR_PATH: "/opt/records"
