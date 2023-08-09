@@ -2,6 +2,7 @@ import unittest
 
 from pyfakefs.fake_filesystem_unittest import patchfs
 
+from model.gender import Gender
 from model.sample_donor import SampleDonor
 from persistence.sample_donor_xml_files_repository import SampleDonorXMLFilesRepository
 
@@ -9,15 +10,16 @@ from persistence.sample_donor_xml_files_repository import SampleDonorXMLFilesRep
 class TestXMLRepo(unittest.TestCase):
     content = '<patient xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' \
               'xmlns="http://www.bbmri.cz/schemas/biobank/data" xsi:noNamespaceSchemaLocation="exportNIS.xsd" ' \
-              'id="9999"></patient>'
+              'id="9999" sex="female"></patient>'
     dir_path = "/mock_dir/"
 
     @patchfs
-    def test_get_all(self, fake_fs):
+    def test_get_all_ok(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content)
         for donor in SampleDonorXMLFilesRepository().get_all():
             self.assertIsInstance(donor, SampleDonor)
             self.assertEqual("9999", donor.identifier)
+            self.assertEqual(Gender.FEMALE, donor.gender)
 
     @patchfs
     def test_get_all_with_one_wrongly_formatted_file(self, fake_fs):

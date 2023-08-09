@@ -79,7 +79,7 @@ class BlazeService:
 
     def get_num_of_patients(self) -> int:
         """
-        Get number of patients available in the Blaze store
+        Get the number of patients available in the Blaze store
         :return: number of patients
         """
         try:
@@ -123,6 +123,7 @@ class BlazeService:
         :param donor: SampleDonor to upload
         :return: Status code of the http request
         """
+        logger.debug("Uploading patient: " + donor.to_fhir().as_json().__str__())
         res = requests.post(url=self._blaze_url + "/Patient",
                             json=donor.to_fhir().as_json(),
                             auth=self._credentials)

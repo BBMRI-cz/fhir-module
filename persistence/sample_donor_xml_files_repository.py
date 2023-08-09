@@ -2,6 +2,7 @@
 import os
 from typing import List
 
+from model.gender import Gender
 from model.sample_donor import SampleDonor
 from persistence.sample_donor_repository import SampleDonorRepository
 from persistence.xml_util import parse_xml_file, WrongXMLFormatError
@@ -21,7 +22,9 @@ class SampleDonorXMLFilesRepository(SampleDonorRepository):
     def __extract_donor_from_xml_file(self, dir_entry: os.DirEntry) -> SampleDonor:
         """Extracts SampleDonor from an XML file"""
         try:
-            donor = SampleDonor(parse_xml_file(dir_entry).get("patient", {}).get("@id", {}))
+            contents = parse_xml_file(dir_entry)
+            donor = SampleDonor(contents.get("patient", {}).get("@id", {}))
+            donor.gender = Gender[contents.get("patient", {}).get("@sex", {}).upper()]
         except WrongXMLFormatError:
             return
         if donor.identifier not in self._ids:
