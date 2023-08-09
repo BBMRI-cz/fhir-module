@@ -15,7 +15,7 @@ if __name__ == "__main__":
     setup_logger()
     logger = logging.getLogger(__name__)
     logger.info("Starting FHIR_Module...")
-    if is_endpoint_available(endpoint_url=BLAZE_URL, wait_time=10, max_attempts=3):
+    if is_endpoint_available(endpoint_url=BLAZE_URL, wait_time=10, max_attempts=5):
         blaze_service = BlazeService(patient_service=PatientService(SampleDonorXMLFilesRepository()),
                                      condition_service=ConditionService(ConditionXMLRepository()),
                                      blaze_url=BLAZE_URL)
