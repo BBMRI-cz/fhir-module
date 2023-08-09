@@ -13,6 +13,8 @@ from persistence.sample_donor_repository import SampleDonorRepository
 from service.blaze_service import BlazeService
 from service.condition_service import ConditionService
 from service.patient_service import PatientService
+from service.sample_service import SampleService
+from test.unit.service.test_sample_service import SampleRepoStub
 
 
 class SampleDonorRepoStub(SampleDonorRepository):
@@ -41,11 +43,14 @@ class TestBlazeStore(unittest.TestCase):
     def run_around_tests(self):
         self.blaze_service = BlazeService(PatientService(SampleDonorRepoStub()),
                                           ConditionService(ConditionRepoStub()),
+                                          SampleService(SampleRepoStub()),
                                           'http://localhost:8080/fhir')
-        yield
+        yield  # run test
         try:
             for donor in SampleDonorRepoStub().get_all():
                 self.blaze_service.delete_patient(donor.identifier)
+            for sample in SampleRepoStub().get_all():
+                self.blaze_service.delete_specimen(sample.identifier)
         except requests.exceptions.ConnectionError:
             logging.info("Could not teardown correctly")
 
@@ -55,7 +60,8 @@ class TestBlazeStore(unittest.TestCase):
     def test_upload_all_patients_when_blaze_unreachable(self):
         self.blaze_service = BlazeService(PatientService(SampleDonorRepoStub()),
                                           blaze_url='http://localhost:44/wrong',
-                                          condition_service=ConditionService(ConditionRepoStub()))
+                                          condition_service=ConditionService(ConditionRepoStub()),
+                                          sample_service=SampleService(SampleRepoStub()))
         self.assertEqual(404, self.blaze_service.initial_upload_of_all_patients())
 
     def test_is_present_in_blaze(self):
@@ -70,7 +76,8 @@ class TestBlazeStore(unittest.TestCase):
         donor_repo.add(SampleDonor("uniqueNewPatient5"))
         self.blaze_service = BlazeService(PatientService(donor_repo),
                                           blaze_url='http://localhost:8080/fhir',
-                                          condition_service=ConditionService(ConditionRepoStub()))
+                                          condition_service=ConditionService(ConditionRepoStub()),
+                                          sample_service=SampleService(SampleRepoStub()))
         self.blaze_service.sync_patients()
         self.assertEqual(num_of_patients_before_sync + 1, self.blaze_service.get_num_of_patients())
 
@@ -94,7 +101,8 @@ class TestBlazeStore(unittest.TestCase):
         condition_repo.add(Condition(patient_id="fakeId", icd_10_code="C50.6"))
         self.blaze_service = BlazeService(PatientService(SampleDonorRepoStub()),
                                           blaze_url='http://localhost:8080/fhir',
-                                          condition_service=ConditionService(condition_repo))
+                                          condition_service=ConditionService(condition_repo),
+                                          sample_service=SampleService(SampleRepoStub()))
         self.blaze_service.sync_conditions()
         self.assertTrue(self.blaze_service.patient_has_condition("fakeId", "C50.6"))
 
@@ -107,6 +115,10 @@ class TestBlazeStore(unittest.TestCase):
     def test_delete_all_patients(self):
         for donor in SampleDonorRepoStub().get_all():
             self.blaze_service.delete_patient(donor.identifier)
+
+    def test_sync_samples_ok(self):
+        self.blaze_service.sync_samples()
+        self.assertEqual(2, self.blaze_service.get_num_of_specimens())
 
 
 if __name__ == '__main__':

@@ -9,9 +9,11 @@ from glom import glom
 
 from exception.patient_not_found import PatientNotFoundError
 from model.condition import Condition
+from model.sample import Sample
 from model.sample_donor import SampleDonor
 from service.condition_service import ConditionService
 from service.patient_service import PatientService
+from service.sample_service import SampleService
 from util.custom_logger import setup_logger
 
 setup_logger()
@@ -19,7 +21,8 @@ logger = logging.getLogger()
 
 
 class BlazeService:
-    def __init__(self, patient_service: PatientService, condition_service: ConditionService, blaze_url: str):
+    def __init__(self, patient_service: PatientService, condition_service: ConditionService,
+                 sample_service: SampleService, blaze_url: str):
         """
         Class for interacting with a Blaze Store FHIR server
         :param patient_service:
@@ -27,6 +30,7 @@ class BlazeService:
         """
         self._patient_service = patient_service
         self._condition_service = condition_service
+        self._sample_service = sample_service
         self._blaze_url = blaze_url
         self._credentials = (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))
 
@@ -188,3 +192,36 @@ class BlazeService:
         search_url = f"{self._blaze_url}/Condition?patient={patient_fhir_id}" \
                      f"&code=http://hl7.org/fhir/sid/icd-10|{icd_10_code}"
         return requests.get(search_url, auth=self._credentials).json().get("total") > 0
+
+    def sync_samples(self):
+        """Syncs Samples present in the repository with the Blaze store."""
+        sample: Sample
+        for sample in self._sample_service.get_all():
+            requests.post(url=self._blaze_url + "/Specimen",
+                          json=sample.to_fhir().as_json(),
+                          auth=self._credentials)
+
+    def get_num_of_specimens(self) -> int:
+        """
+        Get the number of specimens available in the Blaze store
+        :return: number of specimens
+        """
+        try:
+            return requests.get(url=self._blaze_url + "/Specimen?_summary=count",
+                                auth=self._credentials).json().get("total")
+        except requests.exceptions.ConnectionError:
+            logger.error("Cannot connect to blaze!")
+            return 0
+
+    def delete_specimen(self, identifier: str) -> int:
+        """
+        Deletes a Specimen in the Blaze store
+        :param identifier: of the Specimen
+        :return: Status code of the http request
+        """
+        list_of_full_urls = glom(requests.get(url=self._blaze_url + "/Specimen?identifier=" + identifier,
+                                              auth=self._credentials)
+                                 .json(), "**.fullUrl")
+        for url in list_of_full_urls:
+            logger.info("Deleting " + url)
+            return requests.delete(url=url).status_code
