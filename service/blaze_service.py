@@ -40,6 +40,7 @@ class BlazeService:
         if self.get_num_of_patients() == 0:
             self.initial_upload_of_all_patients()
             self.sync_conditions()
+            self.sync_samples()
         else:
             logger.debug("Patients already present in the FHIR store.")
         self.__initialize_scheduler()
@@ -51,6 +52,7 @@ class BlazeService:
         logger.info("Initializing scheduler...")
         schedule.every().week.do(self.sync_patients)
         schedule.every().week.do(self.sync_conditions)
+        schedule.every().week.do(self.sync_samples)
         logger.info("Scheduler initialized.")
 
     def initial_upload_of_all_patients(self) -> int:
