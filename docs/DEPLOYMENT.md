@@ -20,7 +20,8 @@ List of prerequisites for running the application on one of the supported operat
 
 Inside the container, the application runs under a non-root user as an additional security measure.
 For deploying to production,
-configure the application using environment variables (documentation bellow) and run the following command:
+configure the application using environment variables (documentation bellow),
+mount the directory containing patient records/data and run the following command:
 
 ```shell
 docker compose --profile prod up -d
