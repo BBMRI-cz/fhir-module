@@ -1,5 +1,6 @@
 import unittest
 
+import pytest
 from pyfakefs.fake_filesystem_unittest import patchfs
 
 from model.condition import Condition
@@ -32,11 +33,16 @@ class TestConditionXMLRepository(unittest.TestCase):
 
     dir_path = "/mock_dir/"
 
+    @pytest.fixture(autouse=True)
+    def run_around_tests(self):
+        self.condition_repository = ConditionXMLRepository(self.dir_path)
+        yield  # run test
+
     @patchfs
     def test_get_all_from_one_file_with_one_condition(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample))
-        for condition in ConditionXMLRepository().get_all():
+        for condition in self.condition_repository.get_all():
             self.assertIsInstance(condition, Condition)
             self.assertEqual("C50.9", condition.icd_10_code)
 
@@ -44,7 +50,7 @@ class TestConditionXMLRepository(unittest.TestCase):
     def test_get_all_from_one_file_with_two_conditions(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.samples))
-        conditions = list(ConditionXMLRepository().get_all())
+        conditions = list(self.condition_repository.get_all())
         self.assertEqual(2, len(conditions))
 
     @patchfs
@@ -53,7 +59,7 @@ class TestConditionXMLRepository(unittest.TestCase):
                             .format(sample=self.samples))
         fake_fs.create_file(self.dir_path + "mock_file2.xml", contents=self.content
                             .format(sample=self.sample))
-        conditions = list(ConditionXMLRepository().get_all())
+        conditions = list(self.condition_repository.get_all())
         self.assertEqual(3, len(conditions))
 
     @patchfs
@@ -62,7 +68,7 @@ class TestConditionXMLRepository(unittest.TestCase):
                             .format(sample=self.samples))
         fake_fs.create_file(self.dir_path + "mock_file2.xml", contents=self.content
                             .format(sample=self.wrong_diagnosis))
-        conditions = list(ConditionXMLRepository().get_all())
+        conditions = list(self.condition_repository.get_all())
         self.assertEqual(2, len(conditions))
 
 

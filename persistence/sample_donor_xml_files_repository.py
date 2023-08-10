@@ -11,8 +11,8 @@ from persistence.xml_util import parse_xml_file, WrongXMLFormatError
 class SampleDonorXMLFilesRepository(SampleDonorRepository):
     """Class for handling sample donors stored in XML files"""
 
-    def __init__(self):
-        self._dir_path = os.getenv("DIR_PATH", "/mock_dir/")
+    def __init__(self, records_path: str):
+        self._dir_path = records_path
         self._ids: set = set()
 
     def get_all(self) -> List[SampleDonor]:

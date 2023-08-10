@@ -16,8 +16,8 @@ logger = logging.getLogger()
 class SampleXMLRepository(SampleRepository):
     """Class for handling sample persistence in XML files."""
 
-    def __init__(self):
-        self._dir_path = os.getenv("DIR_PATH", "/mock_dir/")
+    def __init__(self, records_path: str):
+        self._dir_path = records_path
 
     def get_all(self) -> List[Sample]:
         for dir_entry in os.scandir(self._dir_path):
