@@ -33,6 +33,13 @@ according to the [BBMRI.de FHIR profile](https://simplifier.net/bbmri.de).
 Docker images are built continuously as part of the CI pipeline. However, for building your own test images simply
 run: `docker build . -t ghcr.io/bbmri-cz/fhir-module:local` in the directory containing the `Dockerfile`.
 
+#### Integration tests
+
+To run the integration tests, you need a running instance of the Blaze store:
+
+```shell
+docker run --name blaze -d -e JAVA_TOOL_OPTIONS=-Xmx2g -p 8080:8080 samply/blaze:latest
+```
 ### Commit messages
 
 For git commit messages,
