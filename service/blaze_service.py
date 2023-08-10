@@ -200,9 +200,10 @@ class BlazeService:
         logger.info("Starting upload of samples...")
         sample: Sample
         for sample in self._sample_service.get_all():
-            requests.post(url=self._blaze_url + "/Specimen",
-                          json=sample.to_fhir().as_json(),
-                          auth=self._credentials)
+            if not self.is_specimen_present_in_blaze(sample.identifier):
+                requests.post(url=self._blaze_url + "/Specimen",
+                              json=sample.to_fhir().as_json(),
+                              auth=self._credentials)
 
     def get_num_of_specimens(self) -> int:
         """
@@ -228,3 +229,18 @@ class BlazeService:
         for url in list_of_full_urls:
             logger.info("Deleting " + url)
             return requests.delete(url=url).status_code
+
+    def is_specimen_present_in_blaze(self, identifier: str) -> bool:
+        """
+        Checks if a specimen is present in a blaze store
+        :param identifier: of the Specimen
+        :return: true if present
+        """
+        try:
+            response = (requests.get(url=self._blaze_url + "/Specimen?identifier=" + identifier + "&_summary=count",
+                                     auth=self._credentials)
+                        .json()
+                        .get("total"))
+            return response > 0
+        except TypeError:
+            return False

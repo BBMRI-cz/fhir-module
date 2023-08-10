@@ -120,6 +120,12 @@ class TestBlazeStore(unittest.TestCase):
         self.blaze_service.sync_samples()
         self.assertEqual(2, self.blaze_service.get_num_of_specimens())
 
+    def test_sync_same_samples_twice_no_duplicates(self):
+        self.blaze_service.sync_samples()
+        self.assertEqual(2, self.blaze_service.get_num_of_specimens())
+        self.blaze_service.sync_samples()
+        self.assertEqual(2, self.blaze_service.get_num_of_specimens())
+
 
 if __name__ == '__main__':
     unittest.main()

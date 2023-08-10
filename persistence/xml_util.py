@@ -18,5 +18,5 @@ def parse_xml_file(dir_entry: os.DirEntry) -> OrderedDict[str, Any]:
 
 
 class WrongXMLFormatError(Exception):
-    """Raised when the XML file being read has wrong format"""
+    """Raised when the XML file being read has a wrong format"""
     pass
