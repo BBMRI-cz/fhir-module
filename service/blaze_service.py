@@ -197,6 +197,7 @@ class BlazeService:
 
     def sync_samples(self):
         """Syncs Samples present in the repository with the Blaze store."""
+        logger.info("Starting upload of samples...")
         sample: Sample
         for sample in self._sample_service.get_all():
             requests.post(url=self._blaze_url + "/Specimen",

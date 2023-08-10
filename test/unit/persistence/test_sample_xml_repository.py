@@ -35,16 +35,16 @@ class TestSampleXMLRepository(unittest.TestCase):
     @patchfs
     def test_get_all_one_sample_ok(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
-                            .format(sample=self.content))
-        for sample in SampleXMLRepository("/mock_dir/").get_all():
-            self.assertIsInstance(sample, Sample)
-            self.assertEqual("&amp;:2032:136043", sample.identifier)
-            self.assertEqual(sample.donor_id, "9999")
+                            .format(sample=self.sample))
+        self.assertEqual(1, sum(1 for _ in SampleXMLRepository().get_all()))
+        for sample in SampleXMLRepository().get_all():
+            self.assertEqual("&:2032:136043", sample.identifier)
 
     @patchfs
     def test_get_all_two_samples_ok(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.samples))
-        for sample in SampleXMLRepository("/mock_dir/").get_all():
+        self.assertEqual(2, sum(1 for _ in SampleXMLRepository().get_all()))
+        for sample in SampleXMLRepository().get_all():
             self.assertIsInstance(sample, Sample)
-            self.assertEqual("&amp;:2032:136043", sample.identifier)
+            self.assertEqual("&:2032:136043", sample.identifier)

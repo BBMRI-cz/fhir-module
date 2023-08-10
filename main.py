@@ -20,7 +20,7 @@ if __name__ == "__main__":
     if is_endpoint_available(endpoint_url=BLAZE_URL, wait_time=10, max_attempts=5):
         blaze_service = BlazeService(patient_service=PatientService(SampleDonorXMLFilesRepository()),
                                      condition_service=ConditionService(ConditionXMLRepository()),
-                                     sample_service=SampleService(SampleXMLRepository("/opt/records")),
+                                     sample_service=SampleService(SampleXMLRepository()),
                                      blaze_url=BLAZE_URL)
         blaze_service.sync()
     else:
