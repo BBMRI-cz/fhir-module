@@ -2,7 +2,7 @@ import logging
 import os
 from typing import List
 
-from glom import glom
+from glom import glom, PathAccessError
 
 from model.sample import Sample
 from persistence.sample_repository import SampleRepository
@@ -31,8 +31,8 @@ class SampleXMLRepository(SampleRepository):
         try:
             for xml_sample_id in glom(file_content, self._sample_parsing_map.get("id")):
                 logger.debug(f"Found a specimen with ID: {xml_sample_id}")
-                sample = Sample(xml_sample_id, file_content.get("patient", {}).get("@id", {}))
+                sample = Sample(xml_sample_id, glom(file_content, self._sample_parsing_map.get("donor_id")))
                 yield sample
-        except WrongXMLFormatError:
+        except (WrongXMLFormatError, PathAccessError, TypeError):
             logger.warning("Error reading XML file.")
             return

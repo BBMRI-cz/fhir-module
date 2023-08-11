@@ -56,3 +56,17 @@ class TestSampleXMLRepository(unittest.TestCase):
         for sample in self.sample_repository.get_all():
             self.assertIsInstance(sample, Sample)
             self.assertEqual("&:2032:136043", sample.identifier)
+
+    @patchfs
+    def test_with_wrong_parsing_map(self, fake_fs):
+        wrong_map = {
+            "id": ".",
+            "donor_id": "wrong_string"
+        }
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path, sample_parsing_map=wrong_map)
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.samples))
+        self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))
+        wrong_map = {}
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path, sample_parsing_map=wrong_map)
+        self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))

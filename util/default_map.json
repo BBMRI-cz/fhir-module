@@ -1,5 +1,6 @@
 {
   "sample_map": {
-    "id": "**.@sampleId"
+    "id": "**.@sampleId",
+    "donor_id": "patient.@id"
   }
 }
