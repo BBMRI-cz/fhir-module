@@ -26,13 +26,10 @@ class SampleXMLRepository(SampleRepository):
     def __extract_sample_from_xml_file(self, dir_entry: os.DirEntry) -> Sample:
         """Extracts Sample from an XML file"""
         file_content = parse_xml_file(dir_entry)
-        logger.debug(file_content)
-        logger.debug("Got here.")
         try:
             for xml_sample_id in glom(file_content, "**.@sampleId"):
-                logger.debug(str(xml_sample_id))
+                logger.debug(f"Found a specimen with ID: {xml_sample_id}")
                 sample = Sample(xml_sample_id, file_content.get("patient", {}).get("@id", {}))
-                logger.debug(sample.identifier)
                 yield sample
         except WrongXMLFormatError:
             logger.warning("Error reading XML file.")
