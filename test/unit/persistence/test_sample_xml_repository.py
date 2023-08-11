@@ -5,6 +5,7 @@ from pyfakefs.fake_filesystem_unittest import patchfs
 
 from model.sample import Sample
 from persistence.sample_xml_repository import SampleXMLRepository
+from util.config import PARSING_MAP
 
 
 class TestSampleXMLRepository(unittest.TestCase):
@@ -35,7 +36,8 @@ class TestSampleXMLRepository(unittest.TestCase):
 
     @pytest.fixture(autouse=True)
     def run_around_tests(self):
-        self.sample_repository = SampleXMLRepository(self.dir_path)
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'])
         yield  # run test
 
     @patchfs
