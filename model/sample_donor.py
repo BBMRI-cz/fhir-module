@@ -30,7 +30,7 @@ class SampleDonor:
     def gender(self, gender: Gender):
         """Ser administrative gender"""
         if not isinstance(gender, Gender):
-            raise TypeError("Gender must be from a list of values: " + Gender.list())
+            raise TypeError("Gender must be from a list of values: " + str(Gender.list()))
         self._gender = gender
 
     def to_fhir(self) -> Patient:

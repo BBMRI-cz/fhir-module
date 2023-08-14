@@ -12,4 +12,4 @@ class Gender(Enum):
     @classmethod
     def list(cls):
         """List all possible gender values"""
-        return list(map(lambda c: c.value, cls))
+        return list(map(lambda c: c.name, cls))

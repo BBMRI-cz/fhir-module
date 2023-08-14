@@ -6,6 +6,7 @@ from pyfakefs.fake_filesystem_unittest import patchfs
 from model.gender import Gender
 from model.sample_donor import SampleDonor
 from persistence.sample_donor_xml_files_repository import SampleDonorXMLFilesRepository
+from util.config import PARSING_MAP
 
 
 class TestDonorXMLRepo(unittest.TestCase):
@@ -16,7 +17,8 @@ class TestDonorXMLRepo(unittest.TestCase):
 
     @pytest.fixture(autouse=True)
     def run_around_tests(self):
-        self.donor_repository = SampleDonorXMLFilesRepository(self.dir_path)
+        self.donor_repository = SampleDonorXMLFilesRepository(records_path=self.dir_path,
+                                                              donor_parsing_map=PARSING_MAP['donor_map'])
         yield  # run test
     @patchfs
     def test_get_all_ok(self, fake_fs):
