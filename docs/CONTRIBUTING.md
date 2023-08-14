@@ -13,12 +13,13 @@ Instructions on how to contribute code to this repository in the best way possib
 
 ### Development environment
 
-How to set up your development environment.
+How to set up your development environment. For ease of use, consider using
 
 #### Recommended tools
 
 - UNIX-based operating system
 - Python Interpreter v3.11
+- Pip
 - [Pycharm IDE](https://www.jetbrains.com/pycharm/)
 - [Docker engine v24.0.0](https://docs.docker.com/engine/release-notes/24.0/#2400)
 - [Docker compose v2.20](https://docs.docker.com/compose/release-notes/#2200)
@@ -28,17 +29,31 @@ How to set up your development environment.
   data
 according to the [BBMRI.de FHIR profile](https://simplifier.net/bbmri.de).
 
+#### Installing required packages
+
+To install python packages using your system interpreter:
+
+```shell
+make setup
+```
 #### Docker image
 
 Docker images are built continuously as part of the CI pipeline. However, for building your own test images simply
 run: `docker build . -t ghcr.io/bbmri-cz/fhir-module:local` in the directory containing the `Dockerfile`.
 
-#### Integration tests
+#### Unit tests
 
-To run the integration tests, you need a running instance of the Blaze store:
+To run unit tests:
 
 ```shell
-docker run --name blaze -d -e JAVA_TOOL_OPTIONS=-Xmx2g -p 8080:8080 samply/blaze:latest
+make test
+```
+#### Integration tests
+
+To run the integration tests:
+
+```shell
+make validate
 ```
 ### Commit messages
 
