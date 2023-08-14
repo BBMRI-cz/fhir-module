@@ -1,6 +1,6 @@
 PYTHON_INTERPRETER = python3
 PYTEST_COMMAND = $(PYTHON_INTERPRETER) -m pytest
-PYTEST_ARGS = -v --cov-report=xml
+PYTEST_ARGS = -v --cov-report=xml --cov=./
 
 .PHONY: test setup clean validate
 setup: requirements.txt
