@@ -5,6 +5,7 @@ from pyfakefs.fake_filesystem_unittest import patchfs
 
 from model.condition import Condition
 from persistence.condition_xml_repository import ConditionXMLRepository
+from util.config import PARSING_MAP
 
 
 class TestConditionXMLRepository(unittest.TestCase):
@@ -35,7 +36,8 @@ class TestConditionXMLRepository(unittest.TestCase):
 
     @pytest.fixture(autouse=True)
     def run_around_tests(self):
-        self.condition_repository = ConditionXMLRepository(self.dir_path)
+        self.condition_repository = ConditionXMLRepository(records_path=self.dir_path,
+                                                           condition_parsing_map=PARSING_MAP['condition_map'])
         yield  # run test
 
     @patchfs
