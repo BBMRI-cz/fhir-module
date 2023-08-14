@@ -12,7 +12,7 @@ logger = logging.getLogger()
 
 BLAZE_URL = os.getenv("BLAZE_URL", "http://localhost:8080/fhir")
 RECORDS_DIR_PATH = os.getenv("DIR_PATH", "/mock_dir/")
-with open("/Users/radovan.tomasik/Repositories/fhir-module/util/default_map.json") as json_file:
+with open("/opt/fhir-module/default_map.json") as json_file:
     try:
         PARSING_MAP = json.load(json_file)
     except JSONDecodeError:

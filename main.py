@@ -9,7 +9,7 @@ from service.blaze_service import BlazeService
 from service.condition_service import ConditionService
 from service.patient_service import PatientService
 from service.sample_service import SampleService
-from util.config import BLAZE_URL, RECORDS_DIR_PATH
+from util.config import BLAZE_URL, RECORDS_DIR_PATH, PARSING_MAP
 from util.custom_logger import setup_logger
 from util.http_util import is_endpoint_available
 
@@ -20,9 +20,11 @@ if __name__ == "__main__":
     if is_endpoint_available(endpoint_url=BLAZE_URL, wait_time=10, max_attempts=5):
         blaze_service = BlazeService(patient_service=PatientService(SampleDonorXMLFilesRepository(RECORDS_DIR_PATH)),
                                      condition_service=ConditionService(ConditionXMLRepository(RECORDS_DIR_PATH)),
-                                     sample_service=SampleService(SampleXMLRepository(RECORDS_DIR_PATH)),
+                                     sample_service=SampleService(SampleXMLRepository(records_path=RECORDS_DIR_PATH,
+                                                                                      sample_parsing_map=
+                                                                                      PARSING_MAP['sample_map'])),
                                      blaze_url=BLAZE_URL)
         blaze_service.sync()
     else:
-        logger.error("Exiting FHIR_Module")
+        logger.error("Exiting FHIR_Module.")
         sys.exit()

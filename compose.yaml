@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   fhir-module:
-    image: ghcr.io/bbmri-cz/fhir-module:latest
+    image: ghcr.io/bbmri-cz/fhir-module:local
     container_name: fhir-module
     profiles:
       - dev
@@ -17,6 +17,7 @@ services:
       - type: bind
         source: "test/xml_data"
         target: "/opt/records"
+      - ${PWD}/util/default_map.json:/opt/fhir-module/default_map.json
 
 
   blaze:
