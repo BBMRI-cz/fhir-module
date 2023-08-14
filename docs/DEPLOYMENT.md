@@ -41,6 +41,7 @@ if connection to the Blaze was successful, you should see the following line:
 The FHIR module is configured via environment variables, all of which can be found below. To override the default value,
 simply specify them in `compose.yaml` in the environment section.
 
-| Variable name | Default value              | Description                                              |
-|---------------|----------------------------|----------------------------------------------------------|
-| BLAZE_URL     | http://localhost:8080/fhir | Base url of the FHIR server for sync. No trailing slash. |
+| Variable name    | Default value                     | Description                                                                                       |
+|------------------|-----------------------------------|---------------------------------------------------------------------------------------------------|
+| BLAZE_URL        | http://localhost:8080/fhir        | Base url of the FHIR server for sync. No trailing slash.                                          |
+| PARSING_MAP_PATH | /opt/fhir-module/default_map.json | Path to a JSON file containing object parsing mappings. Example [here](../util/default_map.json). |
