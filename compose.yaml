@@ -17,7 +17,6 @@ services:
       - type: bind
         source: "test/xml_data"
         target: "/opt/records"
-      - ${PWD}/util/default_map.json:/opt/fhir-module/default_map.json
 
 
   blaze:
