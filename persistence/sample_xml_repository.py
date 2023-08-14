@@ -2,7 +2,7 @@ import logging
 import os
 from typing import List
 
-from glom import glom
+from glom import glom, PathAccessError
 
 from model.sample import Sample
 from persistence.sample_repository import SampleRepository
@@ -16,8 +16,10 @@ logger = logging.getLogger()
 class SampleXMLRepository(SampleRepository):
     """Class for handling sample persistence in XML files."""
 
-    def __init__(self):
-        self._dir_path = os.getenv("DIR_PATH", "/mock_dir/")
+    def __init__(self, records_path: str, sample_parsing_map: dict):
+        self._dir_path = records_path
+        self._sample_parsing_map = sample_parsing_map
+        logger.debug(f"Loaded the following sample parsing map {sample_parsing_map}")
 
     def get_all(self) -> List[Sample]:
         for dir_entry in os.scandir(self._dir_path):
@@ -26,14 +28,11 @@ class SampleXMLRepository(SampleRepository):
     def __extract_sample_from_xml_file(self, dir_entry: os.DirEntry) -> Sample:
         """Extracts Sample from an XML file"""
         file_content = parse_xml_file(dir_entry)
-        logger.debug(file_content)
-        logger.debug("Got here.")
         try:
-            for xml_sample_id in glom(file_content, "**.@sampleId"):
-                logger.debug(str(xml_sample_id))
-                sample = Sample(xml_sample_id, file_content.get("patient", {}).get("@id", {}))
-                logger.debug(sample.identifier)
+            for xml_sample_id in glom(file_content, self._sample_parsing_map.get("id")):
+                logger.debug(f"Found a specimen with ID: {xml_sample_id}")
+                sample = Sample(xml_sample_id, glom(file_content, self._sample_parsing_map.get("donor_id")))
                 yield sample
-        except WrongXMLFormatError:
+        except (WrongXMLFormatError, PathAccessError, TypeError):
             logger.warning("Error reading XML file.")
             return

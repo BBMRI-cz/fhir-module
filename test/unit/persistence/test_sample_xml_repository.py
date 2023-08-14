@@ -1,9 +1,11 @@
 import unittest
 
+import pytest
 from pyfakefs.fake_filesystem_unittest import patchfs
 
 from model.sample import Sample
 from persistence.sample_xml_repository import SampleXMLRepository
+from util.config import PARSING_MAP
 
 
 class TestSampleXMLRepository(unittest.TestCase):
@@ -32,19 +34,39 @@ class TestSampleXMLRepository(unittest.TestCase):
 
     dir_path = "/mock_dir/"
 
+    @pytest.fixture(autouse=True)
+    def run_around_tests(self):
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'])
+        yield  # run test
+
     @patchfs
     def test_get_all_one_sample_ok(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample))
-        self.assertEqual(1, sum(1 for _ in SampleXMLRepository().get_all()))
-        for sample in SampleXMLRepository().get_all():
+        self.assertEqual(1, sum(1 for _ in self.sample_repository.get_all()))
+        for sample in self.sample_repository.get_all():
             self.assertEqual("&:2032:136043", sample.identifier)
 
     @patchfs
     def test_get_all_two_samples_ok(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.samples))
-        self.assertEqual(2, sum(1 for _ in SampleXMLRepository().get_all()))
-        for sample in SampleXMLRepository().get_all():
+        self.assertEqual(2, sum(1 for _ in self.sample_repository.get_all()))
+        for sample in self.sample_repository.get_all():
             self.assertIsInstance(sample, Sample)
             self.assertEqual("&:2032:136043", sample.identifier)
+
+    @patchfs
+    def test_with_wrong_parsing_map(self, fake_fs):
+        wrong_map = {
+            "id": ".",
+            "donor_id": "wrong_string"
+        }
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path, sample_parsing_map=wrong_map)
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.samples))
+        self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))
+        wrong_map = {}
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path, sample_parsing_map=wrong_map)
+        self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))

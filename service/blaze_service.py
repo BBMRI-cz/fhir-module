@@ -201,6 +201,7 @@ class BlazeService:
         sample: Sample
         for sample in self._sample_service.get_all():
             if not self.is_specimen_present_in_blaze(sample.identifier):
+                logger.debug(f"Specimen with org. ID: {sample.identifier} is not present in Blaze. Uploading...")
                 requests.post(url=self._blaze_url + "/Specimen",
                               json=sample.to_fhir().as_json(),
                               auth=self._credentials)

@@ -17,8 +17,10 @@ logger = logging.getLogger()
 class ConditionXMLRepository(ConditionRepository):
     """Class for handling condition persistence in XML files"""
 
-    def __init__(self):
-        self._dir_path = os.getenv("DIR_PATH", "/mock_dir/")
+    def __init__(self, records_path: str, condition_parsing_map: dict):
+        self._dir_path = records_path
+        self._sample_parsing_map = condition_parsing_map
+        logger.debug(f"Loaded the following condition parsing map {condition_parsing_map}")
 
     def get_all(self) -> List[Condition]:
         for dir_entry in os.scandir(self._dir_path):
@@ -28,9 +30,9 @@ class ConditionXMLRepository(ConditionRepository):
         """Extracts Condition from an XML file"""
         file_content = parse_xml_file(dir_entry)
         try:
-            for diagnosis in glom(file_content, '**.diagnosis'):
+            for diagnosis in glom(file_content, self._sample_parsing_map.get("icd-10_code")):
                 try:
-                    condition = Condition(patient_id=glom(file_content, 'patient.@id'),
+                    condition = Condition(patient_id=glom(file_content, self._sample_parsing_map.get("patient_id")),
                                           icd_10_code=diagnosis)
                     yield condition
                 except TypeError:

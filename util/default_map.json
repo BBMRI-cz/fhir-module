@@ -1,0 +1,14 @@
+{
+  "donor_map": {
+    "id": "patient.@id",
+    "gender": "patient.@sex"
+  },
+  "sample_map": {
+    "id": "**.@sampleId",
+    "donor_id": "patient.@id"
+  },
+  "condition_map": {
+    "icd-10_code": "**.diagnosis",
+    "patient_id": "patient.@id"
+  }
+}

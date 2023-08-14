@@ -21,6 +21,8 @@ Currently, the XML files must have the same structure as this [test file](./test
 
 ## Quick Start
 
+### Docker
+
 Prerequisites:
 
 - [Docker engine v24.0.0](https://docs.docker.com/engine/release-notes/24.0/#2400)
@@ -32,7 +34,6 @@ run the following command:
 ```shell
 docker compose --profile dev up -d
 ```
-
 For additional information about deployment, refer to the [Deployment documentation](docs/DEPLOYMENT.md).
 ## Contributing
 
@@ -44,7 +45,6 @@ Found a security vulnerability? Please refer to our [security policy](docs/SECUR
 For instructions on how to set up the development environment, refer to the
 [corresponding chapter](docs/CONTRIBUTING.md#development-environment).
 
-## Development
 
 ## License
 
