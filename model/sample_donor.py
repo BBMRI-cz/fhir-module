@@ -12,7 +12,7 @@ from model.gender import Gender
 class SampleDonor:
     """Class representing a sample donor/patient"""
 
-    def __init__(self, identifier: str):
+    def __init__(self, identifier: str, gender: Gender = None, birth_date: datetime = None):
         if not isinstance(identifier, str):
             raise TypeError("Identifier must be string")
         self._identifier = identifier
@@ -30,12 +30,12 @@ class SampleDonor:
         return self._gender
 
     @property
-    def date_of_birth(self) -> str:
-        """Date of birth. Coding ISO8601"""
+    def date_of_birth(self) -> datetime:
+        """Date of birth"""
         if self._date_of_birth is not None:
-            return self._date_of_birth.isoformat()
+            return self._date_of_birth
         else:
-            return ""
+            return None
 
     @gender.setter
     def gender(self, gender: Gender):

@@ -48,18 +48,18 @@ class TestSampleDonor(unittest.TestCase):
     def test_assign_birth_date_full_date_ok(self):
         donor = SampleDonor("unique_org_id")
         donor.date_of_birth = datetime.datetime(year=2022, month=10, day=20)
-        self.assertEqual("2022-10-20T00:00:00", donor.date_of_birth)
+        self.assertEqual("2022-10-20T00:00:00", donor.date_of_birth.isoformat())
 
     def test_assign_birth_date_from_string_no_day_ok(self):
         donor = SampleDonor("unique_org_id")
         donor.date_of_birth = datetime.datetime.strptime("2022-10", '%Y-%m')
-        self.assertEqual("2022-10-01T00:00:00", donor.date_of_birth)
-        self.assertEqual("2022-10-01T00:00:00", donor.to_fhir().birthDate.date)
+        self.assertEqual("2022-10-01T00:00:00", donor.date_of_birth.isoformat())
+        self.assertEqual("2022-10-01T00:00:00", donor.to_fhir().birthDate.date.isoformat())
 
     def test_assign_birth_date_from_string_just_year_ok(self):
         donor = SampleDonor("unique_org_id")
         donor.date_of_birth = datetime.datetime.strptime("2022", '%Y')
-        self.assertEqual("2022-01-01T00:00:00", donor.date_of_birth)
+        self.assertEqual("2022-01-01T00:00:00", donor.date_of_birth.isoformat())
 
 
 if __name__ == '__main__':

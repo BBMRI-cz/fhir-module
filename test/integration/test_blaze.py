@@ -1,3 +1,4 @@
+import datetime
 import logging
 import unittest
 from typing import List
@@ -7,6 +8,7 @@ import requests
 
 from exception.patient_not_found import PatientNotFoundError
 from model.condition import Condition
+from model.gender import Gender
 from model.sample_donor import SampleDonor
 from persistence.condition_repository import ConditionRepository
 from persistence.sample_donor_repository import SampleDonorRepository
@@ -18,7 +20,12 @@ from test.unit.service.test_sample_service import SampleRepoStub
 
 
 class SampleDonorRepoStub(SampleDonorRepository):
-    donors = [SampleDonor("newId"), SampleDonor("fakeId")]
+    donors = [SampleDonor(identifier="newId",
+                          gender=Gender.FEMALE,
+                          birth_date=datetime.datetime.now()),
+              SampleDonor(identifier="fakeId",
+                          gender=Gender.FEMALE,
+                          birth_date=datetime.datetime.now())]
 
     def get_all(self) -> List[SampleDonor]:
         return self.donors

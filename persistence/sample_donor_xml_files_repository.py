@@ -1,6 +1,7 @@
 """Module for handling sample donor persistence in XML files"""
 import logging
 import os
+from datetime import datetime
 from typing import List
 
 from glom import glom
@@ -34,6 +35,9 @@ class SampleDonorXMLFilesRepository(SampleDonorRepository):
             contents = parse_xml_file(dir_entry)
             donor = SampleDonor(glom(contents, self._donor_parsing_map.get("id")))
             donor.gender = Gender[(glom(contents, self._donor_parsing_map.get("gender"))).upper()]
+            year_of_birth = glom(contents, self._donor_parsing_map.get("birthDate"), default=None)
+            if year_of_birth is not None:
+                donor.date_of_birth = datetime.strptime(year_of_birth, '%Y')
         except WrongXMLFormatError:
             return
         if donor.identifier not in self._ids:

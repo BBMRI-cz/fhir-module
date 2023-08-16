@@ -1,7 +1,8 @@
 {
   "donor_map": {
     "id": "patient.@id",
-    "gender": "patient.@sex"
+    "gender": "patient.@sex",
+    "birthDate": "patient.@year"
   },
   "sample_map": {
     "id": "**.@sampleId",
