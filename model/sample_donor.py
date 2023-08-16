@@ -1,4 +1,5 @@
 """Sample donor module"""
+from _datetime import datetime
 
 from fhirclient.models.identifier import Identifier
 from fhirclient.models.meta import Meta
@@ -15,6 +16,7 @@ class SampleDonor:
             raise TypeError("Identifier must be string")
         self._identifier = identifier
         self._gender: Gender = None
+        self._date_of_birth: datetime = None
 
     @property
     def identifier(self) -> str:
@@ -26,12 +28,24 @@ class SampleDonor:
         """Administrative gender"""
         return self._gender
 
+    @property
+    def date_of_birth(self) -> str:
+        """Date of birth. Coding ISO8601"""
+        return self._date_of_birth.isoformat()
+
     @gender.setter
     def gender(self, gender: Gender):
         """Ser administrative gender"""
         if not isinstance(gender, Gender):
             raise TypeError("Gender must be from a list of values: " + str(Gender.list()))
         self._gender = gender
+
+    @date_of_birth.setter
+    def date_of_birth(self, date: datetime):
+        """Date of birth. Coding ISO8601"""
+        if not isinstance(date, datetime):
+            raise TypeError("Date of birth must be a date.")
+        self._date_of_birth = date
 
     def to_fhir(self) -> Patient:
         """Return sample donor representation in FHIR"""

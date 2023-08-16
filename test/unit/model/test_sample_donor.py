@@ -1,3 +1,4 @@
+import datetime
 import unittest
 
 from model.gender import Gender
@@ -43,6 +44,21 @@ class TestSampleDonor(unittest.TestCase):
         self.assertEqual("male", donor.to_fhir().gender)
         donor.gender = Gender.UNKNOWN
         self.assertEqual("unknown", donor.to_fhir().gender)
+
+    def test_assign_birth_date_full_date_ok(self):
+        donor = SampleDonor("unique_org_id")
+        donor.date_of_birth = datetime.datetime(year=2022, month=10, day=20)
+        self.assertEqual("2022-10-20T00:00:00", donor.date_of_birth)
+
+    def test_assign_birth_date_from_string_no_day_ok(self):
+        donor = SampleDonor("unique_org_id")
+        donor.date_of_birth = datetime.datetime.strptime("2022-10", '%Y-%m')
+        self.assertEqual("2022-10-01T00:00:00", donor.date_of_birth)
+
+    def test_assign_birth_date_from_string_just_year_ok(self):
+        donor = SampleDonor("unique_org_id")
+        donor.date_of_birth = datetime.datetime.strptime("2022", '%Y')
+        self.assertEqual("2022-01-01T00:00:00", donor.date_of_birth)
 
 
 if __name__ == '__main__':
