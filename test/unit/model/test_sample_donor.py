@@ -54,6 +54,7 @@ class TestSampleDonor(unittest.TestCase):
         donor = SampleDonor("unique_org_id")
         donor.date_of_birth = datetime.datetime.strptime("2022-10", '%Y-%m')
         self.assertEqual("2022-10-01T00:00:00", donor.date_of_birth)
+        self.assertEqual("2022-10-01T00:00:00", donor.to_fhir().birthDate.date)
 
     def test_assign_birth_date_from_string_just_year_ok(self):
         donor = SampleDonor("unique_org_id")

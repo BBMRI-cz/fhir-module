@@ -1,6 +1,7 @@
 """Sample donor module"""
 from _datetime import datetime
 
+from fhirclient.models.fhirdate import FHIRDate
 from fhirclient.models.identifier import Identifier
 from fhirclient.models.meta import Meta
 from fhirclient.models.patient import Patient
@@ -31,7 +32,10 @@ class SampleDonor:
     @property
     def date_of_birth(self) -> str:
         """Date of birth. Coding ISO8601"""
-        return self._date_of_birth.isoformat()
+        if self._date_of_birth is not None:
+            return self._date_of_birth.isoformat()
+        else:
+            return ""
 
     @gender.setter
     def gender(self, gender: Gender):
@@ -55,6 +59,9 @@ class SampleDonor:
         fhir_patient.identifier = self.__create_fhir_identifier()
         if self.gender is not None:
             fhir_patient.gender = self._gender.name.lower()
+        if self.date_of_birth is not None:
+            fhir_patient.birthDate = FHIRDate()
+            fhir_patient.birthDate.date = self.date_of_birth
         return fhir_patient
 
     def __create_fhir_identifier(self):
