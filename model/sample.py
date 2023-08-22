@@ -41,11 +41,15 @@ class Sample:
         specimen.meta.profile = ["https://fhir.bbmri.de/StructureDefinition/Specimen"]
         specimen.identifier = self.__create_fhir_identifier()
         if material_type_map is not None:
-            specimen.type = CodeableConcept()
-            specimen.type.coding = [Coding()]
-            specimen.type.coding[0].code = material_type_map.get(self.material_type)
-            specimen.type.coding[0].system = "https://fhir.bbmri.de/CodeSystem/SampleMaterialType"
+            specimen.type = self.__creat_specimen_type(material_type_map)
         return specimen
+
+    def __creat_specimen_type(self, material_type_map) -> CodeableConcept:
+        specimen_type = CodeableConcept()
+        specimen_type.coding = [Coding()]
+        specimen_type.coding[0].code = material_type_map.get(self.material_type)
+        specimen_type.coding[0].system = "https://fhir.bbmri.de/CodeSystem/SampleMaterialType"
+        return specimen_type
 
     def __create_fhir_identifier(self):
         """Create fhir identifier."""
