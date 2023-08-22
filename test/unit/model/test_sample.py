@@ -12,6 +12,9 @@ class TestSample(unittest.TestCase):
         self.assertEqual(Sample("fakeId", "").to_fhir().identifier[0].value, "fakeId")
 
     def test_assign_sample_type_ok(self):
-        sample: Sample = Sample("", "")
-        sample.material_type = "tissue"
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient", material_type="tissue")
         self.assertEqual("tissue", sample.material_type)
+
+    def test_material_type_to_fhir_ok(self):
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient", material_type="dna")
+        self.assertEqual("dna", sample.to_fhir(material_type_map={"dna": "dna"}).type.coding[0].code)
