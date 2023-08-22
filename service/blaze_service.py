@@ -14,6 +14,7 @@ from model.sample_donor import SampleDonor
 from service.condition_service import ConditionService
 from service.patient_service import PatientService
 from service.sample_service import SampleService
+from util.config import MATERIAL_TYPE_MAP
 from util.custom_logger import setup_logger
 
 setup_logger()
@@ -146,6 +147,8 @@ class BlazeService:
                                               auth=self._credentials)
                                  .json(), "**.fullUrl")
         for url in list_of_full_urls:
+            deleted_patient = requests.get(url=url, auth=self._credentials).json()
+            logger.debug(f"{deleted_patient}")
             logger.info("Deleting " + url)
             return requests.delete(url=url).status_code
 
@@ -203,7 +206,7 @@ class BlazeService:
             if not self.is_specimen_present_in_blaze(sample.identifier):
                 logger.debug(f"Specimen with org. ID: {sample.identifier} is not present in Blaze. Uploading...")
                 requests.post(url=self._blaze_url + "/Specimen",
-                              json=sample.to_fhir().as_json(),
+                              json=sample.to_fhir(material_type_map=MATERIAL_TYPE_MAP).as_json(),
                               auth=self._credentials)
 
     def get_num_of_specimens(self) -> int:
@@ -228,6 +231,8 @@ class BlazeService:
                                               auth=self._credentials)
                                  .json(), "**.fullUrl")
         for url in list_of_full_urls:
+            deleted_specimen = requests.get(url=url, auth=self._credentials).json()
+            logger.debug(f"{deleted_specimen}")
             logger.info("Deleting " + url)
             return requests.delete(url=url).status_code
 

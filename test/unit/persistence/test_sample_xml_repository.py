@@ -23,12 +23,34 @@ class TestSampleXMLRepository(unittest.TestCase):
 
     samples = '<STS>' \
               '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
+              '<materialType>S</materialType>' \
               '<diagnosis>C508</diagnosis>' \
               '</diagnosisMaterial>' \
               '<diagnosisMaterial number="136044" sampleId="&amp;:2032:136043" year="2032">' \
+              '<materialType>T</materialType>' \
               '<diagnosis>C501</diagnosis>' \
               '</diagnosisMaterial>' \
               '</STS>'
+    both_collections = '<STS>' \
+                       '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
+                       '<materialType>S</materialType>' \
+                       '<diagnosis>C508</diagnosis>' \
+                       '</diagnosisMaterial>' \
+                       '<diagnosisMaterial number="136044" sampleId="&amp;:2032:136043" year="2032">' \
+                       '<materialType>T</materialType>' \
+                       '<diagnosis>C501</diagnosis>' \
+                       '</diagnosisMaterial>' \
+                       '</STS>' \
+                       '<LTS>' \
+                       '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136045" year="2032">' \
+                       '<materialType>S</materialType>' \
+                       '<diagnosis>C508</diagnosis>' \
+                       '</diagnosisMaterial>' \
+                       '<diagnosisMaterial number="136044" sampleId="&amp;:2032:136045" year="2032">' \
+                       '<materialType>T</materialType>' \
+                       '<diagnosis>C501</diagnosis>' \
+                       '</diagnosisMaterial>' \
+                       '</LTS>'
 
     content = '<patient id="9999">{sample}</patient>'
 
@@ -70,3 +92,9 @@ class TestSampleXMLRepository(unittest.TestCase):
         wrong_map = {}
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path, sample_parsing_map=wrong_map)
         self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))
+
+    @patchfs
+    def test_get_all_four_samples_from_two_collections_ok(self, fake_fs):
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.both_collections))
+        self.assertEqual(4, sum(1 for _ in self.sample_repository.get_all()))

@@ -29,10 +29,23 @@ class SampleXMLRepository(SampleRepository):
         """Extracts Sample from an XML file"""
         file_content = parse_xml_file(dir_entry)
         try:
-            for xml_sample_id in glom(file_content, self._sample_parsing_map.get("id")):
-                logger.debug(f"Found a specimen with ID: {xml_sample_id}")
-                sample = Sample(xml_sample_id, glom(file_content, self._sample_parsing_map.get("donor_id")))
-                yield sample
+            for parsing_path in str(self._sample_parsing_map.get("sample")).split(" || "):
+                for xml_sample in flatten_list(glom(file_content, parsing_path)):
+                    logger.debug(f"Found a specimen: {xml_sample}")
+                    sample = Sample(identifier=glom(xml_sample,
+                                                    self._sample_parsing_map.get("sample_details").get("id")),
+                                    donor_id=glom(file_content,
+                                                  self._sample_parsing_map.get("donor_id")),
+                                    material_type=glom(xml_sample,
+                                                       self._sample_parsing_map.get("sample_details").get(
+                                                           "material_type"),
+                                                       default=None))
+                    yield sample
         except (WrongXMLFormatError, PathAccessError, TypeError):
             logger.warning("Error reading XML file.")
             return
+
+
+def flatten_list(nested_list):
+    return [item for sublist in nested_list for item in
+            (flatten_list(sublist) if isinstance(sublist, list) else [sublist])]

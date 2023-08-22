@@ -61,7 +61,7 @@ class SampleDonor:
             fhir_patient.gender = self._gender.name.lower()
         if self.date_of_birth is not None:
             fhir_patient.birthDate = FHIRDate()
-            fhir_patient.birthDate.date = self.date_of_birth
+            fhir_patient.birthDate.date = self.date_of_birth.date()
         return fhir_patient
 
     def __create_fhir_identifier(self):

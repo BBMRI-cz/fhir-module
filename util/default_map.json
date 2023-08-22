@@ -5,7 +5,11 @@
     "birthDate": "patient.@year"
   },
   "sample_map": {
-    "id": "**.@sampleId",
+    "sample": "**.STS.* || **.LTS.*",
+    "sample_details": {
+      "id": "@sampleId",
+      "material_type": "materialType"
+    },
     "donor_id": "patient.@id"
   },
   "condition_map": {
