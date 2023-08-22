@@ -13,5 +13,5 @@ class TestSample(unittest.TestCase):
 
     def test_assign_sample_type_ok(self):
         sample: Sample = Sample("", "")
-        sample.type = "tissue"
-        self.assertEqual("tissue", sample.type)
+        sample.material_type = "tissue"
+        self.assertEqual("tissue", sample.material_type)
