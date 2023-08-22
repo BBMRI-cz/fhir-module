@@ -18,3 +18,7 @@ class TestSample(unittest.TestCase):
     def test_material_type_to_fhir_ok(self):
         sample: Sample = Sample(identifier="sampleId", donor_id="patient", material_type="dna")
         self.assertEqual("dna", sample.to_fhir(material_type_map={"dna": "dna"}).type.coding[0].code)
+
+    def test_material_type_not_in_map_ok(self):
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient", material_type="dna")
+        self.assertIsNone(sample.to_fhir(material_type_map={"something": "not"}).type)
