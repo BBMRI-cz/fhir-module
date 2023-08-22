@@ -8,8 +8,9 @@ class Sample:
     """Class representing a biological specimen."""
 
     def __init__(self, identifier: str, donor_id: str) -> None:
-        self._identifier = identifier
-        self._donor_id = donor_id
+        self._identifier: str = identifier
+        self._donor_id: str = donor_id
+        self._type: str = None
 
     @property
     def identifier(self) -> str:
@@ -20,6 +21,16 @@ class Sample:
     def donor_id(self) -> str:
         """Institutional ID of donor."""
         return self._donor_id
+
+    @property
+    def type(self) -> str:
+        """Sample type. E.g. tissue, plasma..."""
+        return self._type
+
+    @type.setter
+    def type(self, sample_type: str):
+        """Sample type. E.g. tissue, plasma..."""
+        self._type = sample_type
 
     def to_fhir(self):
         """Return sample representation in FHIR."""
