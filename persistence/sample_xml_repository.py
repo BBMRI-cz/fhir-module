@@ -28,22 +28,24 @@ class SampleXMLRepository(SampleRepository):
     def __extract_sample_from_xml_file(self, dir_entry: os.DirEntry) -> Sample:
         """Extracts Sample from an XML file"""
         file_content = parse_xml_file(dir_entry)
-        try:
-            for parsing_path in str(self._sample_parsing_map.get("sample")).split(" || "):
+        for parsing_path in str(self._sample_parsing_map.get("sample")).split(" || "):
+            try:
                 for xml_sample in flatten_list(glom(file_content, parsing_path)):
                     logger.debug(f"Found a specimen: {xml_sample}")
-                    sample = Sample(identifier=glom(xml_sample,
-                                                    self._sample_parsing_map.get("sample_details").get("id")),
-                                    donor_id=glom(file_content,
-                                                  self._sample_parsing_map.get("donor_id")),
-                                    material_type=glom(xml_sample,
-                                                       self._sample_parsing_map.get("sample_details").get(
-                                                           "material_type"),
-                                                       default=None))
-                    yield sample
-        except (WrongXMLFormatError, PathAccessError, TypeError):
-            logger.warning("Error reading XML file.")
-            return
+                    yield self.__build_sample(file_content, xml_sample)
+            except (WrongXMLFormatError, PathAccessError, TypeError):
+                logger.warning("Error reading XML file.")
+                return
+
+    def __build_sample(self, file_content, xml_sample):
+        return Sample(identifier=glom(xml_sample,
+                                      self._sample_parsing_map.get("sample_details").get("id")),
+                      donor_id=glom(file_content,
+                                    self._sample_parsing_map.get("donor_id")),
+                      material_type=glom(xml_sample,
+                                         self._sample_parsing_map.get("sample_details").get(
+                                             "material_type"),
+                                         default=None))
 
 
 def flatten_list(nested_list):

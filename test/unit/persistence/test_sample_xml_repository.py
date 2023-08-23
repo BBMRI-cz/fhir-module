@@ -31,6 +31,7 @@ class TestSampleXMLRepository(unittest.TestCase):
               '<diagnosis>C501</diagnosis>' \
               '</diagnosisMaterial>' \
               '</STS>'
+
     both_collections = '<STS>' \
                        '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
                        '<materialType>S</materialType>' \
