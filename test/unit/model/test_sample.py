@@ -40,3 +40,12 @@ class TestSample(unittest.TestCase):
     def test_set_correct_icd_10_diagnosis_ok(self):
         sample: Sample = Sample(identifier="sampleId", donor_id="patient", diagnosis="C50.1")
         self.assertEqual("C50.1", sample.diagnosis)
+
+    def test_diagnosis_without_dot_is_added_to_fhir(self):
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient", diagnosis="C501")
+        self.assertTrue(sample.to_fhir().extension)
+        self.assertEqual("C50.1", sample.to_fhir().extension[0].valueCodeableConcept.coding[0].code)
+
+    def test_to_fhir_no_extensions_if_no_special_attributes(self):
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient")
+        self.assertFalse(sample.to_fhir().extension)

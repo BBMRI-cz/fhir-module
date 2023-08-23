@@ -1,7 +1,10 @@
 """Module for Sample representation."""
+from typing import List
+
 import icd10
 from fhirclient.models.codeableconcept import CodeableConcept
 from fhirclient.models.coding import Coding
+from fhirclient.models.extension import Extension
 from fhirclient.models.fhirreference import FHIRReference
 from fhirclient.models.identifier import Identifier
 from fhirclient.models.meta import Meta
@@ -64,11 +67,21 @@ class Sample:
         specimen.meta = Meta()
         specimen.meta.profile = ["https://fhir.bbmri.de/StructureDefinition/Specimen"]
         specimen.identifier = self.__create_fhir_identifier()
+        extensions: List[Extension] = []
         if material_type_map is not None and self.material_type in material_type_map:
             specimen.type = self.__create_specimen_type(material_type_map)
         if subject_id is not None:
             specimen.subject = FHIRReference()
             specimen.subject.reference = f"Patient/{subject_id}"
+        if self.diagnosis is not None:
+            fhir_diagnosis: Extension = Extension()
+            fhir_diagnosis.url = "https://fhir.bbmri.de/StructureDefinition/SampleDiagnosis"
+            fhir_diagnosis.valueCodeableConcept = CodeableConcept()
+            fhir_diagnosis.valueCodeableConcept.coding = [Coding()]
+            fhir_diagnosis.valueCodeableConcept.coding[0].code = self.__diagnosis_with_period()
+            extensions.append(fhir_diagnosis)
+        if extensions:
+            specimen.extension = extensions
         return specimen
 
     def __create_specimen_type(self, material_type_map) -> CodeableConcept:
@@ -83,3 +96,10 @@ class Sample:
         fhir_identifier = Identifier()
         fhir_identifier.value = self.identifier
         return [fhir_identifier]
+
+    def __diagnosis_with_period(self) -> str:
+        """Returns icd-10 code with a period, e.g., C188 to C18.8"""
+        code = self.diagnosis
+        if len(code) == 4 and "." not in code:
+            return code[:3] + '.' + code[3:]
+        return code
