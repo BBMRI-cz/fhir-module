@@ -1,6 +1,7 @@
 """Module for Sample representation."""
 from fhirclient.models.codeableconcept import CodeableConcept
 from fhirclient.models.coding import Coding
+from fhirclient.models.fhirreference import FHIRReference
 from fhirclient.models.identifier import Identifier
 from fhirclient.models.meta import Meta
 from fhirclient.models.specimen import Specimen
@@ -34,14 +35,18 @@ class Sample:
         """Sample type. E.g. tissue, plasma..."""
         self._material_type = sample_type
 
-    def to_fhir(self, material_type_map: dict = None):
-        """Return sample representation in FHIR."""
+    def to_fhir(self, material_type_map: dict = None, subject_id: str = None):
+        """Return sample representation in FHIR.
+        @subject_id: FHIR Resource ID of the sample donor."""
         specimen = Specimen()
         specimen.meta = Meta()
         specimen.meta.profile = ["https://fhir.bbmri.de/StructureDefinition/Specimen"]
         specimen.identifier = self.__create_fhir_identifier()
         if material_type_map is not None and self.material_type in material_type_map:
             specimen.type = self.__create_specimen_type(material_type_map)
+        if subject_id is not None:
+            specimen.subject = FHIRReference()
+            specimen.subject.reference = f"Patient/{subject_id}"
         return specimen
 
     def __create_specimen_type(self, material_type_map) -> CodeableConcept:

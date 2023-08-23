@@ -9,14 +9,15 @@ import requests
 from exception.patient_not_found import PatientNotFoundError
 from model.condition import Condition
 from model.gender import Gender
+from model.sample import Sample
 from model.sample_donor import SampleDonor
 from persistence.condition_repository import ConditionRepository
 from persistence.sample_donor_repository import SampleDonorRepository
+from persistence.sample_repository import SampleRepository
 from service.blaze_service import BlazeService
 from service.condition_service import ConditionService
 from service.patient_service import PatientService
 from service.sample_service import SampleService
-from test.unit.service.test_sample_service import SampleRepoStub
 
 
 class SampleDonorRepoStub(SampleDonorRepository):
@@ -42,6 +43,14 @@ class ConditionRepoStub(ConditionRepository):
 
     def add(self, condition: Condition):
         self.conditions.append(condition)
+
+
+class SampleRepoStub(SampleRepository):
+    samples = [Sample(identifier="fakeId", donor_id="newId"),
+               Sample(identifier="fakeId2", donor_id="fakeId", material_type="2")]
+
+    def get_all(self) -> List[Sample]:
+        yield from self.samples
 
 
 class TestBlazeStore(unittest.TestCase):
@@ -123,11 +132,17 @@ class TestBlazeStore(unittest.TestCase):
         for donor in SampleDonorRepoStub().get_all():
             self.blaze_service.delete_patient(donor.identifier)
 
+    def test_sync_samples_with_donors_not_present_in_blaze_no_upload(self):
+        self.blaze_service.sync_samples()
+        self.assertEqual(0, self.blaze_service.get_num_of_specimens())
+
     def test_sync_samples_ok(self):
+        self.blaze_service.sync_patients()
         self.blaze_service.sync_samples()
         self.assertEqual(2, self.blaze_service.get_num_of_specimens())
 
     def test_sync_same_samples_twice_no_duplicates(self):
+        self.blaze_service.sync_patients()
         self.blaze_service.sync_samples()
         self.assertEqual(2, self.blaze_service.get_num_of_specimens())
         self.blaze_service.sync_samples()

@@ -28,3 +28,7 @@ class TestSample(unittest.TestCase):
         self.assertIsNone(sample.to_fhir(material_type_map={"something": "not"}).type)
         self.assertIsNone(sample.to_fhir(material_type_map={}).type)
         self.assertIsNone(sample.to_fhir().type)
+
+    def test_to_fhir_subject_ok(self):
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient")
+        self.assertEqual("Patient/PatientFHIRId", sample.to_fhir(subject_id="PatientFHIRId").subject.reference)

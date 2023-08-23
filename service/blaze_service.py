@@ -27,7 +27,8 @@ class BlazeService:
         """
         Class for interacting with a Blaze Store FHIR server
         :param patient_service:
-        :param blaze_url: base url of the FHIR server. Must be without a trailing /
+        :param blaze_url: Base url of the FHIR server.
+        Must be without a trailing /
         """
         self._patient_service = patient_service
         self._condition_service = condition_service
@@ -60,7 +61,7 @@ class BlazeService:
         """
         This method posts all patients from the repository to the Blaze store. WARNING: can result in duplication of
         patients. This method should be called only once, specifically if there are no patients in the FHIR server.
-        :return: status code of the http request
+        :return: Status code of the http request
         """
         logger.info("Starting upload of patients...")
         bundle = self._patient_service.get_all_patients_in_fhir_transaction()
@@ -98,8 +99,8 @@ class BlazeService:
 
     def is_patient_present_in_blaze(self, identifier: str) -> bool:
         """
-        Checks if a patient is present in a blaze store
-        :param identifier: of the Patient
+        Checks if a patient with a specific organizational ID is present in a blaze store.
+        :param identifier: Of the Patient
         :return: true if present
         """
         try:
@@ -180,7 +181,7 @@ class BlazeService:
     def __get_fhir_id_of_donor(self, patient_id: str) -> str:
         """
         Get Resource id for a patient with identifier.
-        :param patient_id: identifier of the sample donor
+        :param patient_id: Identifier of the sample donor
         :return: FHIR resource id
         """
         return glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + patient_id,
@@ -188,7 +189,7 @@ class BlazeService:
                     .json(), "**.resource.id")[0]
 
     def patient_has_condition(self, patient_identifier: str, icd_10_code: str) -> bool:
-        """Checks if patient already has a condition with specific ICD-10 code (use dot format)"""
+        """Checks if patient already has a condition with specific ICD-10 code (use a dot format)"""
         try:
             patient_fhir_id = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + patient_identifier)
                                    .json(), "**.resource.id")[0]
@@ -203,10 +204,15 @@ class BlazeService:
         logger.info("Starting upload of samples...")
         sample: Sample
         for sample in self._sample_service.get_all():
-            if not self.is_specimen_present_in_blaze(sample.identifier):
-                logger.debug(f"Specimen with org. ID: {sample.identifier} is not present in Blaze. Uploading...")
+            if not self.is_specimen_present_in_blaze(sample.identifier) and self.is_patient_present_in_blaze(
+                    sample.donor_id):
+                logger.debug(f"Specimen with org. ID: {sample.identifier} is not present in Blaze but the Donor is "
+                             f"present. Uploading...")
+                patient_fhir_id = glom(requests.get(url=self._blaze_url + f"/Patient?identifier={sample.donor_id}")
+                                       .json(), "**.resource.id")[0]
                 requests.post(url=self._blaze_url + "/Specimen",
-                              json=sample.to_fhir(material_type_map=MATERIAL_TYPE_MAP).as_json(),
+                              json=sample.to_fhir(material_type_map=MATERIAL_TYPE_MAP, subject_id=patient_fhir_id)
+                              .as_json(),
                               auth=self._credentials)
 
     def get_num_of_specimens(self) -> int:
