@@ -60,7 +60,7 @@ class Sample:
             raise TypeError("The provided string is not a valid ICD-10 code.")
         self._diagnosis = icd_10_code
 
-    def to_fhir(self, material_type_map: dict = None, subject_id: str = None):
+    def to_fhir(self, material_type_map: dict = None, subject_id: str = None, custodian_id: str = None):
         """Return sample representation in FHIR.
         @subject_id: FHIR Resource ID of the sample donor."""
         specimen = Specimen()
@@ -80,6 +80,12 @@ class Sample:
             fhir_diagnosis.valueCodeableConcept.coding = [Coding()]
             fhir_diagnosis.valueCodeableConcept.coding[0].code = self.__diagnosis_with_period()
             extensions.append(fhir_diagnosis)
+        if custodian_id is not None:
+            custodian_extension: Extension = Extension()
+            custodian_extension.url = "https://fhir.bbmri.de/StructureDefinition/Custodian"
+            custodian_extension.valueReference = FHIRReference()
+            custodian_extension.valueReference.reference = f"Organization/{custodian_id}"
+            extensions.append(custodian_extension)
         if extensions:
             specimen.extension = extensions
         return specimen

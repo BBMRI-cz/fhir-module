@@ -49,3 +49,8 @@ class TestSample(unittest.TestCase):
     def test_to_fhir_no_extensions_if_no_special_attributes(self):
         sample: Sample = Sample(identifier="sampleId", donor_id="patient")
         self.assertFalse(sample.to_fhir().extension)
+
+    def test_to_fhir_sample_custodian_ok(self):
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient")
+        self.assertEqual("Organization/FHIRCollectionID", sample.to_fhir(custodian_id="FHIRCollectionID")
+                         .extension[0].valueReference.reference)
