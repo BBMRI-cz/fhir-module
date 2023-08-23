@@ -1,7 +1,7 @@
 import datetime
 import logging
 import unittest
-from typing import List
+from typing import List, Generator
 
 import pytest
 import requests
@@ -10,8 +10,10 @@ from exception.patient_not_found import PatientNotFoundError
 from model.condition import Condition
 from model.gender import Gender
 from model.sample import Sample
+from model.sample_collection import SampleCollection
 from model.sample_donor import SampleDonor
 from persistence.condition_repository import ConditionRepository
+from persistence.sample_collection_repository import SampleCollectionRepository
 from persistence.sample_donor_repository import SampleDonorRepository
 from persistence.sample_repository import SampleRepository
 from service.blaze_service import BlazeService
@@ -53,20 +55,30 @@ class SampleRepoStub(SampleRepository):
         yield from self.samples
 
 
+class SampleCollectionRepoStub(SampleCollectionRepository):
+    sample_collections = [SampleCollection(identifier="test:collection:1")]
+
+    def get_all(self) -> Generator[SampleCollection, None, None]:
+        yield from self.sample_collections
+
+
 class TestBlazeStore(unittest.TestCase):
 
     @pytest.fixture(autouse=True)
     def run_around_tests(self):
-        self.blaze_service = BlazeService(PatientService(SampleDonorRepoStub()),
-                                          ConditionService(ConditionRepoStub()),
-                                          SampleService(SampleRepoStub()),
-                                          'http://localhost:8080/fhir')
+        self.blaze_service = BlazeService(patient_service=PatientService(SampleDonorRepoStub()),
+                                          condition_service=ConditionService(ConditionRepoStub()),
+                                          sample_service=SampleService(SampleRepoStub()),
+                                          blaze_url='http://localhost:8080/fhir',
+                                          sample_collection_repository=SampleCollectionRepoStub())
         yield  # run test
         try:
             for donor in SampleDonorRepoStub().get_all():
                 self.blaze_service.delete_patient(donor.identifier)
             for sample in SampleRepoStub().get_all():
                 self.blaze_service.delete_specimen(sample.identifier)
+            for organization in SampleCollectionRepoStub().get_all():
+                self.blaze_service.delete_organization(organization.identifier)
         except requests.exceptions.ConnectionError:
             logging.info("Could not teardown correctly")
 
@@ -77,7 +89,8 @@ class TestBlazeStore(unittest.TestCase):
         self.blaze_service = BlazeService(PatientService(SampleDonorRepoStub()),
                                           blaze_url='http://localhost:44/wrong',
                                           condition_service=ConditionService(ConditionRepoStub()),
-                                          sample_service=SampleService(SampleRepoStub()))
+                                          sample_service=SampleService(SampleRepoStub()),
+                                          sample_collection_repository=SampleCollectionRepoStub())
         self.assertEqual(404, self.blaze_service.initial_upload_of_all_patients())
 
     def test_is_present_in_blaze(self):
@@ -93,7 +106,8 @@ class TestBlazeStore(unittest.TestCase):
         self.blaze_service = BlazeService(PatientService(donor_repo),
                                           blaze_url='http://localhost:8080/fhir',
                                           condition_service=ConditionService(ConditionRepoStub()),
-                                          sample_service=SampleService(SampleRepoStub()))
+                                          sample_service=SampleService(SampleRepoStub()),
+                                          sample_collection_repository=SampleCollectionRepoStub())
         self.blaze_service.sync_patients()
         self.assertEqual(num_of_patients_before_sync + 1, self.blaze_service.get_num_of_patients())
 
@@ -118,7 +132,8 @@ class TestBlazeStore(unittest.TestCase):
         self.blaze_service = BlazeService(PatientService(SampleDonorRepoStub()),
                                           blaze_url='http://localhost:8080/fhir',
                                           condition_service=ConditionService(condition_repo),
-                                          sample_service=SampleService(SampleRepoStub()))
+                                          sample_service=SampleService(SampleRepoStub()),
+                                          sample_collection_repository=SampleCollectionRepoStub())
         self.blaze_service.sync_conditions()
         self.assertTrue(self.blaze_service.patient_has_condition("fakeId", "C50.6"))
 
@@ -148,6 +163,19 @@ class TestBlazeStore(unittest.TestCase):
         self.blaze_service.sync_samples()
         self.assertEqual(2, self.blaze_service.get_num_of_specimens())
 
+    def test_upload_sample_collections(self):
+        self.blaze_service.upload_sample_collections()
+        self.assertTrue(self.blaze_service.is_organization_present_in_blaze("test:collection:1"))
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_delete_sample_collections(self):
+        self.blaze_service.upload_sample_collections()
+        self.assertTrue(self.blaze_service.is_organization_present_in_blaze("test:collection:1"))
+        self.blaze_service.delete_organization("test:collection:1")
+        self.assertFalse(self.blaze_service.is_organization_present_in_blaze("test:collection:1"))
+
+    def test_upload_sample_collection_twice_no_duplicates(self):
+        self.assertEqual(0, self.blaze_service.get_num_of_organizations())
+        self.blaze_service.upload_sample_collections()
+        self.assertEqual(1, self.blaze_service.get_num_of_organizations())
+        self.blaze_service.upload_sample_collections()
+        self.assertEqual(1, self.blaze_service.get_num_of_organizations())

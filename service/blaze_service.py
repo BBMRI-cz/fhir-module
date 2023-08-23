@@ -11,6 +11,7 @@ from exception.patient_not_found import PatientNotFoundError
 from model.condition import Condition
 from model.sample import Sample
 from model.sample_donor import SampleDonor
+from persistence.sample_collection_repository import SampleCollectionRepository
 from service.condition_service import ConditionService
 from service.patient_service import PatientService
 from service.sample_service import SampleService
@@ -23,7 +24,8 @@ logger = logging.getLogger()
 
 class BlazeService:
     def __init__(self, patient_service: PatientService, condition_service: ConditionService,
-                 sample_service: SampleService, blaze_url: str):
+                 sample_service: SampleService, blaze_url: str,
+                 sample_collection_repository: SampleCollectionRepository):
         """
         Class for interacting with a Blaze Store FHIR server
         :param patient_service:
@@ -34,12 +36,14 @@ class BlazeService:
         self._condition_service = condition_service
         self._sample_service = sample_service
         self._blaze_url = blaze_url
+        self._sample_collection_repository = sample_collection_repository
         self._credentials = (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))
 
     def sync(self):
         """Starts the sync between the repositories and the Blaze store"""
         logger.info("Starting sync with Blaze 🔥!")
         if self.get_num_of_patients() == 0:
+            self.upload_sample_collections()
             self.initial_upload_of_all_patients()
             self.sync_conditions()
             self.sync_samples()
@@ -151,7 +155,7 @@ class BlazeService:
             deleted_patient = requests.get(url=url, auth=self._credentials).json()
             logger.debug(f"{deleted_patient}")
             logger.info("Deleting " + url)
-            return requests.delete(url=url).status_code
+            return requests.delete(url=url, auth=self._credentials).status_code
 
     def sync_conditions(self):
         """
@@ -227,6 +231,18 @@ class BlazeService:
             logger.error("Cannot connect to blaze!")
             return 0
 
+    def get_num_of_organizations(self) -> int:
+        """
+        Get the number of Organizations available in the Blaze store
+        :return: number of Organizations
+        """
+        try:
+            return requests.get(url=self._blaze_url + "/Organization?_summary=count",
+                                auth=self._credentials).json().get("total")
+        except requests.exceptions.ConnectionError:
+            logger.error("Cannot connect to blaze!")
+            return 0
+
     def delete_specimen(self, identifier: str) -> int:
         """
         Deletes a Specimen in the Blaze store
@@ -240,7 +256,22 @@ class BlazeService:
             deleted_specimen = requests.get(url=url, auth=self._credentials).json()
             logger.debug(f"{deleted_specimen}")
             logger.info("Deleting " + url)
-            return requests.delete(url=url).status_code
+            return requests.delete(url=url, auth=self._credentials).status_code
+
+    def delete_organization(self, identifier: str) -> int:
+        """
+        Deletes an Organization in the Blaze store
+        :param identifier: Organizational identifier
+        :return: Status code of the http request
+        """
+        list_of_full_urls = glom(requests.get(url=self._blaze_url + "/Organization?identifier=" + identifier,
+                                              auth=self._credentials)
+                                 .json(), "**.fullUrl")
+        for url in list_of_full_urls:
+            deleted_organization = requests.get(url=url, auth=self._credentials).json()
+            logger.debug(f"{deleted_organization}")
+            logger.info("Deleting " + url)
+            return requests.delete(url=url, auth=self._credentials).status_code
 
     def is_specimen_present_in_blaze(self, identifier: str) -> bool:
         """
@@ -250,6 +281,24 @@ class BlazeService:
         """
         try:
             response = (requests.get(url=self._blaze_url + "/Specimen?identifier=" + identifier + "&_summary=count",
+                                     auth=self._credentials)
+                        .json()
+                        .get("total"))
+            return response > 0
+        except TypeError:
+            return False
+
+    def upload_sample_collections(self):
+        """Uploads SampleCollections as FHIR organizations."""
+        for sample_collection in self._sample_collection_repository.get_all():
+            if not self.is_organization_present_in_blaze(sample_collection.identifier):
+                requests.post(url=self._blaze_url + "/Organization",
+                              json=sample_collection.to_fhir().as_json(),
+                              auth=self._credentials)
+
+    def is_organization_present_in_blaze(self, identifier: str) -> bool:
+        try:
+            response = (requests.get(url=self._blaze_url + "/Organization?identifier=" + identifier + "&_summary=count",
                                      auth=self._credentials)
                         .json()
                         .get("total"))

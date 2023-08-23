@@ -16,6 +16,10 @@ class SampleCollection:
         self._name: str = name
         self._acronym: str = acronym
 
+    @property
+    def identifier(self) -> str:
+        return self._identifier
+
     def to_fhir(self) -> Organization:
         fhir_organization = Organization()
         fhir_organization.identifier = self.__create_fhir_identifier()
