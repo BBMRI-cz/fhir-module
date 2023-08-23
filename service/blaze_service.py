@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 
 import requests
@@ -15,7 +14,7 @@ from persistence.sample_collection_repository import SampleCollectionRepository
 from service.condition_service import ConditionService
 from service.patient_service import PatientService
 from service.sample_service import SampleService
-from util.config import MATERIAL_TYPE_MAP
+from util.config import MATERIAL_TYPE_MAP, BLAZE_AUTH
 from util.custom_logger import setup_logger
 
 setup_logger()
@@ -37,7 +36,7 @@ class BlazeService:
         self._sample_service = sample_service
         self._blaze_url = blaze_url
         self._sample_collection_repository = sample_collection_repository
-        self._credentials = (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))
+        self._credentials = BLAZE_AUTH
 
     def sync(self):
         """Starts the sync between the repositories and the Blaze store"""
