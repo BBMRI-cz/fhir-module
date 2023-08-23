@@ -32,3 +32,11 @@ class TestSample(unittest.TestCase):
     def test_to_fhir_subject_ok(self):
         sample: Sample = Sample(identifier="sampleId", donor_id="patient")
         self.assertEqual("Patient/PatientFHIRId", sample.to_fhir(subject_id="PatientFHIRId").subject.reference)
+
+    def test_get_icd_10_diagnosis_none(self):
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient")
+        self.assertIsNone(sample.diagnosis)
+
+    def test_set_correct_icd_10_diagnosis_ok(self):
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient", diagnosis="C50.1")
+        self.assertEqual("C50.1", sample.diagnosis)

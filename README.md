@@ -28,7 +28,7 @@ Prerequisites:
 - [Docker engine v24.0.0](https://docs.docker.com/engine/release-notes/24.0/#2400)
 - [Docker compose v2.20](https://docs.docker.com/compose/release-notes/#2200)
 
-To spin up an instance of the FHIR module along with [Blaze](https://github.com/samply/blaze) clone the repository and
+To spin up an instance of the FHIR module along with [Blaze](https://github.com/samply/blaze), clone the repository and
 run the following command:
 
 ```shell
