@@ -162,6 +162,8 @@ class BlazeService:
         Syncs Conditions present in the Condition Repository
         """
         logger.info("Starting upload of conditions...")
+        num_of_conditions_before_upload = self.get_num_of_conditions()
+        logger.debug(f"Current number of conditions: {num_of_conditions_before_upload}")
         condition: Condition
         for condition in self._condition_service.get_all():
             try:
@@ -173,6 +175,8 @@ class BlazeService:
                 continue
             if not patient_has_condition:
                 self.__upload_condition(condition)
+        logger.debug(f"Successfully uploaded {self.get_num_of_conditions() - num_of_conditions_before_upload}"
+                     f" new conditions.")
 
     def __upload_condition(self, condition):
         patient_fhir_id = self.__get_fhir_id_of_donor(condition.patient_id)
@@ -206,6 +210,8 @@ class BlazeService:
     def sync_samples(self):
         """Syncs Samples present in the repository with the Blaze store."""
         logger.info("Starting upload of samples...")
+        num_of_samples_before_sync = self.get_num_of_specimens()
+        logger.debug(f"Current number of Specimens: {num_of_samples_before_sync}.")
         sample: Sample
         for sample in self._sample_service.get_all():
             if not self.is_specimen_present_in_blaze(sample.identifier) and self.is_patient_present_in_blaze(
@@ -218,6 +224,8 @@ class BlazeService:
                               json=sample.to_fhir(material_type_map=MATERIAL_TYPE_MAP, subject_id=patient_fhir_id)
                               .as_json(),
                               auth=self._credentials)
+        logger.debug(f"Successfully uploaded {self.get_num_of_specimens() - num_of_samples_before_sync} "
+                     f"new samples.")
 
     def get_num_of_specimens(self) -> int:
         """
@@ -238,6 +246,18 @@ class BlazeService:
         """
         try:
             return requests.get(url=self._blaze_url + "/Organization?_summary=count",
+                                auth=self._credentials).json().get("total")
+        except requests.exceptions.ConnectionError:
+            logger.error("Cannot connect to blaze!")
+            return 0
+
+    def get_num_of_conditions(self) -> int:
+        """
+        Get the number of Conditions available in the Blaze store
+        :return: number of Conditions
+        """
+        try:
+            return requests.get(url=self._blaze_url + "/Condition?_summary=count",
                                 auth=self._credentials).json().get("total")
         except requests.exceptions.ConnectionError:
             logger.error("Cannot connect to blaze!")
@@ -295,6 +315,7 @@ class BlazeService:
                 requests.post(url=self._blaze_url + "/Organization",
                               json=sample_collection.to_fhir().as_json(),
                               auth=self._credentials)
+        logger.debug(f"Successfully uploaded {self.get_num_of_organizations()} Sample collections.")
 
     def is_organization_present_in_blaze(self, identifier: str) -> bool:
         try:
