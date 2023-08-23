@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import List
+from typing import Generator
 
 from glom import glom, PathAccessError
 
@@ -21,7 +21,7 @@ class SampleXMLRepository(SampleRepository):
         self._sample_parsing_map = sample_parsing_map
         logger.debug(f"Loaded the following sample parsing map {sample_parsing_map}")
 
-    def get_all(self) -> List[Sample]:
+    def get_all(self) -> Generator[Sample, None, None]:
         for dir_entry in os.scandir(self._dir_path):
             yield from self.__extract_sample_from_xml_file(dir_entry)
 
@@ -45,7 +45,10 @@ class SampleXMLRepository(SampleRepository):
                       material_type=glom(xml_sample,
                                          self._sample_parsing_map.get("sample_details").get(
                                              "material_type"),
-                                         default=None))
+                                         default=None),
+                      diagnosis=glom(xml_sample,
+                                     self._sample_parsing_map.get("sample_details").get(
+                                         "diagnosis"), default=None))
 
 
 def flatten_list(nested_list):

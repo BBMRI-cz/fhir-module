@@ -8,7 +8,8 @@
     "sample": "**.STS.* || **.LTS.*",
     "sample_details": {
       "id": "@sampleId",
-      "material_type": "materialType"
+      "material_type": "materialType",
+      "diagnosis": "diagnosis"
     },
     "donor_id": "patient.@id"
   },

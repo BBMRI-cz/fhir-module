@@ -99,3 +99,17 @@ class TestSampleXMLRepository(unittest.TestCase):
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.both_collections))
         self.assertEqual(4, sum(1 for _ in self.sample_repository.get_all()))
+
+    @patchfs
+    def test_get_all_with_wrong_diagnosis_skips(self, fake_fs):
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.wrong_diagnosis))
+        self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))
+
+    @patchfs
+    def test_get_all_four_samples_not_none_diagnosis(self, fake_fs):
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.both_collections))
+        self.assertEqual(4, sum(1 for _ in self.sample_repository.get_all()))
+        for sample in self.sample_repository.get_all():
+            self.assertIsNotNone(sample.diagnosis)
