@@ -113,7 +113,7 @@ class TestBlazeStore(unittest.TestCase):
     def test_sync_one_new_patient(self):
         donor_repo = SampleDonorRepoStub()
         self.blaze_service.initial_upload_of_all_patients()
-        num_of_patients_before_sync = self.blaze_service.get_num_of_patients()
+        num_of_patients_before_sync = self.blaze_service.get_number_of_resources("Patient")
         donor_repo.add(SampleDonor("uniqueNewPatient5"))
         self.blaze_service = BlazeService(PatientService(donor_repo),
                                           blaze_url='http://localhost:8080/fhir',
@@ -121,7 +121,7 @@ class TestBlazeStore(unittest.TestCase):
                                           sample_service=SampleService(SampleRepoStub()),
                                           sample_collection_repository=SampleCollectionRepoStub())
         self.blaze_service.sync_patients()
-        self.assertEqual(num_of_patients_before_sync + 1, self.blaze_service.get_num_of_patients())
+        self.assertEqual(num_of_patients_before_sync + 1, self.blaze_service.get_number_of_resources("Patient"))
 
     def test_delete_patient(self):
         self.blaze_service.initial_upload_of_all_patients()
@@ -157,26 +157,26 @@ class TestBlazeStore(unittest.TestCase):
 
     def test_delete_all_patients(self):
         self.blaze_service.initial_upload_of_all_patients()
-        self.assertEqual(2, self.blaze_service.get_num_of_patients())
+        self.assertEqual(2, self.blaze_service.get_number_of_resources("Patient"))
         for donor in SampleDonorRepoStub().get_all():
             self.blaze_service.delete_fhir_resource("Patient", donor.identifier)
-        self.assertEqual(0, self.blaze_service.get_num_of_patients())
+        self.assertEqual(0, self.blaze_service.get_number_of_resources("Patient"))
 
     def test_sync_samples_with_donors_not_present_in_blaze_no_upload(self):
         self.blaze_service.sync_samples()
-        self.assertEqual(0, self.blaze_service.get_num_of_specimens())
+        self.assertEqual(0, self.blaze_service.get_number_of_resources("Specimen"))
 
     def test_sync_samples_ok(self):
         self.blaze_service.sync_patients()
         self.blaze_service.sync_samples()
-        self.assertEqual(2, self.blaze_service.get_num_of_specimens())
+        self.assertEqual(2, self.blaze_service.get_number_of_resources("Specimen"))
 
     def test_sync_same_samples_twice_no_duplicates(self):
         self.blaze_service.sync_patients()
         self.blaze_service.sync_samples()
-        self.assertEqual(2, self.blaze_service.get_num_of_specimens())
+        self.assertEqual(2, self.blaze_service.get_number_of_resources("Specimen"))
         self.blaze_service.sync_samples()
-        self.assertEqual(2, self.blaze_service.get_num_of_specimens())
+        self.assertEqual(2, self.blaze_service.get_number_of_resources("Specimen"))
 
     def test_upload_sample_collections(self):
         self.blaze_service.upload_sample_collections()
@@ -189,8 +189,8 @@ class TestBlazeStore(unittest.TestCase):
         self.assertFalse(self.blaze_service.is_organization_present_in_blaze("test:collection:1"))
 
     def test_upload_sample_collection_twice_no_duplicates(self):
-        self.assertEqual(0, self.blaze_service.get_num_of_organizations())
+        self.assertEqual(0, self.blaze_service.get_number_of_resources("Organization"))
         self.blaze_service.upload_sample_collections()
-        self.assertEqual(1, self.blaze_service.get_num_of_organizations())
+        self.assertEqual(1, self.blaze_service.get_number_of_resources("Organization"))
         self.blaze_service.upload_sample_collections()
-        self.assertEqual(1, self.blaze_service.get_num_of_organizations())
+        self.assertEqual(1, self.blaze_service.get_number_of_resources("Organization"))
