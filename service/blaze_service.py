@@ -141,21 +141,6 @@ class BlazeService:
         logger.info("Patient " + donor.identifier + " uploaded.")
         return res.status_code
 
-    def delete_patient(self, identifier: str) -> int:
-        """
-        Deletes a Patient in the Blaze store
-        :param identifier: of the Patient
-        :return: Status code of the http request
-        """
-        list_of_full_urls = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + identifier,
-                                              auth=self._credentials)
-                                 .json(), "**.fullUrl")
-        for url in list_of_full_urls:
-            deleted_patient = requests.get(url=url, auth=self._credentials).json()
-            logger.debug(f"{deleted_patient}")
-            logger.info("Deleting " + url)
-            return requests.delete(url=url, auth=self._credentials).status_code
-
     def sync_conditions(self):
         """
         Syncs Conditions present in the Condition Repository
@@ -262,34 +247,24 @@ class BlazeService:
             logger.error("Cannot connect to blaze!")
             return 0
 
-    def delete_specimen(self, identifier: str) -> int:
+    def delete_fhir_resource(self, resource_type: str, identifier: str) -> int:
         """
-        Deletes a Specimen in the Blaze store
-        :param identifier: of the Specimen
-        :return: Status code of the http request
+        Deletes all FHIR resources from the Blaze server of a specific type having a specific identifier.
+        :param identifier: Identifier belonging to the resource.
+        It is not the FHIR resource ID!
+        :param resource_type: Type of FHIR resource to delete.
+        :return: Status code of the http request.
         """
-        list_of_full_urls = glom(requests.get(url=self._blaze_url + "/Specimen?identifier=" + identifier,
-                                              auth=self._credentials)
-                                 .json(), "**.fullUrl")
+        response = requests.get(url=self._blaze_url + f"/{resource_type.lower().capitalize()}"
+                                                      f"?identifier={identifier}",
+                                auth=self._credentials)
+        list_of_full_urls = glom(response.json(), "**.fullUrl")
+        if response.status_code == 404 or len(list_of_full_urls) == 0:
+            return 404
         for url in list_of_full_urls:
-            deleted_specimen = requests.get(url=url, auth=self._credentials).json()
-            logger.debug(f"{deleted_specimen}")
             logger.info("Deleting " + url)
-            return requests.delete(url=url, auth=self._credentials).status_code
-
-    def delete_organization(self, identifier: str) -> int:
-        """
-        Deletes an Organization in the Blaze store
-        :param identifier: Organizational identifier
-        :return: Status code of the http request
-        """
-        list_of_full_urls = glom(requests.get(url=self._blaze_url + "/Organization?identifier=" + identifier,
-                                              auth=self._credentials)
-                                 .json(), "**.fullUrl")
-        for url in list_of_full_urls:
-            deleted_organization = requests.get(url=url, auth=self._credentials).json()
-            logger.debug(f"{deleted_organization}")
-            logger.info("Deleting " + url)
+            deleted_resource = requests.get(url=url, auth=self._credentials).json()
+            logger.debug(f"{deleted_resource}")
             return requests.delete(url=url, auth=self._credentials).status_code
 
     def is_specimen_present_in_blaze(self, identifier: str) -> bool:

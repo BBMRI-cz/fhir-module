@@ -74,16 +74,28 @@ class TestBlazeStore(unittest.TestCase):
         yield  # run test
         try:
             for donor in SampleDonorRepoStub().get_all():
-                self.blaze_service.delete_patient(donor.identifier)
+                self.blaze_service.delete_fhir_resource("Patient", donor.identifier)
             for sample in SampleRepoStub().get_all():
-                self.blaze_service.delete_specimen(sample.identifier)
+                self.blaze_service.delete_fhir_resource("Specimen", sample.identifier)
             for organization in SampleCollectionRepoStub().get_all():
-                self.blaze_service.delete_organization(organization.identifier)
+                self.blaze_service.delete_fhir_resource("Organization", organization.identifier)
         except requests.exceptions.ConnectionError:
             logging.info("Could not teardown correctly")
 
     def test_upload_all_patients(self):
         self.assertEqual(200, self.blaze_service.initial_upload_of_all_patients())
+
+    def test_delete_patient_resource_by_identifier_ok(self):
+        self.blaze_service.sync_patients()
+        self.assertTrue(self.blaze_service.is_patient_present_in_blaze("newId"))
+        self.assertEqual(204, self.blaze_service.delete_fhir_resource("PATIENT", "newId"))
+        self.assertFalse(self.blaze_service.is_patient_present_in_blaze("newId"))
+
+    def test_delete_nonexistent_resource_type_404(self):
+        self.assertEqual(404, self.blaze_service.delete_fhir_resource("WRONG", "newId"))
+
+    def test_delete_nonexistent_resource_404(self):
+        self.assertEqual(404, self.blaze_service.delete_fhir_resource("Patient", "newId"))
 
     def test_upload_all_patients_when_blaze_unreachable(self):
         self.blaze_service = BlazeService(PatientService(SampleDonorRepoStub()),
@@ -114,7 +126,7 @@ class TestBlazeStore(unittest.TestCase):
     def test_delete_patient(self):
         self.blaze_service.initial_upload_of_all_patients()
         self.assertTrue(self.blaze_service.is_patient_present_in_blaze("fakeId"))
-        self.blaze_service.delete_patient("fakeId")
+        self.blaze_service.delete_fhir_resource("Patient", "fakeId")
         self.assertFalse(self.blaze_service.is_patient_present_in_blaze("fakeId"))
 
     def test_upload_patient_and_their_condition(self):
@@ -144,8 +156,11 @@ class TestBlazeStore(unittest.TestCase):
                              patient_has_condition("fakeId", "C50.4"))
 
     def test_delete_all_patients(self):
+        self.blaze_service.initial_upload_of_all_patients()
+        self.assertEqual(2, self.blaze_service.get_num_of_patients())
         for donor in SampleDonorRepoStub().get_all():
-            self.blaze_service.delete_patient(donor.identifier)
+            self.blaze_service.delete_fhir_resource("Patient", donor.identifier)
+        self.assertEqual(0, self.blaze_service.get_num_of_patients())
 
     def test_sync_samples_with_donors_not_present_in_blaze_no_upload(self):
         self.blaze_service.sync_samples()
@@ -170,7 +185,7 @@ class TestBlazeStore(unittest.TestCase):
     def test_delete_sample_collections(self):
         self.blaze_service.upload_sample_collections()
         self.assertTrue(self.blaze_service.is_organization_present_in_blaze("test:collection:1"))
-        self.blaze_service.delete_organization("test:collection:1")
+        self.blaze_service.delete_fhir_resource("Organization", "test:collection:1")
         self.assertFalse(self.blaze_service.is_organization_present_in_blaze("test:collection:1"))
 
     def test_upload_sample_collection_twice_no_duplicates(self):
