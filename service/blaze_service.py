@@ -23,6 +23,7 @@ logger = logging.getLogger()
 
 class BlazeService:
     """Service class for business operations/interactions with a Blaze FHIR server."""
+
     def __init__(self, patient_service: PatientService, condition_service: ConditionService,
                  sample_service: SampleService, blaze_url: str,
                  sample_collection_repository: SampleCollectionRepository):
@@ -175,8 +176,15 @@ class BlazeService:
                              f"present. Uploading...")
                 patient_fhir_id = glom(requests.get(url=self._blaze_url + f"/Patient?identifier={sample.donor_id}")
                                        .json(), "**.resource.id")[0]
+                organization_fhir_id = None
+                if (sample.sample_collection_id is not None and
+                        self.is_resource_present_in_blaze("Organization", sample.sample_collection_id)):
+                    organization_fhir_id = \
+                    glom(requests.get(url=self._blaze_url + f"/Organization?identifier={sample.sample_collection_id}")
+                         .json(), "**.resource.id")[0]
                 requests.post(url=self._blaze_url + "/Specimen",
-                              json=sample.to_fhir(material_type_map=MATERIAL_TYPE_MAP, subject_id=patient_fhir_id)
+                              json=sample.to_fhir(material_type_map=MATERIAL_TYPE_MAP, subject_id=patient_fhir_id,
+                                                  custodian_id=organization_fhir_id)
                               .as_json(),
                               auth=self._credentials)
         logger.debug(f"Successfully uploaded {self.get_number_of_resources('Specimen') - num_of_samples_before_sync} "

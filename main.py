@@ -10,7 +10,7 @@ from service.blaze_service import BlazeService
 from service.condition_service import ConditionService
 from service.patient_service import PatientService
 from service.sample_service import SampleService
-from util.config import BLAZE_URL, RECORDS_DIR_PATH, PARSING_MAP, SAMPLE_COLLECTIONS_PATH
+from util.config import BLAZE_URL, RECORDS_DIR_PATH, PARSING_MAP, SAMPLE_COLLECTIONS_PATH, TYPE_TO_COLLECTION_MAP
 from util.custom_logger import setup_logger
 from util.http_util import is_endpoint_available
 
@@ -27,7 +27,8 @@ if __name__ == "__main__":
                                        condition_parsing_map=PARSING_MAP['condition_map'])),
             sample_service=SampleService(SampleXMLRepository(records_path=RECORDS_DIR_PATH,
                                                              sample_parsing_map=
-                                                             PARSING_MAP['sample_map'])),
+                                                             PARSING_MAP['sample_map'],
+                                                             type_to_collection_map=TYPE_TO_COLLECTION_MAP)),
             blaze_url=BLAZE_URL,
             sample_collection_repository=SampleCollectionJSONRepository(SAMPLE_COLLECTIONS_PATH))
         blaze_service.sync()
