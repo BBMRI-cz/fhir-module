@@ -87,9 +87,11 @@ class TestBlazeStore(unittest.TestCase):
 
     def test_delete_patient_resource_by_identifier_ok(self):
         self.blaze_service.sync_patients()
-        self.assertTrue(self.blaze_service.is_patient_present_in_blaze("newId"))
+        self.assertTrue(self.blaze_service.is_resource_present_in_blaze(resource_type="patient",
+                                                                        identifier="newId"))
         self.assertEqual(204, self.blaze_service.delete_fhir_resource("PATIENT", "newId"))
-        self.assertFalse(self.blaze_service.is_patient_present_in_blaze("newId"))
+        self.assertFalse(self.blaze_service.is_resource_present_in_blaze(resource_type="patient",
+                                                                         identifier="newId"))
 
     def test_delete_nonexistent_resource_type_404(self):
         self.assertEqual(404, self.blaze_service.delete_fhir_resource("WRONG", "newId"))
@@ -107,8 +109,10 @@ class TestBlazeStore(unittest.TestCase):
 
     def test_is_present_in_blaze(self):
         self.blaze_service.initial_upload_of_all_patients()
-        self.assertTrue(self.blaze_service.is_patient_present_in_blaze("fakeId"))
-        self.assertTrue(self.blaze_service.is_patient_present_in_blaze("newId"))
+        self.assertTrue(self.blaze_service.is_resource_present_in_blaze(resource_type="patient",
+                                                                        identifier="fakeId"))
+        self.assertTrue(self.blaze_service.is_resource_present_in_blaze(resource_type="patient",
+                                                                        identifier="newId"))
 
     def test_sync_one_new_patient(self):
         donor_repo = SampleDonorRepoStub()
@@ -125,13 +129,16 @@ class TestBlazeStore(unittest.TestCase):
 
     def test_delete_patient(self):
         self.blaze_service.initial_upload_of_all_patients()
-        self.assertTrue(self.blaze_service.is_patient_present_in_blaze("fakeId"))
+        self.assertTrue(self.blaze_service.is_resource_present_in_blaze(resource_type="patient",
+                                                                        identifier="fakeId"))
         self.blaze_service.delete_fhir_resource("Patient", "fakeId")
-        self.assertFalse(self.blaze_service.is_patient_present_in_blaze("fakeId"))
+        self.assertFalse(self.blaze_service.is_resource_present_in_blaze(resource_type="patient",
+                                                                         identifier="fakeId"))
 
     def test_upload_patient_and_their_condition(self):
         self.blaze_service.initial_upload_of_all_patients()
-        self.assertTrue(self.blaze_service.is_patient_present_in_blaze("fakeId"))
+        self.assertTrue(self.blaze_service.is_resource_present_in_blaze(resource_type="patient",
+                                                                        identifier="fakeId"))
         self.blaze_service.sync_conditions()
         self.assertTrue(self.blaze_service.patient_has_condition("fakeId", "C50.4"))
 
@@ -180,13 +187,16 @@ class TestBlazeStore(unittest.TestCase):
 
     def test_upload_sample_collections(self):
         self.blaze_service.upload_sample_collections()
-        self.assertTrue(self.blaze_service.is_organization_present_in_blaze("test:collection:1"))
+        self.assertTrue(self.blaze_service.is_resource_present_in_blaze(resource_type="Organization",
+                                                                        identifier="test:collection:1"))
 
     def test_delete_sample_collections(self):
         self.blaze_service.upload_sample_collections()
-        self.assertTrue(self.blaze_service.is_organization_present_in_blaze("test:collection:1"))
+        self.assertTrue(self.blaze_service.is_resource_present_in_blaze(resource_type="Organization",
+                                                                        identifier="test:collection:1"))
         self.blaze_service.delete_fhir_resource("Organization", "test:collection:1")
-        self.assertFalse(self.blaze_service.is_organization_present_in_blaze("test:collection:1"))
+        self.assertFalse(self.blaze_service.is_resource_present_in_blaze(resource_type="Organization",
+                                                                         identifier="test:collection:1"))
 
     def test_upload_sample_collection_twice_no_duplicates(self):
         self.assertEqual(0, self.blaze_service.get_number_of_resources("Organization"))
