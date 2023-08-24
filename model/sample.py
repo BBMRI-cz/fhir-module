@@ -74,21 +74,27 @@ class Sample:
             specimen.subject = FHIRReference()
             specimen.subject.reference = f"Patient/{subject_id}"
         if self.diagnosis is not None:
-            fhir_diagnosis: Extension = Extension()
-            fhir_diagnosis.url = "https://fhir.bbmri.de/StructureDefinition/SampleDiagnosis"
-            fhir_diagnosis.valueCodeableConcept = CodeableConcept()
-            fhir_diagnosis.valueCodeableConcept.coding = [Coding()]
-            fhir_diagnosis.valueCodeableConcept.coding[0].code = self.__diagnosis_with_period()
-            extensions.append(fhir_diagnosis)
+            extensions.append(self.__create_diagnosis_extension())
         if custodian_id is not None:
-            custodian_extension: Extension = Extension()
-            custodian_extension.url = "https://fhir.bbmri.de/StructureDefinition/Custodian"
-            custodian_extension.valueReference = FHIRReference()
-            custodian_extension.valueReference.reference = f"Organization/{custodian_id}"
-            extensions.append(custodian_extension)
+            extensions.append(self.__create_custodian_extension(custodian_id))
         if extensions:
             specimen.extension = extensions
         return specimen
+
+    def __create_diagnosis_extension(self):
+        fhir_diagnosis: Extension = Extension()
+        fhir_diagnosis.url = "https://fhir.bbmri.de/StructureDefinition/SampleDiagnosis"
+        fhir_diagnosis.valueCodeableConcept = CodeableConcept()
+        fhir_diagnosis.valueCodeableConcept.coding = [Coding()]
+        fhir_diagnosis.valueCodeableConcept.coding[0].code = self.__diagnosis_with_period()
+        return fhir_diagnosis
+
+    def __create_custodian_extension(self, custodian_id):
+        custodian_extension: Extension = Extension()
+        custodian_extension.url = "https://fhir.bbmri.de/StructureDefinition/Custodian"
+        custodian_extension.valueReference = FHIRReference()
+        custodian_extension.valueReference.reference = f"Organization/{custodian_id}"
+        return custodian_extension
 
     def __create_specimen_type(self, material_type_map) -> CodeableConcept:
         specimen_type = CodeableConcept()
