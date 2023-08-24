@@ -16,10 +16,11 @@ logger = logging.getLogger()
 class SampleXMLRepository(SampleRepository):
     """Class for handling sample persistence in XML files."""
 
-    def __init__(self, records_path: str, sample_parsing_map: dict):
+    def __init__(self, records_path: str, sample_parsing_map: dict, type_to_collection_map: dict = None):
         self._dir_path = records_path
         self._sample_parsing_map = sample_parsing_map
         logger.debug(f"Loaded the following sample parsing map {sample_parsing_map}")
+        self._type_to_collection_map = type_to_collection_map
 
     def get_all(self) -> Generator[Sample, None, None]:
         for dir_entry in os.scandir(self._dir_path):
@@ -38,17 +39,20 @@ class SampleXMLRepository(SampleRepository):
                 return
 
     def __build_sample(self, file_content, xml_sample):
-        return Sample(identifier=glom(xml_sample,
-                                      self._sample_parsing_map.get("sample_details").get("id")),
-                      donor_id=glom(file_content,
-                                    self._sample_parsing_map.get("donor_id")),
-                      material_type=glom(xml_sample,
-                                         self._sample_parsing_map.get("sample_details").get(
-                                             "material_type"),
-                                         default=None),
-                      diagnosis=glom(xml_sample,
-                                     self._sample_parsing_map.get("sample_details").get(
-                                         "diagnosis"), default=None))
+        sample = Sample(identifier=glom(xml_sample,
+                                        self._sample_parsing_map.get("sample_details").get("id")),
+                        donor_id=glom(file_content,
+                                      self._sample_parsing_map.get("donor_id")),
+                        material_type=glom(xml_sample,
+                                           self._sample_parsing_map.get("sample_details").get(
+                                               "material_type"),
+                                           default=None),
+                        diagnosis=glom(xml_sample,
+                                       self._sample_parsing_map.get("sample_details").get(
+                                           "diagnosis"), default=None))
+        if self._type_to_collection_map is not None:
+            sample.sample_collection_id = self._type_to_collection_map.get(sample.material_type)
+        return sample
 
 
 def flatten_list(nested_list):

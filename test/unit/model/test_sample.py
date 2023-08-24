@@ -54,3 +54,7 @@ class TestSample(unittest.TestCase):
         sample: Sample = Sample(identifier="sampleId", donor_id="patient")
         self.assertEqual("Organization/FHIRCollectionID", sample.to_fhir(custodian_id="FHIRCollectionID")
                          .extension[0].valueReference.reference)
+
+    def test_sample_collection_id_ok(self):
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient", sample_collection_id="test")
+        self.assertEqual("test", sample.sample_collection_id)

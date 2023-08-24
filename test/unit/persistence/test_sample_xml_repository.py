@@ -11,6 +11,7 @@ from util.config import PARSING_MAP
 class TestSampleXMLRepository(unittest.TestCase):
     sample = '<STS>' \
              '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
+             '<materialType>S</materialType>' \
              '<diagnosis>C509</diagnosis>' \
              '</diagnosisMaterial>' \
              '</STS>'
@@ -113,3 +114,21 @@ class TestSampleXMLRepository(unittest.TestCase):
         self.assertEqual(4, sum(1 for _ in self.sample_repository.get_all()))
         for sample in self.sample_repository.get_all():
             self.assertIsNotNone(sample.diagnosis)
+
+    @patchfs
+    def test_with_type_to_collection_map_ok(self, fake_fs):
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
+                                                     type_to_collection_map={"S": "test:collection:id"})
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.sample))
+        self.assertEqual("test:collection:id", next(self.sample_repository.get_all()).sample_collection_id)
+
+    @patchfs
+    def test_with_wrong_type_to_collection_map_id_is_none(self, fake_fs):
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
+                                                     type_to_collection_map={"not_present": "test:collection:id"})
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.sample))
+        self.assertEqual(None, next(self.sample_repository.get_all()).sample_collection_id)
