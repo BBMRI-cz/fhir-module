@@ -46,3 +46,8 @@ simply specify them in `compose.yaml` in the environment section.
 | BLAZE_URL              | http://localhost:8080/fhir                      | Base url of the FHIR server for sync. No trailing slash.                                                                                        |
 | PARSING_MAP_PATH       | /opt/fhir-module/default_map.json               | Path to a JSON file containing object parsing mappings. Example [here](../util/default_map.json).                                               |
 | MATERIAL_TYPE_MAP_PATH | /opt/fhir-module/default_material_type_map.json | Path to a JSON file containing mappings between organizational and FHIR material types. Example [here](../util/default_material_type_map.json). |
+
+## Object mapping
+
+The FHIR module uses dynamically configurable maps currently stored as json files
+to parse XML into Python objects. 
