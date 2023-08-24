@@ -22,6 +22,7 @@ logger = logging.getLogger()
 
 
 class BlazeService:
+    """Service class for business operations/interactions with a Blaze FHIR server."""
     def __init__(self, patient_service: PatientService, condition_service: ConditionService,
                  sample_service: SampleService, blaze_url: str,
                  sample_collection_repository: SampleCollectionRepository):
@@ -103,11 +104,6 @@ class BlazeService:
                     return
 
     def __upload_donor(self, donor: SampleDonor) -> int:
-        """
-        Uploads a SampleDonor to the Blaze store
-        :param donor: SampleDonor to upload
-        :return: Status code of the http request
-        """
         logger.debug("Uploading patient: " + donor.to_fhir().as_json().__str__())
         res = requests.post(url=self._blaze_url + "/Patient",
                             json=donor.to_fhir().as_json(),
