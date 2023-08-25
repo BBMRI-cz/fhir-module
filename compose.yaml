@@ -13,6 +13,7 @@ services:
     environment:
       BLAZE_URL: "http://blaze:8080/fhir"
       DIR_PATH: "/opt/records"
+      PYTHONWARNINGS: "ignore:Unverified HTTPS request"
     volumes:
       - type: bind
         source: "test/xml_data"
