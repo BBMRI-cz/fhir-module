@@ -82,7 +82,8 @@ class BlazeService:
         try:
             response = requests.post(url=self._blaze_url,
                                      json=bundle.as_json(),
-                                     auth=self._credentials)
+                                     auth=self._credentials,
+                                     verify=False)
         except requests.exceptions.ConnectionError:
             logger.error("Cannot connect to blaze!")
             return 404
@@ -106,7 +107,8 @@ class BlazeService:
         logger.debug("Uploading patient: " + donor.to_fhir().as_json().__str__())
         res = requests.post(url=self._blaze_url + "/Patient",
                             json=donor.to_fhir().as_json(),
-                            auth=self._credentials)
+                            auth=self._credentials,
+                            verify=False)
         logger.info("Patient " + donor.identifier + " uploaded.")
         return res.status_code
 
@@ -135,7 +137,8 @@ class BlazeService:
         patient_fhir_id = self.__get_fhir_id_of_donor(condition.patient_id)
         requests.post(url=self._blaze_url + "/Condition",
                       json=condition.to_fhir(subject_id=patient_fhir_id).as_json(),
-                      auth=self._credentials)
+                      auth=self._credentials,
+                      verify=False)
         logger.debug(f"Condition {condition.icd_10_code} successfully uploaded for patient"
                      f"with FHIR id: {patient_fhir_id} and org. id: {condition.patient_id}.")
 
@@ -146,19 +149,20 @@ class BlazeService:
         :return: FHIR resource id
         """
         return glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + patient_id,
-                                 auth=self._credentials)
+                                 auth=self._credentials, verify=False)
                     .json(), "**.resource.id")[0]
 
     def patient_has_condition(self, patient_identifier: str, icd_10_code: str) -> bool:
         """Checks if patient already has a condition with specific ICD-10 code (use a dot format)."""
         try:
-            patient_fhir_id = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + patient_identifier)
+            patient_fhir_id = glom(requests.get(url=f"{self._blaze_url}/Patient?identifier={patient_identifier}",
+                                                verify=False)
                                    .json(), "**.resource.id")[0]
         except IndexError:
             raise PatientNotFoundError
         search_url = f"{self._blaze_url}/Condition?patient={patient_fhir_id}" \
                      f"&code=http://hl7.org/fhir/sid/icd-10|{icd_10_code}"
-        return requests.get(search_url, auth=self._credentials).json().get("total") > 0
+        return requests.get(search_url, auth=self._credentials, verify=False).json().get("total") > 0
 
     def sync_samples(self):
         """Syncs Samples present in the repository with the Blaze store."""
@@ -185,12 +189,15 @@ class BlazeService:
                                           subject_id=self.__get_fhir_id_of_donor(sample.donor_id),
                                           custodian_id=custodian_fhir_id)
                       .as_json(),
-                      auth=self._credentials)
+                      auth=self._credentials,
+                      verify=False
+                      )
 
     def __get_organization_fhir_id(self, organization_identifier: str):
         organization_fhir_id = \
             glom(requests.get(
-                url=self._blaze_url + f"/Organization?identifier={organization_identifier}")
+                url=self._blaze_url + f"/Organization?identifier={organization_identifier}",
+                auth=self._credentials, verify=False)
                  .json(), "**.resource.id")[0]
         return organization_fhir_id
 
@@ -202,7 +209,7 @@ class BlazeService:
         """
         try:
             return requests.get(url=self._blaze_url + f"/{resource_type.capitalize()}?_summary=count",
-                                auth=self._credentials).json().get("total")
+                                auth=self._credentials, verify=False).json().get("total")
         except requests.exceptions.ConnectionError:
             logger.error("Cannot connect to blaze!")
             return 0
@@ -217,7 +224,8 @@ class BlazeService:
         """
         response = requests.get(url=self._blaze_url + f"/{resource_type.capitalize()}"
                                                       f"?identifier={identifier}",
-                                auth=self._credentials)
+                                auth=self._credentials,
+                                verify=False)
         list_of_full_urls = glom(response.json(), "**.fullUrl")
         if response.status_code == 404 or len(list_of_full_urls) == 0:
             return 404
@@ -238,7 +246,7 @@ class BlazeService:
         try:
             count = (requests.get(
                 url=self._blaze_url + f"/{resource_type.capitalize()}?identifier={identifier}&_summary=count",
-                auth=self._credentials)
+                auth=self._credentials, verify=False)
                      .json()
                      .get("total"))
             return count > 0
@@ -252,5 +260,6 @@ class BlazeService:
                                                      identifier=sample_collection.identifier):
                 requests.post(url=self._blaze_url + "/Organization",
                               json=sample_collection.to_fhir().as_json(),
-                              auth=self._credentials)
+                              auth=self._credentials,
+                              verify=False)
         logger.debug(f"Successfully uploaded {self.get_number_of_resources('Organization')} Sample collections.")

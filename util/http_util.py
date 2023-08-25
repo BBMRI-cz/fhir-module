@@ -21,7 +21,7 @@ def is_endpoint_available(endpoint_url, max_attempts=10, wait_time=60) -> bool:
     logger.info(f"Attempting to reach endpoint: '{endpoint_url}'.")
     while attempts < max_attempts:
         try:
-            response = requests.get(endpoint_url)
+            response = requests.get(endpoint_url, verify=False)
             response.raise_for_status()
             logger.info(f"Endpoint '{endpoint_url}' is available.")
             return True
