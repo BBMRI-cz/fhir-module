@@ -7,8 +7,8 @@ from service.sample_service import SampleService
 
 
 class SampleRepoStub(SampleRepository):
-    samples = [Sample("fakeId", "fakePatientId"),
-               Sample("fakeId2", "fakePatientId2")]
+    samples = [Sample(identifier="fakeId", donor_id="fakePatientId"),
+               Sample(identifier="fakeId2", donor_id="fakePatientId2", material_type="2")]
 
     def get_all(self) -> List[Sample]:
         yield from self.samples

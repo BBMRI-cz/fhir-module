@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 
 import requests
@@ -8,12 +7,13 @@ from fhirclient.models.bundle import Bundle
 from glom import glom
 
 from exception.patient_not_found import PatientNotFoundError
-from model.condition import Condition
 from model.sample import Sample
 from model.sample_donor import SampleDonor
+from persistence.sample_collection_repository import SampleCollectionRepository
 from service.condition_service import ConditionService
 from service.patient_service import PatientService
 from service.sample_service import SampleService
+from util.config import MATERIAL_TYPE_MAP, BLAZE_AUTH
 from util.custom_logger import setup_logger
 
 setup_logger()
@@ -21,23 +21,28 @@ logger = logging.getLogger()
 
 
 class BlazeService:
+    """Service class for business operations/interactions with a Blaze FHIR server."""
+
     def __init__(self, patient_service: PatientService, condition_service: ConditionService,
-                 sample_service: SampleService, blaze_url: str):
+                 sample_service: SampleService, blaze_url: str,
+                 sample_collection_repository: SampleCollectionRepository):
         """
         Class for interacting with a Blaze Store FHIR server
-        :param patient_service:
-        :param blaze_url: base url of the FHIR server. Must be without a trailing /
+        :param blaze_url: Base url of the FHIR server
+        Must be without a trailing /.
         """
         self._patient_service = patient_service
         self._condition_service = condition_service
         self._sample_service = sample_service
         self._blaze_url = blaze_url
-        self._credentials = (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))
+        self._sample_collection_repository = sample_collection_repository
+        self._credentials = BLAZE_AUTH
 
     def sync(self):
-        """Starts the sync between the repositories and the Blaze store"""
+        """Starts the sync between the repositories and the Blaze store."""
         logger.info("Starting sync with Blaze 🔥!")
-        if self.get_num_of_patients() == 0:
+        if self.get_number_of_resources("Patient") == 0:
+            self.upload_sample_collections()
             self.initial_upload_of_all_patients()
             self.sync_conditions()
             self.sync_samples()
@@ -59,13 +64,13 @@ class BlazeService:
         """
         This method posts all patients from the repository to the Blaze store. WARNING: can result in duplication of
         patients. This method should be called only once, specifically if there are no patients in the FHIR server.
-        :return: status code of the http request
+        :return: Status code of the http request
         """
         logger.info("Starting upload of patients...")
         bundle = self._patient_service.get_all_patients_in_fhir_transaction()
         status_code = self.__post_bundle(bundle=bundle)
         logger.info('Number of patients successfully uploaded: %s',
-                    self.get_num_of_patients())
+                    self.get_number_of_resources("Patient"))
         return status_code
 
     def __post_bundle(self, bundle: Bundle) -> int:
@@ -83,40 +88,14 @@ class BlazeService:
             return 404
         return response.status_code
 
-    def get_num_of_patients(self) -> int:
-        """
-        Get the number of patients available in the Blaze store
-        :return: number of patients
-        """
-        try:
-            return requests.get(url=self._blaze_url + "/Patient?_summary=count",
-                                auth=self._credentials).json().get("total")
-        except requests.exceptions.ConnectionError:
-            logger.error("Cannot connect to blaze!")
-            return 0
-
-    def is_patient_present_in_blaze(self, identifier: str) -> bool:
-        """
-        Checks if a patient is present in a blaze store
-        :param identifier: of the Patient
-        :return: true if present
-        """
-        try:
-            response = (requests.get(url=self._blaze_url + "/Patient?identifier=" + identifier + "&_summary=count",
-                                     auth=self._credentials)
-                        .json()
-                        .get("total"))
-            return response > 0
-        except TypeError:
-            return False
-
     def sync_patients(self):
         """
         Syncs SampleDonors present in the repository and uploads them to the blaze store
         :return:
         """
         for donor in self._patient_service.get_all():
-            if not self.is_patient_present_in_blaze(donor.identifier):
+            if not self.is_resource_present_in_blaze(resource_type="patient",
+                                                     identifier=donor.identifier):
                 try:
                     self.__upload_donor(donor)
                 except requests.exceptions.ConnectionError:
@@ -124,11 +103,6 @@ class BlazeService:
                     return
 
     def __upload_donor(self, donor: SampleDonor) -> int:
-        """
-        Uploads a SampleDonor to the Blaze store
-        :param donor: SampleDonor to upload
-        :return: Status code of the http request
-        """
         logger.debug("Uploading patient: " + donor.to_fhir().as_json().__str__())
         res = requests.post(url=self._blaze_url + "/Patient",
                             json=donor.to_fhir().as_json(),
@@ -136,35 +110,26 @@ class BlazeService:
         logger.info("Patient " + donor.identifier + " uploaded.")
         return res.status_code
 
-    def delete_patient(self, identifier: str) -> int:
-        """
-        Deletes a Patient in the Blaze store
-        :param identifier: of the Patient
-        :return: Status code of the http request
-        """
-        list_of_full_urls = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + identifier,
-                                              auth=self._credentials)
-                                 .json(), "**.fullUrl")
-        for url in list_of_full_urls:
-            logger.info("Deleting " + url)
-            return requests.delete(url=url).status_code
-
     def sync_conditions(self):
         """
         Syncs Conditions present in the Condition Repository
         """
         logger.info("Starting upload of conditions...")
-        condition: Condition
+        num_of_conditions_before_upload = self.get_number_of_resources("condition")
+        logger.debug(f"Current number of conditions: {num_of_conditions_before_upload}")
         for condition in self._condition_service.get_all():
             try:
                 patient_has_condition = self.patient_has_condition(patient_identifier=condition.patient_id,
                                                                    icd_10_code=condition.icd_10_code)
             except PatientNotFoundError:
-                logger.info("Patient with identifier: " + condition.patient_id
-                            + " not present in the FHIR store. Skipping...")
+                logger.info(f"Patient with identifier: {condition.patient_id} not present in the FHIR store."
+                            f" Skipping...")
                 continue
             if not patient_has_condition:
                 self.__upload_condition(condition)
+        logger.debug(
+            f"Successfully uploaded {self.get_number_of_resources('Condition') - num_of_conditions_before_upload}"
+            f" new conditions.")
 
     def __upload_condition(self, condition):
         patient_fhir_id = self.__get_fhir_id_of_donor(condition.patient_id)
@@ -177,7 +142,7 @@ class BlazeService:
     def __get_fhir_id_of_donor(self, patient_id: str) -> str:
         """
         Get Resource id for a patient with identifier.
-        :param patient_id: identifier of the sample donor
+        :param patient_id: Identifier of the sample donor
         :return: FHIR resource id
         """
         return glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + patient_id,
@@ -185,7 +150,7 @@ class BlazeService:
                     .json(), "**.resource.id")[0]
 
     def patient_has_condition(self, patient_identifier: str, icd_10_code: str) -> bool:
-        """Checks if patient already has a condition with specific ICD-10 code (use dot format)"""
+        """Checks if patient already has a condition with specific ICD-10 code (use a dot format)."""
         try:
             patient_fhir_id = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + patient_identifier)
                                    .json(), "**.resource.id")[0]
@@ -198,50 +163,94 @@ class BlazeService:
     def sync_samples(self):
         """Syncs Samples present in the repository with the Blaze store."""
         logger.info("Starting upload of samples...")
-        sample: Sample
+        num_of_samples_before_sync = self.get_number_of_resources("Specimen")
+        logger.debug(f"Current number of Specimens: {num_of_samples_before_sync}.")
         for sample in self._sample_service.get_all():
-            if not self.is_specimen_present_in_blaze(sample.identifier):
-                logger.debug(f"Specimen with org. ID: {sample.identifier} is not present in Blaze. Uploading...")
-                requests.post(url=self._blaze_url + "/Specimen",
-                              json=sample.to_fhir().as_json(),
-                              auth=self._credentials)
+            if (not self.is_resource_present_in_blaze(resource_type="Specimen", identifier=sample.identifier) and
+                    self.is_resource_present_in_blaze(resource_type="Patient", identifier=sample.donor_id)):
+                logger.debug(f"Specimen with org. ID: {sample.identifier} is not present in Blaze but the Donor is "
+                             f"present. Uploading...")
+                self.__upload_sample(sample)
+                logger.debug(f"Successfully uploaded"
+                             f" {self.get_number_of_resources('Specimen') - num_of_samples_before_sync}"
+                             f"new samples.")
 
-    def get_num_of_specimens(self) -> int:
+    def __upload_sample(self, sample: Sample):
+        custodian_fhir_id: str = None
+        if (sample.sample_collection_id is not None and
+                self.is_resource_present_in_blaze("Organization", sample.sample_collection_id)):
+            custodian_fhir_id = self.__get_organization_fhir_id(sample.sample_collection_id)
+        requests.post(url=self._blaze_url + "/Specimen",
+                      json=sample.to_fhir(material_type_map=MATERIAL_TYPE_MAP,
+                                          subject_id=self.__get_fhir_id_of_donor(sample.donor_id),
+                                          custodian_id=custodian_fhir_id)
+                      .as_json(),
+                      auth=self._credentials)
+
+    def __get_organization_fhir_id(self, organization_identifier: str):
+        organization_fhir_id = \
+            glom(requests.get(
+                url=self._blaze_url + f"/Organization?identifier={organization_identifier}")
+                 .json(), "**.resource.id")[0]
+        return organization_fhir_id
+
+    def get_number_of_resources(self, resource_type: str) -> int:
         """
-        Get the number of specimens available in the Blaze store
-        :return: number of specimens
+        Get the number of Resources, of a specific type in the blaze store.
+        :param resource_type: Resource type for which to get the count.
+        :return: The number of resources in the Blaze store.
         """
         try:
-            return requests.get(url=self._blaze_url + "/Specimen?_summary=count",
+            return requests.get(url=self._blaze_url + f"/{resource_type.capitalize()}?_summary=count",
                                 auth=self._credentials).json().get("total")
         except requests.exceptions.ConnectionError:
             logger.error("Cannot connect to blaze!")
             return 0
 
-    def delete_specimen(self, identifier: str) -> int:
+    def delete_fhir_resource(self, resource_type: str, identifier: str) -> int:
         """
-        Deletes a Specimen in the Blaze store
-        :param identifier: of the Specimen
-        :return: Status code of the http request
+        Deletes all FHIR resources from the Blaze server of a specific type having a specific identifier.
+        :param identifier: Identifier belonging to the resource.
+        It is not the FHIR resource ID!
+        :param resource_type: Type of FHIR resource to delete.
+        :return: Status code of the http request.
         """
-        list_of_full_urls = glom(requests.get(url=self._blaze_url + "/Specimen?identifier=" + identifier,
-                                              auth=self._credentials)
-                                 .json(), "**.fullUrl")
+        response = requests.get(url=self._blaze_url + f"/{resource_type.capitalize()}"
+                                                      f"?identifier={identifier}",
+                                auth=self._credentials)
+        list_of_full_urls = glom(response.json(), "**.fullUrl")
+        if response.status_code == 404 or len(list_of_full_urls) == 0:
+            return 404
         for url in list_of_full_urls:
             logger.info("Deleting " + url)
-            return requests.delete(url=url).status_code
+            deleted_resource = requests.get(url=url, auth=self._credentials).json()
+            logger.debug(f"{deleted_resource}")
+            return requests.delete(url=url, auth=self._credentials).status_code
 
-    def is_specimen_present_in_blaze(self, identifier: str) -> bool:
+    def is_resource_present_in_blaze(self, resource_type: str, identifier: str) -> bool:
         """
-        Checks if a specimen is present in a blaze store
-        :param identifier: of the Specimen
-        :return: true if present
+        Checks if a resource of specific type with a specific identifier is present in the Blaze store.
+        :param resource_type: FHIR resource type.
+        :param identifier: Identifier belonging to the resource.
+        It is not the FHIR resource ID!
+        :return:
         """
         try:
-            response = (requests.get(url=self._blaze_url + "/Specimen?identifier=" + identifier + "&_summary=count",
-                                     auth=self._credentials)
-                        .json()
-                        .get("total"))
-            return response > 0
+            count = (requests.get(
+                url=self._blaze_url + f"/{resource_type.capitalize()}?identifier={identifier}&_summary=count",
+                auth=self._credentials)
+                     .json()
+                     .get("total"))
+            return count > 0
         except TypeError:
             return False
+
+    def upload_sample_collections(self):
+        """Uploads SampleCollections as FHIR organizations."""
+        for sample_collection in self._sample_collection_repository.get_all():
+            if not self.is_resource_present_in_blaze(resource_type="Organization",
+                                                     identifier=sample_collection.identifier):
+                requests.post(url=self._blaze_url + "/Organization",
+                              json=sample_collection.to_fhir().as_json(),
+                              auth=self._credentials)
+        logger.debug(f"Successfully uploaded {self.get_number_of_resources('Organization')} Sample collections.")

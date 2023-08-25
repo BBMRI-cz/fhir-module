@@ -41,7 +41,16 @@ if connection to the Blaze was successful, you should see the following line:
 The FHIR module is configured via environment variables, all of which can be found below. To override the default value,
 simply specify them in `compose.yaml` in the environment section.
 
-| Variable name    | Default value                     | Description                                                                                       |
-|------------------|-----------------------------------|---------------------------------------------------------------------------------------------------|
-| BLAZE_URL        | http://localhost:8080/fhir        | Base url of the FHIR server for sync. No trailing slash.                                          |
-| PARSING_MAP_PATH | /opt/fhir-module/default_map.json | Path to a JSON file containing object parsing mappings. Example [here](../util/default_map.json). |
+| Variable name           | Default value                                   | Description                                                                                                                                     |
+|-------------------------|-------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| BLAZE_URL               | http://localhost:8080/fhir                      | Base url of the FHIR server for sync. No trailing slash.                                                                                        |
+| BLAZE_USER              | _empty_                                         | Basic auth username for accessing the blaze store via HTTP.                                                                                     |
+| BLAZE_PASS              | _empty_                                         | Basic auth password for accessing the blaze store via HTTP.                                                                                     |
+| PARSING_MAP_PATH        | /opt/fhir-module/default_map.json               | Path to a JSON file containing object parsing mappings. Example [here](../util/default_map.json).                                               |
+| MATERIAL_TYPE_MAP_PATH  | /opt/fhir-module/default_material_type_map.json | Path to a JSON file containing mappings between organizational and FHIR material types. Example [here](../util/default_material_type_map.json). |
+| SAMPLE_COLLECTIONS_PATH | /opt/fhir-module/default_sample_collection.json | Path to a JSON file containing information about Sample collections. Example [here](../util/default_sample_collection.json).                    |
+
+## Object mapping
+
+The FHIR module uses dynamically configurable maps currently stored as json files
+to parse XML into Python objects. 
