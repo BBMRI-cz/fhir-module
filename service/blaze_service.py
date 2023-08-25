@@ -170,18 +170,20 @@ class BlazeService:
                     self.is_resource_present_in_blaze(resource_type="Patient", identifier=sample.donor_id)):
                 logger.debug(f"Specimen with org. ID: {sample.identifier} is not present in Blaze but the Donor is "
                              f"present. Uploading...")
-                if (sample.sample_collection_id is not None and
-                        self.is_resource_present_in_blaze("Organization", sample.sample_collection_id)):
-                    self.__upload_sample(sample)
-                    logger.debug(f"Successfully uploaded"
-                                 f" {self.get_number_of_resources('Specimen') - num_of_samples_before_sync}"
-                                 f"new samples.")
+                self.__upload_sample(sample)
+                logger.debug(f"Successfully uploaded"
+                             f" {self.get_number_of_resources('Specimen') - num_of_samples_before_sync}"
+                             f"new samples.")
 
     def __upload_sample(self, sample: Sample):
+        custodian_fhir_id: str = None
+        if (sample.sample_collection_id is not None and
+                self.is_resource_present_in_blaze("Organization", sample.sample_collection_id)):
+            custodian_fhir_id = self.__get_organization_fhir_id(sample.sample_collection_id)
         requests.post(url=self._blaze_url + "/Specimen",
                       json=sample.to_fhir(material_type_map=MATERIAL_TYPE_MAP,
                                           subject_id=self.__get_fhir_id_of_donor(sample.donor_id),
-                                          custodian_id=self.__get_organization_fhir_id(sample.sample_collection_id))
+                                          custodian_id=custodian_fhir_id)
                       .as_json(),
                       auth=self._credentials)
 
