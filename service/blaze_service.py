@@ -7,7 +7,6 @@ from fhirclient.models.bundle import Bundle
 from glom import glom
 
 from exception.patient_not_found import PatientNotFoundError
-from model.condition import Condition
 from model.sample import Sample
 from model.sample_donor import SampleDonor
 from persistence.sample_collection_repository import SampleCollectionRepository
@@ -29,9 +28,8 @@ class BlazeService:
                  sample_collection_repository: SampleCollectionRepository):
         """
         Class for interacting with a Blaze Store FHIR server
-        :param patient_service:
-        :param blaze_url: Base url of the FHIR server.
-        Must be without a trailing /
+        :param blaze_url: Base url of the FHIR server
+        Must be without a trailing /.
         """
         self._patient_service = patient_service
         self._condition_service = condition_service
@@ -119,14 +117,13 @@ class BlazeService:
         logger.info("Starting upload of conditions...")
         num_of_conditions_before_upload = self.get_number_of_resources("condition")
         logger.debug(f"Current number of conditions: {num_of_conditions_before_upload}")
-        condition: Condition
         for condition in self._condition_service.get_all():
             try:
                 patient_has_condition = self.patient_has_condition(patient_identifier=condition.patient_id,
                                                                    icd_10_code=condition.icd_10_code)
             except PatientNotFoundError:
-                logger.info("Patient with identifier: " + condition.patient_id
-                            + " not present in the FHIR store. Skipping...")
+                logger.info(f"Patient with identifier: {condition.patient_id} not present in the FHIR store."
+                            f" Skipping...")
                 continue
             if not patient_has_condition:
                 self.__upload_condition(condition)
@@ -153,7 +150,7 @@ class BlazeService:
                     .json(), "**.resource.id")[0]
 
     def patient_has_condition(self, patient_identifier: str, icd_10_code: str) -> bool:
-        """Checks if patient already has a condition with specific ICD-10 code (use a dot format)"""
+        """Checks if patient already has a condition with specific ICD-10 code (use a dot format)."""
         try:
             patient_fhir_id = glom(requests.get(url=self._blaze_url + "/Patient?identifier=" + patient_identifier)
                                    .json(), "**.resource.id")[0]
@@ -168,27 +165,32 @@ class BlazeService:
         logger.info("Starting upload of samples...")
         num_of_samples_before_sync = self.get_number_of_resources("Specimen")
         logger.debug(f"Current number of Specimens: {num_of_samples_before_sync}.")
-        sample: Sample
         for sample in self._sample_service.get_all():
             if (not self.is_resource_present_in_blaze(resource_type="Specimen", identifier=sample.identifier) and
-                    self.is_resource_present_in_blaze(resource_type="patient", identifier=sample.donor_id)):
+                    self.is_resource_present_in_blaze(resource_type="Patient", identifier=sample.donor_id)):
                 logger.debug(f"Specimen with org. ID: {sample.identifier} is not present in Blaze but the Donor is "
                              f"present. Uploading...")
-                patient_fhir_id = glom(requests.get(url=self._blaze_url + f"/Patient?identifier={sample.donor_id}")
-                                       .json(), "**.resource.id")[0]
-                organization_fhir_id = None
                 if (sample.sample_collection_id is not None and
                         self.is_resource_present_in_blaze("Organization", sample.sample_collection_id)):
-                    organization_fhir_id = \
-                    glom(requests.get(url=self._blaze_url + f"/Organization?identifier={sample.sample_collection_id}")
-                         .json(), "**.resource.id")[0]
-                requests.post(url=self._blaze_url + "/Specimen",
-                              json=sample.to_fhir(material_type_map=MATERIAL_TYPE_MAP, subject_id=patient_fhir_id,
-                                                  custodian_id=organization_fhir_id)
-                              .as_json(),
-                              auth=self._credentials)
-        logger.debug(f"Successfully uploaded {self.get_number_of_resources('Specimen') - num_of_samples_before_sync} "
-                     f"new samples.")
+                    self.__upload_sample(sample)
+                    logger.debug(f"Successfully uploaded"
+                                 f" {self.get_number_of_resources('Specimen') - num_of_samples_before_sync}"
+                                 f"new samples.")
+
+    def __upload_sample(self, sample: Sample):
+        requests.post(url=self._blaze_url + "/Specimen",
+                      json=sample.to_fhir(material_type_map=MATERIAL_TYPE_MAP,
+                                          subject_id=self.__get_fhir_id_of_donor(sample.donor_id),
+                                          custodian_id=self.__get_organization_fhir_id(sample.sample_collection_id))
+                      .as_json(),
+                      auth=self._credentials)
+
+    def __get_organization_fhir_id(self, organization_identifier: str):
+        organization_fhir_id = \
+            glom(requests.get(
+                url=self._blaze_url + f"/Organization?identifier={organization_identifier}")
+                 .json(), "**.resource.id")[0]
+        return organization_fhir_id
 
     def get_number_of_resources(self, resource_type: str) -> int:
         """

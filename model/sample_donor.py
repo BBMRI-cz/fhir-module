@@ -16,8 +16,8 @@ class SampleDonor:
         if not isinstance(identifier, str):
             raise TypeError("Identifier must be string")
         self._identifier = identifier
-        self._gender: Gender = None
-        self._date_of_birth: datetime = None
+        self._gender: Gender = gender
+        self._date_of_birth: datetime = birth_date
 
     @property
     def identifier(self) -> str:
