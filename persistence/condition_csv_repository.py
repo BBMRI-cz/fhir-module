@@ -3,7 +3,6 @@ import os
 import pandas as pd
 from typing import List
 
-from glom import glom
 
 from model.condition import Condition
 from persistence.condition_repository import ConditionRepository
@@ -33,7 +32,7 @@ class ConditionCsvRepository(ConditionRepository):
         try:
             for _, row in file_content.iterrows():
                 try:
-                    diagnosis = self.__extract_first_diagnosis(row[self._sample_parsing_map.get("icd-10_code")])
+                    diagnosis = self.__extract_first_diagnosis(self, row[self._sample_parsing_map.get("icd-10_code")])
                     patient_id = row[self._sample_parsing_map.get("patient_id")]
                     condition = Condition(patient_id=patient_id, icd_10_code=diagnosis)
                     yield condition
