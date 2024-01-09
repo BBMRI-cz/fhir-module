@@ -23,8 +23,10 @@ class ConditionCsvRepository(ConditionRepository):
         logger.debug(f"Loaded the following condition parsing map {condition_parsing_map}")
 
     def get_all(self) -> List[Condition]:
+        dir_entry: os.DirEntry
         for dir_entry in os.scandir(self._dir_path):
-            yield from self.__extract_condition_from_csv_file(dir_entry)
+            if dir_entry.name.endswith(".csv"):
+                yield from self.__extract_condition_from_csv_file(dir_entry)
 
     def __extract_condition_from_csv_file(self, dir_entry: os.DirEntry) -> Condition:
         file_content = pd.read_csv(dir_entry, sep=self.separator, dtype=str)
@@ -41,6 +43,7 @@ class ConditionCsvRepository(ConditionRepository):
         except TypeError:
             return
 
+    @staticmethod
     def __extract_first_diagnosis(self, diagnosis_str: str):
         """Extracts only the first diagnosis, in case the file has multiple diagnosis"""
         if ',' in diagnosis_str:
