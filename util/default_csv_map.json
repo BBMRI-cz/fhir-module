@@ -1,0 +1,19 @@
+{
+  "donor_map": {
+    "id": "patient_pseudonym",
+    "gender": "sex",
+    "birthDate": "birth_year"
+  },
+  "sample_map": {
+    "sample_details": {
+      "id": "sample_ID",
+      "material_type": "sampling_type",
+      "diagnosis": "diagnosis"
+    },
+    "donor_id": "patient_pseudonym"
+  },
+  "condition_map": {
+    "icd-10_code": "diagnosis",
+    "patient_id": "patient_pseudonym"
+  }
+}
