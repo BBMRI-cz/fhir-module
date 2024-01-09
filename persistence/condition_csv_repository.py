@@ -29,18 +29,15 @@ class ConditionCsvRepository(ConditionRepository):
 
     def __extract_condition_from_csv_file(self, dir_entry: os.DirEntry) -> Condition:
         file_content = pd.read_csv(dir_entry, sep=self.separator, dtype=str)
-        try:
-            for _, row in file_content.iterrows():
-                try:
-                    diagnosis = self.__extract_first_diagnosis(self, row[self._sample_parsing_map.get("icd-10_code")])
-                    patient_id = row[self._sample_parsing_map.get("patient_id")]
-                    condition = Condition(patient_id=patient_id, icd_10_code=diagnosis)
-                    yield condition
-                except TypeError:
-                    logger.info("Parsed string is not a valid ICD-10 code. Skipping...")
-                    return
-        except TypeError:
-            return
+        for _, row in file_content.iterrows():
+            try:
+                diagnosis = self.__extract_first_diagnosis(self, row[self._sample_parsing_map.get("icd-10_code")])
+                patient_id = row[self._sample_parsing_map.get("patient_id")]
+                condition = Condition(patient_id=patient_id, icd_10_code=diagnosis)
+                yield condition
+            except TypeError:
+                logger.info("Parsed string is not a valid ICD-10 code. Skipping...")
+                return
 
     @staticmethod
     def __extract_first_diagnosis(self, diagnosis_str: str):
