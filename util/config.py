@@ -14,6 +14,7 @@ BLAZE_URL = os.getenv("BLAZE_URL", "http://localhost:8080/fhir")
 RECORDS_DIR_PATH = os.getenv("DIR_PATH", "/mock_dir/")
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 PARSING_MAP_PATH = os.getenv("PARSING_MAP_PATH", os.path.join(ROOT_DIR, 'default_map.json'))
+PARSING_MAP_CSV_PATH = os.getenv("PARSING_MAP_PATH", os.path.join(ROOT_DIR, 'default_csv_map.json'))
 MATERIAL_TYPE_MAP_PATH = os.getenv("MATERIAL_TYPE_MAP_PATH", os.path.join(ROOT_DIR, 'default_material_type_map.json'))
 SAMPLE_COLLECTIONS_PATH = os.getenv("SAMPLE_COLLECTIONS_PATH", os.path.join(ROOT_DIR, 'default_sample_collection.json'))
 TYPE_TO_COLLECTION_MAP_PATH = os.getenv("TYPE_TO_COLLECTION_MAP_PATH",
@@ -22,6 +23,13 @@ BLAZE_AUTH: tuple = (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))
 with open(PARSING_MAP_PATH) as json_file:
     try:
         PARSING_MAP = json.load(json_file)
+    except JSONDecodeError:
+        logger.error("Parsing map does not have correct JSON format. Exiting.")
+        sys.exit()
+
+with open(PARSING_MAP_CSV_PATH) as json_file:
+    try:
+        PARSING_MAP_CSV = json.load(json_file)
     except JSONDecodeError:
         logger.error("Parsing map does not have correct JSON format. Exiting.")
         sys.exit()
