@@ -11,6 +11,7 @@ from util.config import RECORDS_DIR_PATH, CSV_SEPARATOR, PARSING_MAP, SAMPLE_COL
 
 
 class CSVRepositoryFactory(RepositoryFactory):
+    """This class instantiates repositories that work with csv files"""
     def create_condition_repository(self) -> ConditionRepository:
         return ConditionCsvRepository(records_path=RECORDS_DIR_PATH,
                                       separator=CSV_SEPARATOR,
