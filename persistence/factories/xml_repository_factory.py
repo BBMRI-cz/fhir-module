@@ -11,6 +11,7 @@ from util.config import RECORDS_DIR_PATH, PARSING_MAP, SAMPLE_COLLECTIONS_PATH, 
 
 
 class XMLRepositoryFactory(RepositoryFactory):
+    """This class instantiates repositories that work with XML files"""
     def create_condition_repository(self) -> ConditionRepository:
         return ConditionXMLRepository(records_path=RECORDS_DIR_PATH,
                                       condition_parsing_map=PARSING_MAP['condition_map'])

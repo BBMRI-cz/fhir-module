@@ -7,6 +7,7 @@ from persistence.sample_repository import SampleRepository
 
 
 class RepositoryFactory(abc.ABC):
+    """Abstract class Representing factory for instantiating repositories, regardless of their concrete type"""
     @abc.abstractmethod
     def create_condition_repository(self) -> ConditionRepository:
         pass
