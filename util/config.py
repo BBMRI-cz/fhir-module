@@ -19,6 +19,7 @@ MATERIAL_TYPE_MAP_PATH = os.getenv("MATERIAL_TYPE_MAP_PATH", os.path.join(ROOT_D
 SAMPLE_COLLECTIONS_PATH = os.getenv("SAMPLE_COLLECTIONS_PATH", os.path.join(ROOT_DIR, 'default_sample_collection.json'))
 TYPE_TO_COLLECTION_MAP_PATH = os.getenv("TYPE_TO_COLLECTION_MAP_PATH",
                                         os.path.join(ROOT_DIR, 'default_type_to_collection_map.json'))
+CSV_SEPARATOR = os.getenv("CSV_SEPARATOR", ";")
 BLAZE_AUTH: tuple = (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))
 with open(PARSING_MAP_PATH) as json_file:
     try:
