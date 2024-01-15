@@ -9,6 +9,7 @@ from glom import glom
 from exception.patient_not_found import PatientNotFoundError
 from model.sample import Sample
 from model.sample_donor import SampleDonor
+from persistence.factories.repository_factory import RepositoryFactory
 from persistence.sample_collection_repository import SampleCollectionRepository
 from service.condition_service import ConditionService
 from service.patient_service import PatientService
@@ -23,19 +24,26 @@ logger = logging.getLogger()
 class BlazeService:
     """Service class for business operations/interactions with a Blaze FHIR server."""
 
-    def __init__(self, patient_service: PatientService, condition_service: ConditionService,
-                 sample_service: SampleService, blaze_url: str,
-                 sample_collection_repository: SampleCollectionRepository):
+    def __init__(self, repository_factory: RepositoryFactory,
+                 # patient_service: PatientService, condition_service: ConditionService,
+                 # sample_service: SampleService
+                 blaze_url: str,
+                 # sample_collection_repository: SampleCollectionRepository
+                 ):
         """
         Class for interacting with a Blaze Store FHIR server
         :param blaze_url: Base url of the FHIR server
         Must be without a trailing /.
         """
-        self._patient_service = patient_service
-        self._condition_service = condition_service
-        self._sample_service = sample_service
+        self._patient_service = PatientService(repository_factory.create_sample_donor_repository())
+        self._condition_service = ConditionService(repository_factory.create_condition_repository())
+        self._sample_service = SampleService(repository_factory.create_sample_repository())
+        self._sample_collection_repository = repository_factory.create_sample_collection_repository()
+        # self._patient_service = patient_service
+        # self._condition_service = condition_service
+        # self._sample_service = sample_service
         self._blaze_url = blaze_url
-        self._sample_collection_repository = sample_collection_repository
+        # self._sample_collection_repository = sample_collection_repository
         self._credentials = BLAZE_AUTH
 
     def sync(self):
