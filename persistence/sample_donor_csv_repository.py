@@ -8,7 +8,6 @@ from model.gender import get_gender_from_abbreviation
 from model.sample_donor import SampleDonor
 from persistence.sample_donor_repository import SampleDonorRepository
 from util.custom_logger import setup_logger
-import pandas as pd
 
 setup_logger()
 logger = logging.getLogger()

@@ -1,6 +1,5 @@
 import logging
 import os
-import pandas as pd
 import csv
 from typing import List
 
