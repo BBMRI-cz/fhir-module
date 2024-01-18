@@ -3,8 +3,6 @@ import logging
 import os
 from typing import Generator
 
-import pandas as pd
-
 from model.sample import Sample
 from persistence.sample_repository import SampleRepository
 from util.custom_logger import setup_logger
