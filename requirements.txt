@@ -10,4 +10,3 @@ PyYAML~=6.0
 pylint
 icd10-cm
 glom
-pandas
