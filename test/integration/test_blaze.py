@@ -13,6 +13,7 @@ from model.sample import Sample
 from model.sample_collection import SampleCollection
 from model.sample_donor import SampleDonor
 from persistence.condition_repository import ConditionRepository
+from persistence.factories.repository_factory import RepositoryFactory
 from persistence.sample_collection_repository import SampleCollectionRepository
 from persistence.sample_donor_repository import SampleDonorRepository
 from persistence.sample_repository import SampleRepository
@@ -62,15 +63,26 @@ class SampleCollectionRepoStub(SampleCollectionRepository):
         yield from self.sample_collections
 
 
+class RepositoryFactoryStub(RepositoryFactory):
+
+    def create_condition_repository(self) -> ConditionRepository:
+        return ConditionRepoStub()
+
+    def create_sample_collection_repository(self) -> SampleCollectionRepository:
+        return SampleCollectionRepoStub()
+
+    def create_sample_repository(self) -> SampleRepository:
+        return SampleRepoStub()
+
+    def create_sample_donor_repository(self) -> SampleDonorRepository:
+        return SampleDonorRepoStub()
+
+
 class TestBlazeStore(unittest.TestCase):
 
     @pytest.fixture(autouse=True)
     def run_around_tests(self):
-        self.blaze_service = BlazeService(patient_service=PatientService(SampleDonorRepoStub()),
-                                          condition_service=ConditionService(ConditionRepoStub()),
-                                          sample_service=SampleService(SampleRepoStub()),
-                                          blaze_url='http://localhost:8080/fhir',
-                                          sample_collection_repository=SampleCollectionRepoStub())
+        self.blaze_service = BlazeService(RepositoryFactoryStub(), blaze_url='http://localhost:8080/fhir')
         yield  # run test
         try:
             for donor in SampleDonorRepoStub().get_all():
@@ -100,11 +112,7 @@ class TestBlazeStore(unittest.TestCase):
         self.assertEqual(404, self.blaze_service.delete_fhir_resource("Patient", "newId"))
 
     def test_upload_all_patients_when_blaze_unreachable(self):
-        self.blaze_service = BlazeService(PatientService(SampleDonorRepoStub()),
-                                          blaze_url='http://localhost:44/wrong',
-                                          condition_service=ConditionService(ConditionRepoStub()),
-                                          sample_service=SampleService(SampleRepoStub()),
-                                          sample_collection_repository=SampleCollectionRepoStub())
+        self.blaze_service = BlazeService(RepositoryFactoryStub(), blaze_url='http://localhost:44/wrong')
         self.assertEqual(404, self.blaze_service.initial_upload_of_all_patients())
 
     def test_is_present_in_blaze(self):
@@ -119,11 +127,7 @@ class TestBlazeStore(unittest.TestCase):
         self.blaze_service.initial_upload_of_all_patients()
         num_of_patients_before_sync = self.blaze_service.get_number_of_resources("Patient")
         donor_repo.add(SampleDonor("uniqueNewPatient5"))
-        self.blaze_service = BlazeService(PatientService(donor_repo),
-                                          blaze_url='http://localhost:8080/fhir',
-                                          condition_service=ConditionService(ConditionRepoStub()),
-                                          sample_service=SampleService(SampleRepoStub()),
-                                          sample_collection_repository=SampleCollectionRepoStub())
+        self.blaze_service = BlazeService(RepositoryFactoryStub(), blaze_url='http://localhost:8080/fhir')
         self.blaze_service.sync_patients()
         self.assertEqual(num_of_patients_before_sync + 1, self.blaze_service.get_number_of_resources("Patient"))
 
@@ -148,11 +152,7 @@ class TestBlazeStore(unittest.TestCase):
         self.blaze_service.sync_conditions()
         self.assertFalse(self.blaze_service.patient_has_condition("fakeId", "C50.6"))
         condition_repo.add(Condition(patient_id="fakeId", icd_10_code="C50.6"))
-        self.blaze_service = BlazeService(PatientService(SampleDonorRepoStub()),
-                                          blaze_url='http://localhost:8080/fhir',
-                                          condition_service=ConditionService(condition_repo),
-                                          sample_service=SampleService(SampleRepoStub()),
-                                          sample_collection_repository=SampleCollectionRepoStub())
+        self.blaze_service = BlazeService(RepositoryFactoryStub(), blaze_url='http://localhost:8080/fhir')
         self.blaze_service.sync_conditions()
         self.assertTrue(self.blaze_service.patient_has_condition("fakeId", "C50.6"))
 
