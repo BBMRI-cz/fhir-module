@@ -1,8 +1,8 @@
 import logging
 import os
 import pandas as pd
+import csv
 from typing import List
-
 
 from model.condition import Condition
 from persistence.condition_repository import ConditionRepository
@@ -28,16 +28,22 @@ class ConditionCsvRepository(ConditionRepository):
                 yield from self.__extract_condition_from_csv_file(dir_entry)
 
     def __extract_condition_from_csv_file(self, dir_entry: os.DirEntry) -> Condition:
-        file_content = pd.read_csv(dir_entry, sep=self.separator, dtype=str)
-        for _, row in file_content.iterrows():
-            try:
-                diagnosis = self.__extract_first_diagnosis(self, row[self._sample_parsing_map.get("icd-10_code")])
-                patient_id = row[self._sample_parsing_map.get("patient_id")]
-                condition = Condition(patient_id=patient_id, icd_10_code=diagnosis)
-                yield condition
-            except TypeError:
-                logger.info("Parsed string is not a valid ICD-10 code. Skipping...")
-                return
+        fields_dict: dict = {}
+        with open(dir_entry, "r") as file_content:
+            reader = csv.reader(file_content, delimiter=self.separator)
+            fields = next(reader)
+            for i, field in enumerate(fields):
+                fields_dict[field] = i
+            for row in reader:
+                try:
+                    diagnosis = self.__extract_first_diagnosis(self, row[
+                        fields_dict[self._sample_parsing_map.get("icd-10_code")]])
+                    patient_id = row[fields_dict[self._sample_parsing_map.get("patient_id")]]
+                    condition = Condition(patient_id=patient_id, icd_10_code=diagnosis)
+                    yield condition
+                except TypeError:
+                    logger.info("Parsed string is not a valid ICD-10 code. Skipping...")
+                    return
 
     @staticmethod
     def __extract_first_diagnosis(self, diagnosis_str: str):
