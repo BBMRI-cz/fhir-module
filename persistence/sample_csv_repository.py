@@ -1,3 +1,4 @@
+import csv
 import logging
 import os
 from typing import Generator
@@ -32,24 +33,29 @@ class SampleCsvRepository(SampleRepository):
                 yield from self.__extract_sample_from_csv_file(dir_entry)
 
     def __extract_sample_from_csv_file(self, dir_entry: os.DirEntry) -> Sample:
-        file_content = pd.read_csv(dir_entry, sep=self._separator, dtype=str)
-        try:
-            check_sample_map_format(self._sample_parsing_map)
-            for _, row in file_content.iterrows():
-                sample = Sample(identifier=row[self._sample_parsing_map.get("sample_details").get("id")],
-                                donor_id=row[self._sample_parsing_map.get("donor_id")],
-                                material_type=row[self._sample_parsing_map.get("sample_details").get("material_type")],
-                                diagnosis=self.__extract_first_diagnosis(self, row[self._sample_parsing_map
-                                                                         .get("sample_details").get("diagnosis")]))
-                if self._type_to_collection_map is not None:
-                    sample.sample_collection_id = self._type_to_collection_map.get(sample.diagnosis)
-                yield sample
-        except WrongSampleMapException:
-            logger.info("Given Sample map has a bad format, cannot parse the file")
-            pass
-        except TypeError as err:
-            logger.info(err)
-            pass
+        fields_dict: dict = {}
+        with open(dir_entry, "r") as file_content:
+            reader = csv.reader(file_content, delimiter=self._separator)
+            fields = next(reader)
+            for i, field in enumerate(fields):
+                fields_dict[field] = i
+            try:
+                check_sample_map_format(self._sample_parsing_map)
+                for row in reader:
+                    sample = Sample(identifier=row[fields_dict[self._sample_parsing_map.get("sample_details").get("id")]],
+                                    donor_id=row[fields_dict[self._sample_parsing_map.get("donor_id")]],
+                                    material_type=row[fields_dict[self._sample_parsing_map.get("sample_details").get("material_type")]],
+                                    diagnosis=self.__extract_first_diagnosis(self, row[fields_dict[self._sample_parsing_map
+                                                                             .get("sample_details").get("diagnosis")]]))
+                    if self._type_to_collection_map is not None:
+                        sample.sample_collection_id = self._type_to_collection_map.get(sample.diagnosis)
+                    yield sample
+            except WrongSampleMapException:
+                logger.info("Given Sample map has a bad format, cannot parse the file")
+                pass
+            except TypeError as err:
+                logger.info(err)
+                pass
 
     @staticmethod
     def __extract_first_diagnosis(self, diagnosis_str: str):

@@ -1,3 +1,4 @@
+import csv
 from datetime import datetime
 import logging
 import os
@@ -29,18 +30,24 @@ class SampleDonorCsvRepository(SampleDonorRepository):
                 yield from self.__extract_donor_from_csv_file(dir_entry)
 
     def __extract_donor_from_csv_file(self, dir_entry: os.DirEntry) -> SampleDonor:
-        file_content = pd.read_csv(dir_entry, sep= self.separator, dtype=str)
-        for _, row in file_content.iterrows():
-            try:
-                donor = SampleDonor(row[self._donor_parsing_map.get("id")])
-                donor.gender = get_gender_from_abbreviation(row[self._donor_parsing_map.get("gender")])
-                year_of_birth = row[self._donor_parsing_map.get("birthDate")]
-                if year_of_birth is not None:
-                    donor.date_of_birth = datetime.strptime(year_of_birth, '%Y')
-                if donor.identifier not in self._ids:
-                    self._ids.add(donor.identifier)
-                    yield donor
-            except TypeError as e:
-                logger.info(e , "Skipping...")
-                return
+        fields_dict: dict = {}
+        with open(dir_entry, "r") as file_content:
+            reader = csv.reader(file_content, delimiter=self.separator)
+            fields = next(reader)
+            for i, field in enumerate(fields):
+                fields_dict[field] = i
+            for row in reader:
+                try:
+                    donor = SampleDonor(row[fields_dict[self._donor_parsing_map.get("id")]])
+                    donor.gender = get_gender_from_abbreviation(row[fields_dict[self._donor_parsing_map.get("gender")]])
+                    year_of_birth = row[fields_dict[self._donor_parsing_map.get("birthDate")]]
+                    if year_of_birth is not None:
+                        donor.date_of_birth = datetime.strptime(year_of_birth, '%Y')
+                    if donor.identifier not in self._ids:
+                        self._ids.add(donor.identifier)
+                        yield donor
+                except TypeError as e:
+                    logger.info(e, "Skipping...")
+                    return
+
 
