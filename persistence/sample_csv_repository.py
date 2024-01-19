@@ -3,11 +3,12 @@ import logging
 import os
 from typing import Generator
 
+from exception.wrong_sample_format import WrongSampleMapException
 from model.sample import Sample
 from persistence.sample_repository import SampleRepository
 from util.custom_logger import setup_logger
 
-from persistence.csv_util import check_sample_map_format, WrongSampleMapException
+from persistence.csv_util import check_sample_map_format
 
 setup_logger()
 logger = logging.getLogger()
