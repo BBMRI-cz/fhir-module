@@ -15,9 +15,10 @@ part of BBMRI-ERIC. This tool should support ETL processes by providing the foll
 
 ## State
 
-Supports syncing of patients between a [Blaze FHIR store](https://github.com/samply/blaze) and a repository of XML files
+Supports syncing of patients between a [Blaze FHIR store](https://github.com/samply/blaze) and a repository of XML or CSV files
 stored on a regular filesystem.
 Currently, the XML files must have the same structure as this [test file](./test/xml_data/MMCI_1.xml).
+This module cannot work with different types of files at the same time, so the records needs to be in either XML or CSV format, not both.
 
 ## Quick Start
 

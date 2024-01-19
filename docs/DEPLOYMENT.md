@@ -49,7 +49,9 @@ simply specify them in `compose.yaml` in the environment section.
 | PARSING_MAP_PATH        | /opt/fhir-module/default_map.json               | Path to a JSON file containing object parsing mappings. Example [here](../util/default_map.json).                                               |
 | MATERIAL_TYPE_MAP_PATH  | /opt/fhir-module/default_material_type_map.json | Path to a JSON file containing mappings between organizational and FHIR material types. Example [here](../util/default_material_type_map.json). |
 | SAMPLE_COLLECTIONS_PATH | /opt/fhir-module/default_sample_collection.json | Path to a JSON file containing information about Sample collections. Example [here](../util/default_sample_collection.json).                    |
-
+ | RECORDS_DIR_PATH        | /mock_dir/                                      | Path to a folder containing file(s) with records.                                                                                               |
+ | RECORDS_FILE_TYPE       | xml                                             | Type of files containing the records.                                                                                                           |
+ | CSV_SEPARATOR           | ;                                               | Separator used inside csv file, if the records are in a csv format.                                                                             |
 ## Object mapping
 
 The FHIR module uses dynamically configurable maps currently stored as json files
