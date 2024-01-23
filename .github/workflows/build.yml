@@ -204,7 +204,7 @@ jobs:
 
   build-push-image:
     name: Publish docker image
-    needs: [ system-test ]
+    needs: [ system-test-csv ]
     runs-on: ubuntu-latest
 
     steps:
