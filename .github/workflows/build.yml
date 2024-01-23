@@ -146,6 +146,62 @@ jobs:
       - name: Verify upload succeeded
         run: .github/scripts/check-patient-exists.sh
 
+
+  system-test-csv:
+    name: System test csv files
+    needs: [ system-test ]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: fhir-module-image
+          path: /tmp
+
+      - name: Load FHIR-Module Image
+        run: docker load --input /tmp/fhir-module.tar
+
+      - name: Create docker network
+        run: docker network create system-test
+
+      - name: Generate compose.override.yaml file
+        run: |
+          echo "version: '3.9'" > compose.override.yaml
+          echo "services:" >> compose.override.yaml
+          echo "  fhir-module:" >> compose.override.yaml
+          echo "    environment:" >> compose.override.yaml
+          echo "      PARSING_MAP_PATH: \"/opt/fhir-module/util/default_csv_map.json\"" >> compose.override.yaml
+          echo "      MATERIAL_TYPE_MAP_PATH: \"/opt/fhir-module/util/default_csv_material_type_map.json\"" >> compose.override.yaml
+          echo "      RECORDS_FILE_TYPE: \"csv\"" >> compose.override.yaml
+          echo "    volumes:" >> compose.override.yaml
+          echo "      - type: bind" >> compose.override.yaml
+          echo "        source: \"test/csv_data\"" >> compose.override.yaml
+          echo "        target: \"/opt/records\"" >> compose.override.yaml
+
+      - name: Run sandbox in dev env
+        run: docker compose --profile dev up -d
+
+      - name: Wait for Blaze
+        run: .github/scripts/wait-for-url.sh  http://localhost:8080/health
+
+      - name: Docker Logs
+        run: docker logs blaze
+
+      - name: Docker Logs
+        run: sleep 20 && docker logs fhir-module
+
+      - name: Verify upload succeeded
+        run: .github/scripts/check-patient-exists.sh
+
+
+
   build-push-image:
     name: Publish docker image
     needs: [ system-test ]
