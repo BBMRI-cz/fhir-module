@@ -1,0 +1,11 @@
+version: '3.9'
+services:
+  fhir-module:
+    environment:
+      PARSING_MAP_PATH: "/opt/fhir-module/util/default_csv_map.json"
+      MATERIAL_TYPE_MAP_PATH: "/opt/fhir-module/util/default_csv_material_type_map.json"
+      RECORDS_FILE_TYPE: "csv"
+    volumes:
+      - type: bind
+        source: "test/csv_data"
+        target: "/opt/records"
