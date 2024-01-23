@@ -171,22 +171,8 @@ jobs:
       - name: Create docker network
         run: docker network create system-test
 
-      - name: Generate compose.override.yaml file
-        run: |
-          echo "version: '3.9'" > compose.override.yaml
-          echo "services:" >> compose.override.yaml
-          echo "  fhir-module:" >> compose.override.yaml
-          echo "    environment:" >> compose.override.yaml
-          echo "      PARSING_MAP_PATH: \"/opt/fhir-module/util/default_csv_map.json\"" >> compose.override.yaml
-          echo "      MATERIAL_TYPE_MAP_PATH: \"/opt/fhir-module/util/default_csv_material_type_map.json\"" >> compose.override.yaml
-          echo "      RECORDS_FILE_TYPE: \"csv\"" >> compose.override.yaml
-          echo "    volumes:" >> compose.override.yaml
-          echo "      - type: bind" >> compose.override.yaml
-          echo "        source: \"test/csv_data\"" >> compose.override.yaml
-          echo "        target: \"/opt/records\"" >> compose.override.yaml
-
-      - name: Run sandbox in dev env
-        run: docker compose --profile dev up -d
+      - name: Run sandbox in dev env (use compose.override.yaml  to work with csv files)
+        run: docker compose -f compose.yaml -f .github/comp_override/compose.override.yaml --profile dev up -d
 
       - name: Wait for Blaze
         run: .github/scripts/wait-for-url.sh  http://localhost:8080/health
