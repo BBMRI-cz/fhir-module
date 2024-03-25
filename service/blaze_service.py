@@ -218,26 +218,41 @@ class BlazeService:
             logger.error("Cannot connect to blaze!")
             return 0
 
-    def delete_fhir_resource(self, resource_type: str, identifier: str) -> int:
+    def delete_fhir_resource(self, resource_type: str, param_value: str, search_param: str = "identifier") -> int:
         """
         Deletes all FHIR resources from the Blaze server of a specific type having a specific identifier.
-        :param identifier: Identifier belonging to the resource.
-        It is not the FHIR resource ID!
+        :param search_param: Parameter by which the resources are filtered. Default value is identifier
+        :param param_value: actual value of the search parameter.
+        (When using identifier, Identifier belonging to the resource. It is not the FHIR resource ID!)
         :param resource_type: Type of FHIR resource to delete.
         :return: Status code of the http request.
         """
         response = requests.get(url=self._blaze_url + f"/{resource_type.capitalize()}"
-                                                      f"?identifier={identifier}",
+                                                      f"?{search_param}={param_value}",
                                 auth=self._credentials,
                                 verify=False)
-        list_of_full_urls = glom(response.json(), "**.fullUrl")
+        list_of_full_urls: list[str] = glom(response.json(), "**.fullUrl")
         if response.status_code == 404 or len(list_of_full_urls) == 0:
             return 404
         for url in list_of_full_urls:
             logger.info("Deleting " + url)
+            if resource_type.capitalize() == "Patient":
+                patient_reference = url[url.find("Patient/"):]
+                logger.info(f"In order to delete Patient successfully, "
+                            f"all resources which reference this patient needs to be deleted as well")
+                self.delete_fhir_resource("Condition", patient_reference, "reference")
+                self.delete_fhir_resource("Specimen", patient_reference, "reference")
             deleted_resource = requests.get(url=url, auth=self._credentials).json()
             logger.debug(f"{deleted_resource}")
-            return requests.delete(url=url, auth=self._credentials).status_code
+            delete_response = requests.delete(url=url, auth=self._credentials)
+            # logger.debug(f"delete resource json response: {delete_response.json()}")
+            if delete_response.status_code != 204:
+                reason_index = delete_response.text.find("diagnostics")
+                if reason_index != -1:
+                    logger.debug(f"could not delete. Reason: {delete_response.text[reason_index:]}")
+            logger.debug(f"response status: {delete_response.status_code}")
+            # return requests.delete(url=url, auth=self._credentials).status_code
+            return delete_response.status_code
 
     def is_resource_present_in_blaze(self, resource_type: str, identifier: str) -> bool:
         """
