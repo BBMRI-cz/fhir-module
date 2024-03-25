@@ -74,10 +74,10 @@ class TestBlazeStore(unittest.TestCase):
                                           sample_collection_repository=SampleCollectionRepoStub())
         yield  # run test
         try:
-            for donor in SampleDonorRepoStub().get_all():
-                self.blaze_service.delete_fhir_resource("Patient", donor.identifier)
             for sample in SampleRepoStub().get_all():
                 self.blaze_service.delete_fhir_resource("Specimen", sample.identifier)
+            for donor in SampleDonorRepoStub().get_all():
+                self.blaze_service.delete_fhir_resource("Patient", donor.identifier)
             for organization in SampleCollectionRepoStub().get_all():
                 self.blaze_service.delete_fhir_resource("Organization", organization.identifier)
         except requests.exceptions.ConnectionError:
