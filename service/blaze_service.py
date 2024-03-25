@@ -172,6 +172,8 @@ class BlazeService:
         num_of_samples_before_sync = self.get_number_of_resources("Specimen")
         logger.debug(f"Current number of Specimens: {num_of_samples_before_sync}.")
         for sample in self._sample_service.get_all():
+            logger.debug(f"Checking if Specimen with ID: {sample.identifier} is present."
+                         f"Checking if Patient with ID: {sample.donor_id} is present")
             if (not self.is_resource_present_in_blaze(resource_type="Specimen", identifier=sample.identifier) and
                     self.is_resource_present_in_blaze(resource_type="Patient", identifier=sample.donor_id)):
                 logger.debug(f"Specimen with org. ID: {sample.identifier} is not present in Blaze but the Donor is "
@@ -251,6 +253,7 @@ class BlazeService:
                 auth=self._credentials, verify=False)
                      .json()
                      .get("total"))
+            logger.debug(f"Count of resource : {count} of type: {resource_type} with identifier :{identifier} ")
             return count > 0
         except TypeError:
             return False
