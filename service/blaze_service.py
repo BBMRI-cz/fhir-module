@@ -239,19 +239,17 @@ class BlazeService:
             if resource_type.capitalize() == "Patient":
                 patient_reference = url[url.find("Patient/"):]
                 logger.info(f"In order to delete Patient successfully, "
-                            f"all resources which reference this patient needs to be deleted as well")
+                            f"all resources which reference this patient needs to be deleted as well.")
                 self.delete_fhir_resource("Condition", patient_reference, "reference")
                 self.delete_fhir_resource("Specimen", patient_reference, "reference")
             deleted_resource = requests.get(url=url, auth=self._credentials).json()
             logger.debug(f"{deleted_resource}")
             delete_response = requests.delete(url=url, auth=self._credentials)
-            # logger.debug(f"delete resource json response: {delete_response.json()}")
             if delete_response.status_code != 204:
                 reason_index = delete_response.text.find("diagnostics")
                 if reason_index != -1:
                     logger.debug(f"could not delete. Reason: {delete_response.text[reason_index:]}")
             logger.debug(f"response status: {delete_response.status_code}")
-            # return requests.delete(url=url, auth=self._credentials).status_code
             return delete_response.status_code
 
     def is_resource_present_in_blaze(self, resource_type: str, identifier: str) -> bool:
