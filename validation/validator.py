@@ -92,3 +92,6 @@ class Validator(abc.ABC):
                          f"condition_map needs to contain the following names(attributes):"
                          f" \"icd-10_code\", \"patient_id\"")
             return True
+
+    def _get_properties(self) -> list[str]:
+        return [attr for attr in dir(self) if attr.startswith(("_donor", "_sample", "condition"))]

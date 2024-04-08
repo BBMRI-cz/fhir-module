@@ -30,12 +30,7 @@ class CsvValidator(Validator):
         with open(csv_file, "r") as file_content:
             reader = csv.reader(file_content, delimiter=self._separator)
             fields = next(reader)
-            donor_props = [attr for attr in dir(CsvValidator) if attr.startswith("_donor")]
-            sample_props = [attr for attr in dir(CsvValidator) if attr.startswith("_sample")]
-            condition_props = [attr for attr in dir(CsvValidator) if attr.startswith("_condition")]
-            return self._validate_file_attributes(fields, donor_props) and \
-                self._validate_file_attributes(fields, sample_props) \
-                and self._validate_file_attributes(fields, condition_props)
+            return self._validate_file_attributes(fields, self._get_properties())
 
     def _validate_file_attributes(self, fields: list[str], properties: list[str]) -> bool:
         for prop in properties:
@@ -52,4 +47,3 @@ class CsvValidator(Validator):
         super()._validate_sample_map()
         super()._validate_condition_map()
         return self._validate_files_structure()
-
