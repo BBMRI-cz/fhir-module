@@ -3,46 +3,38 @@ import logging
 import os
 
 from exception.no_files_provided import NoFilesProvidedException
+from exception.nonexistent_attribute_parsing_map import NonexistentAttributeParsingMapException
 from util.custom_logger import setup_logger
 from validation.validator import Validator
-from exception.nonexistent_attribute_parsing_map import NonexistentAttributeParsingMapException
 
 setup_logger()
 logger = logging.getLogger()
 
 
 class CsvValidator(Validator):
-
+    """Concrete implementation of Validator abstract class. Handles the validation of CSV files"""
     def __init__(self, parsing_map: dict, records_path: str, separator: str):
         super().__init__(parsing_map, records_path)
         self._separator = separator
 
-    def _validate_files_structure(self) -> bool:
-        """This method validates, if all the files meant for data transformation have the necessary structure"""
-        self._validate_csv_files_present()
-        dir_entry: os.DirEntry
+    def _validate_files_present(self, file_type: str) -> bool:
         for dir_entry in os.scandir(self._dir_path):
-            if dir_entry.name.endswith(".csv"):
-                self._validate_single_file(dir_entry)
-        return True
-
-    def _validate_csv_files_present(self) -> bool:
-        for dir_entry in os.scandir(self._dir_path):
-            if dir_entry.name.endswith(".csv"):
+            if dir_entry.name.endswith("." + file_type):
                 return True
         logger.error("No CSV files are provided for data transformation. "
                      "Please check that you provided correct directory in DIR_PATH variable.")
         raise NoFilesProvidedException
 
-    def _validate_single_file(self, csv_file: os.DirEntry) -> bool:
+    def _validate_single_file(self, file: os.DirEntry) -> bool:
         """Validates if the fields in header of the csv file
         correspond to the name/value pairs provided in parsing map"""
-        with open(csv_file, "r") as file_content:
+        with open(file, "r") as file_content:
             reader = csv.reader(file_content, delimiter=self._separator)
             fields = next(reader)
             return self._validate_file_attributes(fields, self._get_properties())
 
     def _validate_file_attributes(self, fields: list[str], properties: list[str]) -> bool:
+        """Validates that all the values defined by parsing_map are present in the header of the csv file."""
         for prop in properties:
             prop_value = getattr(self, prop)
             if prop_value not in fields:
@@ -56,4 +48,4 @@ class CsvValidator(Validator):
         super()._validate_donor_map()
         super()._validate_sample_map()
         super()._validate_condition_map()
-        return self._validate_files_structure()
+        return self._validate_files_structure("csv")
