@@ -1,11 +1,12 @@
 import logging
 import os
 
+from exception.no_files_provided import NoFilesProvidedException
 from exception.nonexistent_attribute_parsing_map import NonexistentAttributeParsingMapException
 from exception.wrong_parsing_map import WrongParsingMapException
 from persistence.xml_util import parse_xml_file
 from util.custom_logger import setup_logger
-from validator import Validator
+from validation.validator import Validator
 
 setup_logger()
 logger = logging.getLogger()
@@ -17,11 +18,20 @@ class XMLValidator(Validator):
         self._sample = None
 
     def _validate_file_structure(self) -> bool:
+        self._validate_xml_files_present()
         dir_entry: os.DirEntry
         for dir_entry in os.scandir(self._dir_path):
             if dir_entry.name.endswith(".xml"):
                 self._validate_single_file(dir_entry)
         return True
+
+    def _validate_xml_files_present(self) -> bool:
+        for dir_entry in os.scandir(self._dir_path):
+            if dir_entry.name.endswith(".xml"):
+                return True
+        logger.error("No XML files are provided for data transformation. "
+                     "Please check that you provided correct directory in DIR_PATH variable.")
+        raise NoFilesProvidedException
 
     def _validate_single_file(self, xml_file: os.DirEntry) -> bool:
         file_content = parse_xml_file(xml_file)
@@ -35,11 +45,11 @@ class XMLValidator(Validator):
                              f"does not have the corresponding pair "
                              f"(which based on parsing map should be \"{prop_value}\")")
                 raise NonexistentAttributeParsingMapException
-            return True
+        return True
 
     def _validate_sample_map(self) -> bool:
         super()._validate_sample_map()
-        self._sample = self._map_sample["sample"]
+        self._sample = self._map_sample.get("sample")
         if self._sample is None:
             logger.error(f"Provided parsing map does not contain the necessary name/value pairs for sample map."
                          f"sample_map needs to contain the following names(attributes): \"sample\"")
@@ -50,3 +60,5 @@ class XMLValidator(Validator):
         super()._validate_donor_map()
         self._validate_sample_map()
         super()._validate_condition_map()
+
+        return self._validate_file_structure()

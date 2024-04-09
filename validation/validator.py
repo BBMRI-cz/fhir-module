@@ -47,9 +47,9 @@ class Validator(abc.ABC):
             logger.error("Provided parsing map does not contain key \"donor_map\"")
             raise WrongParsingMapException
 
-        self._donor_id = self._map_donor["id"]
-        self._donor_gender = self._map_donor["gender"]
-        self._donor_birthDate = self._map_donor["birthDate"]
+        self._donor_id = self._map_donor.get("id")
+        self._donor_gender = self._map_donor.get("gender")
+        self._donor_birthDate = self._map_donor.get("birthDate")
 
         if self._donor_id is None or self._donor_gender is None or self._donor_birthDate is None:
             logger.error(f"Provided parsing map does not contain the necessary name/value pairs for donor_map."
@@ -68,14 +68,15 @@ class Validator(abc.ABC):
             logger.error("Provided parsing map does not contain needed name/value pair of \"sample_details\".")
             raise WrongParsingMapException
 
-        self._sample_id = self._map_sample["sample_details"]["id"]
-        self._sample_diagnosis = self._map_sample["sample_details"]["diagnosis"]
-        self._sample_material_type = self._map_sample["sample_details"]["material_type"]
+        self._sample_id = self._map_sample["sample_details"].get("id")
+        self._sample_diagnosis = self._map_sample["sample_details"].get("diagnosis")
+        self._sample_material_type = self._map_sample["sample_details"].get("material_type")
 
         if self._sample_id is None or self._sample_diagnosis is None or self._sample_material_type is None:
             logger.error(f"Provided parsing map does not contain the necessary name/value pairs for sample map."
                          f"sample_map needs to contain the following names(attributes):"
                          f" \"id\", \"diagnosis\", \"material_type\" ")
+            raise WrongParsingMapException
         return True
 
     def _validate_condition_map(self) -> bool:
@@ -84,14 +85,15 @@ class Validator(abc.ABC):
             logger.error("Provided parsing map does not contain key \"condition_map\"")
             raise WrongParsingMapException
 
-        self._condition_icd10 = self._map_condition["icd-10_code"]
-        self._condition_patient_id = self._map_condition["patient_id"]
+        self._condition_icd10 = self._map_condition.get("icd-10_code")
+        self._condition_patient_id = self._map_condition.get("patient_id")
 
         if self._condition_icd10 is None or self._condition_patient_id is None:
             logger.error(f"Provided parsing map does not contain the necessary name/value pairs for the condition map."
                          f"condition_map needs to contain the following names(attributes):"
                          f" \"icd-10_code\", \"patient_id\"")
-            return True
+            raise WrongParsingMapException
+        return True
 
     def _get_properties(self) -> list[str]:
         return [attr for attr in dir(self) if attr.startswith(("_donor", "_sample", "condition"))]
