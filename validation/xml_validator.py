@@ -13,31 +13,27 @@ logger = logging.getLogger()
 
 
 class XMLValidator(Validator):
+    """Concrete implementation of Validator abstract class. Handles the validation of XML files"""
     def __init__(self, parsing_map: dict, records_dir: str):
         super().__init__(parsing_map, records_dir)
         self._sample = None
 
-    def _validate_file_structure(self) -> bool:
-        self._validate_xml_files_present()
-        dir_entry: os.DirEntry
+    def _validate_files_present(self, file_type: str) -> bool:
+        """this method checks if """
         for dir_entry in os.scandir(self._dir_path):
-            if dir_entry.name.endswith(".xml"):
-                self._validate_single_file(dir_entry)
-        return True
-
-    def _validate_xml_files_present(self) -> bool:
-        for dir_entry in os.scandir(self._dir_path):
-            if dir_entry.name.endswith(".xml"):
+            if dir_entry.name.endswith("." + file_type):
                 return True
         logger.error("No XML files are provided for data transformation. "
                      "Please check that you provided correct directory in DIR_PATH variable.")
         raise NoFilesProvidedException
 
-    def _validate_single_file(self, xml_file: os.DirEntry) -> bool:
-        file_content = parse_xml_file(xml_file)
+    def _validate_single_file(self, file: os.DirEntry) -> bool:
+        """Validates presence of xml tags which names are specified in the provided parsing_map"""
+        file_content = parse_xml_file(file)
         return self._validate_file_attributes(file_content, self._get_properties())
 
     def _validate_file_attributes(self, file_content: dict, properties: list[str]):
+        """Validates that all the values defined by parsing_map are present as a xml tags."""
         for prop in properties:
             prop_value = getattr(self, prop)
             if prop_value not in file_content:
@@ -61,4 +57,4 @@ class XMLValidator(Validator):
         self._validate_sample_map()
         super()._validate_condition_map()
 
-        return self._validate_file_structure()
+        return self._validate_files_structure("xml")
