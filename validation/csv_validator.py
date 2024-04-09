@@ -2,8 +2,9 @@ import csv
 import logging
 import os
 
+from exception.no_files_provided import NoFilesProvidedException
 from util.custom_logger import setup_logger
-from validator import Validator
+from validation.validator import Validator
 from exception.nonexistent_attribute_parsing_map import NonexistentAttributeParsingMapException
 
 setup_logger()
@@ -18,11 +19,20 @@ class CsvValidator(Validator):
 
     def _validate_files_structure(self) -> bool:
         """This method validates, if all the files meant for data transformation have the necessary structure"""
+        self._validate_csv_files_present()
         dir_entry: os.DirEntry
         for dir_entry in os.scandir(self._dir_path):
             if dir_entry.name.endswith(".csv"):
                 self._validate_single_file(dir_entry)
         return True
+
+    def _validate_csv_files_present(self) -> bool:
+        for dir_entry in os.scandir(self._dir_path):
+            if dir_entry.name.endswith(".csv"):
+                return True
+        logger.error("No CSV files are provided for data transformation. "
+                     "Please check that you provided correct directory in DIR_PATH variable.")
+        raise NoFilesProvidedException
 
     def _validate_single_file(self, csv_file: os.DirEntry) -> bool:
         """Validates if the fields in header of the csv file
@@ -40,7 +50,7 @@ class CsvValidator(Validator):
                              f"does not have the corresponding pair "
                              f"(which based on parsing map should be \"{prop_value}\")")
                 raise NonexistentAttributeParsingMapException
-            return True
+        return True
 
     def validate(self) -> bool:
         super()._validate_donor_map()

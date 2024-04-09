@@ -1,7 +1,7 @@
 from util.config import PARSING_MAP, RECORDS_DIR_PATH, CSV_SEPARATOR
 from validation.csv_validator import CsvValidator
 from validation.validator import Validator
-from validator_factory import ValidatorFactory
+from validation.factory.validator_factory import ValidatorFactory
 
 
 class CsvValidatorFactory(ValidatorFactory):
