@@ -9,6 +9,66 @@ from validation.xml_validator import XMLValidator
 
 
 class TestXMLValidator(unittest.TestCase):
+    test_xml = """<?xml version="1.0" encoding="utf-8" ?>
+<!--These are completely synthetic dummy_files with the same structure-->
+<patient xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" biobank="MOU" consent="true" id="33" month="--01"
+         sex="female" xmlns="http://www.bbmri.cz/schemas/biobank/data"
+         xsi:noNamespaceSchemaLocation="exportNIS.xsd" year="1999">
+    <LTS>
+        <tissue number="888" sampleId="BBM:2032:888:1" year="2032">
+            <samplesNo>3</samplesNo>
+            <availableSamplesNo>3</availableSamplesNo>
+            <materialType>1</materialType>
+            <pTNM>T4bN1M</pTNM>
+            <morphology>8500/32</morphology>
+            <diagnosis>C509</diagnosis>
+            <cutTime>2032-11-23T09:40:00</cutTime>
+            <freezeTime>2032-11-23T09:08:00</freezeTime>
+            <retrieved>operational</retrieved>
+        </tissue>
+        <tissue number="888" sampleId="BBM:2032:888:4" year="2032">
+            <samplesNo>3</samplesNo>
+            <availableSamplesNo>3</availableSamplesNo>
+            <materialType>4</materialType>
+            <pTNM>T4bN1M</pTNM>
+            <morphology>8500/32</morphology>
+            <diagnosis>C61</diagnosis>
+            <cutTime>2032-11-23T09:40:00</cutTime>
+            <freezeTime>2032-11-23T10:08:00</freezeTime>
+            <retrieved>operational</retrieved>
+        </tissue>
+        <tissue number="888" sampleId="BBM:2032:888:53" year="2032">
+            <samplesNo>1</samplesNo>
+            <availableSamplesNo>1</availableSamplesNo>
+            <materialType>53</materialType>
+            <pTNM>T4bN1M</pTNM>
+            <morphology>8500/32</morphology>
+            <diagnosis>C509</diagnosis>
+            <cutTime>2032-11-23T09:40:00</cutTime>
+            <freezeTime>2032-11-23T11:08:00</freezeTime>
+            <retrieved>operational</retrieved>
+        </tissue>
+        <tissue number="888" sampleId="BBM:2032:888:54" year="2032">
+            <samplesNo>1</samplesNo>
+            <availableSamplesNo>1</availableSamplesNo>
+            <materialType>54</materialType>
+            <pTNM>T4bN1M</pTNM>
+            <morphology>8500/32</morphology>
+            <diagnosis>C549</diagnosis>
+            <cutTime>2032-11-23T09:40:00</cutTime>
+            <freezeTime>2032-11-23T11:08:00</freezeTime>
+            <retrieved>operational</retrieved>
+        </tissue>
+    </LTS>
+    <STS>
+        <diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">
+            <materialType>S</materialType>
+            <diagnosis>C509</diagnosis>
+            <takingDate>2032-10-4T10:02:00</takingDate>
+            <retrieved>unknown</retrieved>
+        </diagnosisMaterial>
+    </STS>
+</patient>"""
     both_collections = '<STS>' \
                        '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
                        '<materialType>S</materialType>' \
@@ -148,9 +208,9 @@ class TestXMLValidator(unittest.TestCase):
 
     @patchfs
     def test_xml_validator_correct_parsing_map_and_file(self, fake_fs):
-        fake_fs.create_file(self.dir_path + "mock.xml", contents=self.content.format(sample=self.both_collections))
+        fake_fs.create_file(self.dir_path + "mock.xml", contents=self.test_xml)
         self.validator = XMLValidator(PARSING_MAP, self.dir_path)
-        self.assertTrue(self.validator.validate)
+        self.assertTrue(self.validator.validate())
 
     @patchfs
     def test_xml_validator_no_csv_files_present_in_records_directory_throws_exception(self, fake_fs):
