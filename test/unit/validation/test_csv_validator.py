@@ -121,7 +121,7 @@ class TestCsvValidator(unittest.TestCase):
     def test_csv_validator_correct_parsing_map_and_file(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.samples)
         self.validator = CsvValidator(PARSING_MAP_CSV, self.dir_path, ";")
-        self.assertTrue(self.validator.validate)
+        self.assertTrue(self.validator.validate())
 
     @patchfs
     def test_csv_validator_no_csv_files_present_in_records_directory_throws_exception(self, fake_fs):
