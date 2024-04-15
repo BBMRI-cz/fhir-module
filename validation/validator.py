@@ -33,7 +33,7 @@ class Validator(abc.ABC):
 
     @abc.abstractmethod
     def validate(self) -> bool:
-        """Validate if the provided parsing map contains all the necessary attributes"""
+        """Validate if the provided parsing map and files for transformation contain all the needed attributes."""
         pass
 
     @abc.abstractmethod
@@ -54,6 +54,7 @@ class Validator(abc.ABC):
         for dir_entry in os.scandir(self._dir_path):
             if dir_entry.name.endswith("." + file_type):
                 self._validate_single_file(dir_entry)
+        logger.info("All the files contain the necessary data/attributes for data transformation.")
         return True
 
     def _validate_donor_map(self) -> bool:
@@ -71,6 +72,7 @@ class Validator(abc.ABC):
                          f"donor_map needs to contain the following names(attributes): "
                          f" \"id\" \"gender\" \"birthDate\".")
             raise WrongParsingMapException
+        logger.info("donor_map and all its name/value pairs are provided.")
         return True
 
     def _validate_sample_map(self) -> bool:
@@ -92,6 +94,7 @@ class Validator(abc.ABC):
                          f"sample_map needs to contain the following names(attributes): "
                          f" \"id\", \"diagnosis\", \"material_type\" ")
             raise WrongParsingMapException
+        logger.info("sample_map and all its name/value pairs are provided.")
         return True
 
     def _validate_condition_map(self) -> bool:
@@ -108,8 +111,6 @@ class Validator(abc.ABC):
                          f"condition_map needs to contain the following names(attributes): "
                          f" \"icd-10_code\", \"patient_id\"")
             raise WrongParsingMapException
+        logger.info("condition_map and all its name/value pairs are provided.")
         return True
 
-    def _get_properties(self) -> list[str]:
-        """method that extracts all the necessary attributes  in the form of name of the properties of this class."""
-        return [attr for attr in dir(self) if attr.startswith(("_donor", "_sample", "_condition"))]
