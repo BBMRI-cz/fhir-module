@@ -41,7 +41,7 @@ class BlazeService:
         self._blaze_url = blaze_url
         self._sample_collection_repository = sample_collection_repository
         self._credentials = BLAZE_AUTH
-        retries = Retry(total=15,
+        retries = Retry(total=5,
                         backoff_factor=0.1,
                         status_forcelist=[500, 502, 503, 504])
         session = requests.session()
