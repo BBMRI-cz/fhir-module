@@ -3,7 +3,7 @@ from fhirclient.models.fhirreference import FHIRReference
 
 
 class MFDiagnosisReport:
-    """Class representing a diagnostis report in order to link a specimen to a Condition through this diagnosis report.
+    """Class representing a diagnosis report in order to link a specimen to a Condition through this diagnosis report.
     as defined by the MIABIS on FHIR profile.
     @sample_identifier: The identifier of the sample."""
     def __init__(self, sample_identifier: str):
