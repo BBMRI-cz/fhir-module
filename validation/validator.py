@@ -52,7 +52,7 @@ class Validator(abc.ABC):
         self._validate_files_present(file_type)
         dir_entry: os.DirEntry
         for dir_entry in os.scandir(self._dir_path):
-            if dir_entry.name.endswith("." + file_type):
+            if dir_entry.name.lower().endswith("." + file_type):
                 self._validate_single_file(dir_entry)
         logger.info("All the files contain the necessary data/attributes for data transformation.")
         return True

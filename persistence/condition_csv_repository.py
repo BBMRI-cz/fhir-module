@@ -23,7 +23,7 @@ class ConditionCsvRepository(ConditionRepository):
     def get_all(self) -> List[Condition]:
         dir_entry: os.DirEntry
         for dir_entry in os.scandir(self._dir_path):
-            if dir_entry.name.endswith(".csv"):
+            if dir_entry.name.lower().endswith(".csv"):
                 yield from self.__extract_condition_from_csv_file(dir_entry)
 
     def __extract_condition_from_csv_file(self, dir_entry: os.DirEntry) -> Condition:
