@@ -28,7 +28,7 @@ class SampleCsvRepository(SampleRepository):
     def get_all(self) -> Generator[Sample, None, None]:
         dir_entry: os.DirEntry
         for dir_entry in os.scandir(self._dir_path):
-            if dir_entry.name.endswith(".csv"):
+            if dir_entry.name.lower().endswith(".csv"):
                 yield from self.__extract_sample_from_csv_file(dir_entry)
 
     def __extract_sample_from_csv_file(self, dir_entry: os.DirEntry) -> Sample:

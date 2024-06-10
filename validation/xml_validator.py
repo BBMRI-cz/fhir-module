@@ -24,8 +24,9 @@ class XMLValidator(Validator):
 
     def _validate_files_present(self, file_type: str) -> bool:
         """this method validates if files with correct format are provided inside the specified directory. """
+        dir_entry: os.DirEntry
         for dir_entry in os.scandir(self._dir_path):
-            if dir_entry.name.endswith("." + file_type):
+            if dir_entry.name.lower().endswith("." + file_type):
                 return True
         logger.error("No XML files are provided for data transformation. "
                      "Please check that you provided correct directory in DIR_PATH variable.")

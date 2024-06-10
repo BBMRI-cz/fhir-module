@@ -23,8 +23,10 @@ class ConditionXMLRepository(ConditionRepository):
         logger.debug(f"Loaded the following condition parsing map {condition_parsing_map}")
 
     def get_all(self) -> List[Condition]:
+        dir_entry: os.DirEntry
         for dir_entry in os.scandir(self._dir_path):
-            yield from self.__extract_condition_from_xml_file(dir_entry)
+            if dir_entry.name.lower().endswith(".xml"):
+                yield from self.__extract_condition_from_xml_file(dir_entry)
 
     def __extract_condition_from_xml_file(self, dir_entry: os.DirEntry) -> Condition:
         """Extracts Condition from an XML file"""

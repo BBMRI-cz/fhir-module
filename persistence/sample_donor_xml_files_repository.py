@@ -26,8 +26,10 @@ class SampleDonorXMLFilesRepository(SampleDonorRepository):
         logger.debug(f"Loaded the following donor parsing map {donor_parsing_map}")
 
     def get_all(self) -> List[SampleDonor]:
+        dir_entry: os.DirEntry
         for dir_entry in os.scandir(self._dir_path):
-            yield from self.__extract_donor_from_xml_file(dir_entry)
+            if dir_entry.name.lower().endswith(".xml"):
+                yield from self.__extract_donor_from_xml_file(dir_entry)
 
     def __extract_donor_from_xml_file(self, dir_entry: os.DirEntry) -> SampleDonor:
         """Extracts SampleDonor from an XML file"""
