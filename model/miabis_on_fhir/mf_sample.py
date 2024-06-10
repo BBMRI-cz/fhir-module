@@ -17,7 +17,7 @@ logger = logging.getLogger()
 
 class MFSample:
     """Class representing a biological specimen as defined by the MIABIS on FHIR profile."""
-    def __init__(self, identifier: str, donor_id: str, material_type: str = None, collected_datetime: str = None,
+    def __init__(self, identifier: str, donor_id: str, material_type: str = None, collected_datetime: datetime = None,
                  body_site: str = None, body_site_system: str = None, storage_temperature: str = None, use_restrictions: str = None):
         """
         :param identifier: Sample organizational identifier
@@ -58,13 +58,12 @@ class MFSample:
         self._material_type = material_type
 
     @property
-    def collected_datetime(self) -> str:
+    def collected_datetime(self) -> datetime:
         """Date and time of sample collection."""
         return self._collected_datetime
 
     @collected_datetime.setter
-    def collected_datetime(self, collected_datetime: str):
-        self._collected_datetime = datetime.strptime(collected_datetime, '%Y-%m-%dT%H:%M:%S')
+    def collected_datetime(self, collected_datetime: datetime):
         self._collected_datetime = collected_datetime
 
     @property
@@ -133,7 +132,9 @@ class MFSample:
             if self.use_restrictions is not None:
                 specimen.note = [Annotation()]
                 specimen.note[0].text = self.use_restrictions
-            return specimen
+        if extensions:
+            specimen.extension = extensions
+        return specimen
 
     def __create_fhir_identifier(self):
         """Create fhir identifier."""
