@@ -1,4 +1,5 @@
 """Module for Sample representation."""
+from datetime import datetime
 from typing import List
 
 import icd10
@@ -8,19 +9,23 @@ from fhirclient.models.extension import Extension
 from fhirclient.models.fhirreference import FHIRReference
 from fhirclient.models.identifier import Identifier
 from fhirclient.models.meta import Meta
-from fhirclient.models.specimen import Specimen
+from fhirclient.models.specimen import Specimen, SpecimenCollection
 
 
 class Sample:
     """Class representing a biological specimen."""
 
     def __init__(self, identifier: str, donor_id: str, material_type: str = None, diagnosis: str = None,
-                 sample_collection_id: str = None) -> None:
+                 sample_collection_id: str = None,
+                 collected_datetime: datetime = None, storage_temperature: str = None) -> None:
         """
         :param identifier: Sample organizational identifier
         :param donor_id: Donor organizational identifier
         :param material_type: Sample type. E.g. tissue, plasma...
         :param diagnosis: ICD-10 classification of the diagnosis
+        :param sample_collection_id: Sample collection identifier
+        :param collected_datetime: Date and time of sample collection
+        :param storage_temperature: Temperature at which the sample is stored
         """
         self._identifier: str = identifier
         self._donor_id: str = donor_id
@@ -29,6 +34,8 @@ class Sample:
             raise TypeError("The provided string is not a valid ICD-10 code.")
         self._diagnosis: str = diagnosis
         self._sample_collection_id: str = sample_collection_id
+        self._collected_datetime: datetime = collected_datetime
+        self._storage_temperature: str = storage_temperature
 
     @property
     def identifier(self) -> str:
@@ -70,6 +77,21 @@ class Sample:
     def sample_collection_id(self, sample_collection_id: str):
         self._sample_collection_id = sample_collection_id
 
+    @property
+    def collected_datetime(self) -> datetime:
+        return self._collected_datetime
+
+    @collected_datetime.setter
+    def collected_datetime(self, collected_datetime: datetime):
+        self._collected_datetime = collected_datetime
+    @property
+    def storage_temperature(self) -> str:
+        return self._storage_temperature
+
+    @storage_temperature.setter
+    def storage_temperature(self, storage_temperature: str):
+        self._storage_temperature = storage_temperature
+
     def to_fhir(self, material_type_map: dict = None, subject_id: str = None, custodian_id: str = None):
         """Return sample representation in FHIR.
         @subject_id: FHIR Resource ID of the sample donor."""
@@ -80,6 +102,9 @@ class Sample:
         extensions: List[Extension] = []
         if material_type_map is not None and self.material_type in material_type_map:
             specimen.type = self.__create_specimen_type(material_type_map)
+        if self.collected_datetime is not None:
+            specimen.collection = SpecimenCollection()
+            specimen.collection.collectedDateTime = self.collected_datetime
         if subject_id is not None:
             specimen.subject = FHIRReference()
             specimen.subject.reference = f"Patient/{subject_id}"
@@ -87,9 +112,20 @@ class Sample:
             extensions.append(self.__create_diagnosis_extension())
         if custodian_id is not None:
             extensions.append(self.__create_custodian_extension(custodian_id))
+        if self._storage_temperature is not None:
+            extensions.append(self.__create_storage_temperature_extension())
         if extensions:
             specimen.extension = extensions
         return specimen
+
+    def __create_storage_temperature_extension(self):
+        # TODO SUBJECT TO CHANGE: storage temperature should be taken from json file ? same as material type
+        storage_temperature_extension: Extension = Extension()
+        storage_temperature_extension.url = "https://fhir.bbmri.de/StructureDefinition/StorageTemperature"
+        storage_temperature_extension.valueCodeableConcept = CodeableConcept()
+        storage_temperature_extension.valueCodeableConcept.coding = [Coding()]
+        storage_temperature_extension.valueCodeableConcept.coding[0].code = self.storage_temperature
+        return storage_temperature_extension
 
     def __create_diagnosis_extension(self):
         fhir_diagnosis: Extension = Extension()
