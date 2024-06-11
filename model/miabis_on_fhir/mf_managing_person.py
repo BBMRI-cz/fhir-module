@@ -5,6 +5,7 @@ from fhirclient.models.practitioner import Practitioner
 
 
 class MFManagingPerson:
+    """Class representing a managing person of a Collection and their contact information."""
     def __init__(self, given_name: str, family_name: str, email: str, city: str,
                  country: str, postal_code: str, street_name_and_number: str):
         self._given_name = given_name
@@ -17,6 +18,7 @@ class MFManagingPerson:
 
     @property
     def given_name(self) -> str:
+        """Given name of the managing person"""
         return self._given_name
 
     @given_name.setter
@@ -25,6 +27,7 @@ class MFManagingPerson:
 
     @property
     def family_name(self) -> str:
+        """Family name of the managing person"""
         return self._family_name
 
     @family_name.setter
@@ -33,6 +36,7 @@ class MFManagingPerson:
 
     @property
     def email(self) -> str:
+        """Email of the managing person"""
         return self._email
 
     @email.setter
@@ -41,6 +45,7 @@ class MFManagingPerson:
 
     @property
     def city(self) -> str:
+        """City of the managing person's address."""
         return self._city
 
     @city.setter
@@ -49,6 +54,7 @@ class MFManagingPerson:
 
     @property
     def country(self) -> str:
+        """Country of the managing person's address."""
         return self._country
 
     @country.setter
@@ -57,6 +63,7 @@ class MFManagingPerson:
 
     @property
     def postal_code(self) -> str:
+        """Postal code of the managing person's address."""
         return self._postal_code
 
     @postal_code.setter
@@ -65,6 +72,7 @@ class MFManagingPerson:
 
     @property
     def street_name_and_number(self) -> str:
+        """Street name and number of the managing person's address."""
         return self._street_name_and_number
 
     @street_name_and_number.setter
@@ -72,6 +80,7 @@ class MFManagingPerson:
         self._street_name_and_number = street_name_and_number
 
     def to_fhir(self) -> Practitioner:
+        """Return managing person representation in FHIR"""
         managing_person = Practitioner()
         managing_person.name = [HumanName()]
         managing_person.name[0].given = self.given_name
