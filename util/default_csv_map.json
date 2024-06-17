@@ -8,7 +8,8 @@
     "sample_details": {
       "id": "sample_ID",
       "material_type": "sampling_type",
-      "diagnosis": "diagnosis"
+      "diagnosis": "diagnosis",
+      "storage_temperature": "storage_temperature"
     },
     "donor_id": "patient_pseudonym"
   },

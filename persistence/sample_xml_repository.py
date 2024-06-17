@@ -51,7 +51,10 @@ class SampleXMLRepository(SampleRepository):
                                            default=None),
                         diagnosis=glom(xml_sample,
                                        self._sample_parsing_map.get("sample_details").get(
-                                           "diagnosis"), default=None))
+                                           "diagnosis"), default=None),
+                        storage_temperature=glom(xml_sample,
+                                                 self._sample_parsing_map.get("sample_details").get(
+                                                     "storage_temperature"), default=None))
         if self._type_to_collection_map is not None:
             sample.sample_collection_id = self._type_to_collection_map.get(sample.material_type)
         return sample

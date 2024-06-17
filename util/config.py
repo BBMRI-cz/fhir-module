@@ -13,12 +13,15 @@ logger = logging.getLogger()
 BLAZE_URL = os.getenv("BLAZE_URL", "http://localhost:8080/fhir")
 RECORDS_DIR_PATH = os.getenv("DIR_PATH", "/mock_dir/")
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 PARSING_MAP_PATH = os.getenv("PARSING_MAP_PATH", os.path.join(ROOT_DIR, 'default_map.json'))
 PARSING_MAP_CSV_PATH = os.getenv("PARSING_MAP_PATH", os.path.join(ROOT_DIR, 'default_csv_map.json'))
 MATERIAL_TYPE_MAP_PATH = os.getenv("MATERIAL_TYPE_MAP_PATH", os.path.join(ROOT_DIR, 'default_material_type_map.json'))
 SAMPLE_COLLECTIONS_PATH = os.getenv("SAMPLE_COLLECTIONS_PATH", os.path.join(ROOT_DIR, 'default_sample_collection.json'))
 TYPE_TO_COLLECTION_MAP_PATH = os.getenv("TYPE_TO_COLLECTION_MAP_PATH",
                                         os.path.join(ROOT_DIR, 'default_type_to_collection_map.json'))
+STORAGE_TEMP_MAP_PATH = os.getenv("STORAGE_TEMP_MAP_PATH", os.path.join(ROOT_DIR, 'default_storage_temp_map.json'))
+
 CSV_SEPARATOR = os.getenv("CSV_SEPARATOR", ";")
 RECORDS_FILE_TYPE = os.getenv("RECORDS_FILE_TYPE", "xml")
 BLAZE_AUTH: tuple = (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))
