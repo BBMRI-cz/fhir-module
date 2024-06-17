@@ -1,6 +1,8 @@
+import datetime
 import unittest
 
 from model.sample import Sample
+from model.storage_temperature import StorageTemperature
 
 
 class TestSample(unittest.TestCase):
@@ -58,3 +60,42 @@ class TestSample(unittest.TestCase):
     def test_sample_collection_id_ok(self):
         sample: Sample = Sample(identifier="sampleId", donor_id="patient", sample_collection_id="test")
         self.assertEqual("test", sample.sample_collection_id)
+
+    def test_storage_temp_is_none(self):
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient")
+        self.assertIsNone(sample.storage_temperature)
+
+    def test_storage_temp_is_ok(self):
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient",
+                                storage_temperature=StorageTemperature.TEMPERATURE_GN)
+        self.assertEqual(StorageTemperature.TEMPERATURE_GN, sample.storage_temperature)
+
+    def test_assign_storage_temp(self):
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient",
+                                storage_temperature=StorageTemperature.TEMPERATURE_GN)
+        self.assertEqual(StorageTemperature.TEMPERATURE_GN, sample.storage_temperature)
+        sample.storage_temperature = StorageTemperature.TEMPERATURE_2_TO_10
+        self.assertEqual(StorageTemperature.TEMPERATURE_2_TO_10, sample.storage_temperature)
+
+    def test_to_fhir_storage_temperature_ok(self):
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient",
+                                storage_temperature=StorageTemperature.TEMPERATURE_GN)
+        self.assertEqual("temperatureGN", sample.to_fhir().extension[0].valueCodeableConcept.coding[0].code)
+
+    def test_collected_datetime_ok(self):
+        collected_datetime = datetime.datetime(year=2025,month=3,day=18)
+        sample: Sample = Sample(identifier="sampleID", donor_id="donor", collected_datetime=collected_datetime)
+        self.assertEqual("2025-03-18T00:00:00", sample.collected_datetime.isoformat())
+        self.assertEqual("2025-03-18T00:00:00", sample.to_fhir().collection.collectedDateTime.isoformat())
+
+    def test_collected_datetime_from_string_no_day_ok(self):
+        collected_datetime = datetime.datetime.strptime("2022-03", '%Y-%m')
+        sample: Sample = Sample(identifier="sampleID", donor_id="donor", collected_datetime=collected_datetime)
+        self.assertEqual("2022-03-01T00:00:00", sample.collected_datetime.isoformat())
+        self.assertEqual("2022-03-01T00:00:00", sample.to_fhir().collection.collectedDateTime.isoformat())
+
+    def test_collected_datetime_from_string_year_only_ok(self):
+        collected_datetime = datetime.datetime.strptime("2022", '%Y')
+        sample: Sample = Sample(identifier="sampleID", donor_id="donor", collected_datetime=collected_datetime)
+        self.assertEqual("2022-01-01T00:00:00", sample.collected_datetime.isoformat())
+        self.assertEqual("2022-01-01T00:00:00", sample.to_fhir().collection.collectedDateTime.isoformat())
