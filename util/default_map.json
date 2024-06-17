@@ -9,7 +9,8 @@
     "sample_details": {
       "id": "@sampleId",
       "material_type": "materialType",
-      "diagnosis": "diagnosis"
+      "diagnosis": "diagnosis",
+      "storage_temperature": "storage_temperature"
     },
     "donor_id": "patient.@id"
   },
