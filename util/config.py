@@ -52,3 +52,10 @@ with open(TYPE_TO_COLLECTION_MAP_PATH) as json_file:
     except JSONDecodeError:
         logger.error("Type to collection map does not have correct JSON format. Exiting.")
         sys.exit()
+
+with open(STORAGE_TEMP_MAP_PATH) as json_file:
+    try:
+        STORAGE_TEMP_MAP = json.load(json_file)
+    except JSONDecodeError:
+        logger.error("Storage temperature map does not have correct JSON format. Exiting.")
+        sys.exit()
