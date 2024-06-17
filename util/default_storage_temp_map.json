@@ -1,0 +1,9 @@
+{
+  "temperature2to10": "TEMPERATURE_2_TO_10",
+  "temperature-18to-35": "TEMPERATURE_MINUS_18_TO_MINUS_35",
+  "temperature-60to-85": "TEMPERATURE_MINUS_60_TO_MINUS_85",
+  "temperatureGN": "TEMPERATURE_GN",
+  "temperatureLN": "TEMPERATURE_LN",
+  "temperatureRoom": "TEMPERATURE_ROOM",
+  "temperatureOther": "TEMPERATURE_OTHER"
+}

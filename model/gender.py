@@ -14,14 +14,3 @@ class Gender(Enum):
         """List all possible gender values"""
         return list(map(lambda c: c.name, cls))
 
-
-def get_gender_from_abbreviation(gender: str) -> Gender:
-    match gender.upper():
-        case "F":
-            return Gender.FEMALE
-        case "M":
-            return Gender.MALE
-        case "O":
-            return Gender.OTHER
-        case _:
-            return Gender.UNKNOWN

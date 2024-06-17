@@ -11,13 +11,15 @@ from fhirclient.models.identifier import Identifier
 from fhirclient.models.meta import Meta
 from fhirclient.models.specimen import Specimen, SpecimenCollection
 
+from model.storage_temperature import StorageTemperature
+
 
 class Sample:
     """Class representing a biological specimen."""
 
     def __init__(self, identifier: str, donor_id: str, material_type: str = None, diagnosis: str = None,
                  sample_collection_id: str = None,
-                 collected_datetime: datetime = None, storage_temperature: str = None) -> None:
+                 collected_datetime: datetime = None, storage_temperature: StorageTemperature = None) -> None:
         """
         :param identifier: Sample organizational identifier
         :param donor_id: Donor organizational identifier
@@ -35,7 +37,7 @@ class Sample:
         self._diagnosis: str = diagnosis
         self._sample_collection_id: str = sample_collection_id
         self._collected_datetime: datetime = collected_datetime
-        self._storage_temperature: str = storage_temperature
+        self._storage_temperature: StorageTemperature = storage_temperature
 
     @property
     def identifier(self) -> str:
@@ -71,6 +73,7 @@ class Sample:
 
     @property
     def sample_collection_id(self) -> str:
+        """"Id of collection that this sample is a part of."""""
         return self._sample_collection_id
 
     @sample_collection_id.setter
@@ -79,17 +82,19 @@ class Sample:
 
     @property
     def collected_datetime(self) -> datetime:
+        """Collected datetime. Coding ISO8601"""
         return self._collected_datetime
 
     @collected_datetime.setter
     def collected_datetime(self, collected_datetime: datetime):
         self._collected_datetime = collected_datetime
     @property
-    def storage_temperature(self) -> str:
+    def storage_temperature(self) -> StorageTemperature:
+        """Storage temperature of a sample"""
         return self._storage_temperature
 
     @storage_temperature.setter
-    def storage_temperature(self, storage_temperature: str):
+    def storage_temperature(self, storage_temperature: StorageTemperature):
         self._storage_temperature = storage_temperature
 
     def to_fhir(self, material_type_map: dict = None, subject_id: str = None, custodian_id: str = None):
@@ -124,7 +129,7 @@ class Sample:
         storage_temperature_extension.url = "https://fhir.bbmri.de/StructureDefinition/StorageTemperature"
         storage_temperature_extension.valueCodeableConcept = CodeableConcept()
         storage_temperature_extension.valueCodeableConcept.coding = [Coding()]
-        storage_temperature_extension.valueCodeableConcept.coding[0].code = self.storage_temperature
+        storage_temperature_extension.valueCodeableConcept.coding[0].code = self.storage_temperature.value
         return storage_temperature_extension
 
     def __create_diagnosis_extension(self):
