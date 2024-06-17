@@ -4,7 +4,7 @@ import logging
 import os
 from typing import List
 
-from model.gender import get_gender_from_abbreviation
+from util.enums_util import get_gender_from_abbreviation
 from model.sample_donor import SampleDonor
 from persistence.sample_donor_repository import SampleDonorRepository
 from util.custom_logger import setup_logger
