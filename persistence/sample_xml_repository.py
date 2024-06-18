@@ -62,7 +62,7 @@ class SampleXMLRepository(SampleRepository):
                                default=None)
         if collection_date is not None:
             try:
-                sample.collected_datetime = date_parser.parse(collection_date)
+                sample.collected_datetime = date_parser.parse(collection_date).date()
             except ParserError:
                 logger.warning(f"Error parsing date {collection_date}. Please make sure the date is in a valid format.")
                 pass
