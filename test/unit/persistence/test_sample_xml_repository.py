@@ -202,7 +202,7 @@ class TestSampleXMLRepository(unittest.TestCase):
             self.assertIsNone(sample.storage_temperature)
             self.assertEqual("S", sample.material_type)
             self.assertEqual("C509", sample.diagnosis)
-            self.assertEqual(datetime.datetime(2021, 1, 1, 0, 0), sample.collected_datetime)
+            self.assertEqual(datetime.date(2021, 1, 1), sample.collected_datetime)
 
     @patchfs
     def test_diagnosis_not_in_sample(self, fake_fs):
@@ -215,7 +215,7 @@ class TestSampleXMLRepository(unittest.TestCase):
             self.assertEqual(StorageTemperature.TEMPERATURE_GN, sample.storage_temperature)
             self.assertEqual("S", sample.material_type)
             self.assertIsNone(sample.diagnosis)
-            self.assertEqual(datetime.datetime(2021, 1, 1, 0, 0), sample.collected_datetime)
+            self.assertEqual(datetime.date(2021, 1, 1), sample.collected_datetime)
     @patchfs
     def test_material_type_not_in_sample(self, fake_fs):
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
@@ -227,7 +227,7 @@ class TestSampleXMLRepository(unittest.TestCase):
             self.assertEqual(StorageTemperature.TEMPERATURE_GN, sample.storage_temperature)
             self.assertIsNone(sample.material_type)
             self.assertEqual("C509", sample.diagnosis)
-            self.assertEqual(datetime.datetime(2021, 1, 1, 0, 0), sample.collected_datetime)
+            self.assertEqual(datetime.date(2021, 1, 1,), sample.collected_datetime)
 
     @patchfs
     def test_no_collection_date(self, fake_fs):

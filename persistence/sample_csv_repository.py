@@ -67,7 +67,7 @@ class SampleCsvRepository(SampleRepository):
                     if diagnosis_field is not None:
                         sample.diagnosis = self.__extract_first_diagnosis(row[diagnosis_field])
                     if collection_date_field is not None:
-                        sample.collected_datetime = date_parser.parse(row[collection_date_field])
+                        sample.collected_datetime = date_parser.parse(row[collection_date_field]).date()
                     if self._type_to_collection_map is not None:
                         sample.sample_collection_id = self._type_to_collection_map.get(sample.diagnosis)
                     if self._storage_temp_map is not None and storage_temp_field is not None:
