@@ -9,7 +9,8 @@
       "id": "sample_ID",
       "material_type": "sampling_type",
       "diagnosis": "diagnosis",
-      "storage_temperature": "storage_temperature"
+      "storage_temperature": "storage_temperature",
+      "collection_date": "sampling_date"
     },
     "donor_id": "patient_pseudonym"
   },
