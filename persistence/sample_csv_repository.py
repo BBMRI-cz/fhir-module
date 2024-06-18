@@ -43,18 +43,26 @@ class SampleCsvRepository(SampleRepository):
             try:
                 check_sample_map_format(self._sample_parsing_map)
                 for row in reader:
-                    sample = Sample(identifier=row[fields_dict[self._sample_parsing_map.get("sample_details").get("id")]],
-                                    donor_id=row[fields_dict[self._sample_parsing_map.get("donor_id")]],
-                                    material_type=row[fields_dict[self._sample_parsing_map.get("sample_details").get("material_type")]],
-                                    diagnosis=self.__extract_first_diagnosis(self, row[fields_dict[self._sample_parsing_map
-                                                                             .get("sample_details").get("diagnosis")]]))
+                    sample = Sample(
+                        identifier=row[fields_dict[self._sample_parsing_map.get("sample_details").get("id")]],
+                        donor_id=row[fields_dict[self._sample_parsing_map.get("donor_id")]])
+                    material_type_field = fields_dict.get(
+                        self._sample_parsing_map.get("sample_details").get("material_type"))
+                    diagnosis_field = fields_dict.get(self._sample_parsing_map.get("sample_details").get("diagnosis"))
+
+                    storage_temp_field = fields_dict.get(self._sample_parsing_map
+                                                .get("sample_details")
+                                                .get("storage_temperature"))
+                    if material_type_field is not None:
+                        sample.material_type = row[material_type_field]
+                    if diagnosis_field is not None:
+                        sample.diagnosis = self.__extract_first_diagnosis(row[diagnosis_field])
                     if self._type_to_collection_map is not None:
                         sample.sample_collection_id = self._type_to_collection_map.get(sample.diagnosis)
-                    if self._storage_temp_map is not None:
-                        parsed_storage_temp = parse_storage_temp_from_code(self._storage_temp_map,
-                                                                                 row[fields_dict[self._sample_parsing_map
-                                                                                                 .get("sample_details")
-                                                                                                 .get("storage_temperature")]])
+                    if self._storage_temp_map is not None and storage_temp_field is not None:
+                        parsed_storage_temp = parse_storage_temp_from_code(
+                            self._storage_temp_map,
+                            row[storage_temp_field])
                         if parsed_storage_temp is not None:
                             sample.storage_temperature = parsed_storage_temp
                     yield sample
@@ -66,7 +74,7 @@ class SampleCsvRepository(SampleRepository):
                 pass
 
     @staticmethod
-    def __extract_first_diagnosis(self, diagnosis_str: str):
+    def __extract_first_diagnosis(diagnosis_str: str):
         """Extracts only the first diagnosis, if the file has multiple diagnosis"""
         if ',' in diagnosis_str:
             return diagnosis_str.split(',')[0].strip()
