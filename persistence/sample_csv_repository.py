@@ -3,6 +3,8 @@ import logging
 import os
 from typing import Generator
 
+from dateutil.parser import ParserError
+
 from exception.wrong_sample_format import WrongSampleMapException
 from model.sample import Sample
 from persistence.sample_repository import SampleRepository
@@ -10,6 +12,8 @@ from util.custom_logger import setup_logger
 from util.enums_util import parse_storage_temp_from_code
 
 from persistence.csv_util import check_sample_map_format
+
+from dateutil import parser as date_parser
 
 setup_logger()
 logger = logging.getLogger()
@@ -40,6 +44,7 @@ class SampleCsvRepository(SampleRepository):
             fields = next(reader)
             for i, field in enumerate(fields):
                 fields_dict[field] = i
+            # TODO smaller try catch block
             try:
                 check_sample_map_format(self._sample_parsing_map)
                 for row in reader:
@@ -51,12 +56,18 @@ class SampleCsvRepository(SampleRepository):
                     diagnosis_field = fields_dict.get(self._sample_parsing_map.get("sample_details").get("diagnosis"))
 
                     storage_temp_field = fields_dict.get(self._sample_parsing_map
-                                                .get("sample_details")
-                                                .get("storage_temperature"))
+                                                         .get("sample_details")
+                                                         .get("storage_temperature"))
+
+                    collection_date_field = fields_dict.get(self._sample_parsing_map
+                                                            .get("sample_details")
+                                                            .get("collection_date"))
                     if material_type_field is not None:
                         sample.material_type = row[material_type_field]
                     if diagnosis_field is not None:
                         sample.diagnosis = self.__extract_first_diagnosis(row[diagnosis_field])
+                    if collection_date_field is not None:
+                        sample.collected_datetime = date_parser.parse(row[collection_date_field])
                     if self._type_to_collection_map is not None:
                         sample.sample_collection_id = self._type_to_collection_map.get(sample.diagnosis)
                     if self._storage_temp_map is not None and storage_temp_field is not None:
@@ -68,6 +79,10 @@ class SampleCsvRepository(SampleRepository):
                     yield sample
             except WrongSampleMapException:
                 logger.info("Given Sample map has a bad format, cannot parse the file")
+                pass
+
+            except ParserError:
+                logger.warning(f"Error parsing date {row[collection_date_field]}. Please make sure the date is in a valid format.")
                 pass
             except TypeError as err:
                 logger.info(err)
