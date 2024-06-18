@@ -1,3 +1,4 @@
+import datetime
 import unittest
 
 import pytest
@@ -18,6 +19,8 @@ class TestSampleCsvRepository(unittest.TestCase):
 
     missing_diagnosis_field_header = "sample_ID;patient_pseudonym;sex;birth_year;date_of_diagnosis;donor_age;sampling_date;sampling_type;storage_temperature;available_number_of_samples \n"
 
+    missing_collection_date_field_header = "sample_ID;patient_pseudonym;sex;birth_year;date_of_diagnosis;diagnosis;donor_age;sampling_type;storage_temperature;available_number_of_samples \n"
+
     wrong_diagnosis = "32;1111;f;1945;2007-10-16;wrong;85;2100-01-16;blood-serum;-20;0"
 
     one_sample = "33;1111;m;1947;2007-10-16;M0580;85;2100-01-16;serum;temperatureLN;0"
@@ -29,6 +32,8 @@ class TestSampleCsvRepository(unittest.TestCase):
     one_sample_missing_material_type = "33;1111;m;1947;2007-10-16;M0580;85;2100-01-16;temperatureLN;0"
 
     one_sample_missing_diagnosis = "33;1111;m;1947;2007-10-16;85;2100-01-16;serum;temperatureLN;0"
+
+    one_sample_missing_collection_date = "33;1111;m;1947;2007-10-16;M0580;85;serum;temperatureLN;0"
 
     dir_path = "/mock/dir/"
 
@@ -138,6 +143,7 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual(None, sample.storage_temperature)
             self.assertEqual("serum", sample.material_type)
             self.assertEqual("M0580", sample.diagnosis)
+            self.assertEqual(datetime.datetime(2100, 1, 16), sample.collected_datetime)
 
     @patchfs
     def test_missing_material_type_field(self, fake_fs):
@@ -153,6 +159,7 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual(StorageTemperature.TEMPERATURE_LN, sample.storage_temperature)
             self.assertEqual(None, sample.material_type)
             self.assertEqual("M0580", sample.diagnosis)
+            self.assertEqual(datetime.datetime(2100, 1, 16), sample.collected_datetime)
 
     @patchfs
     def test_missing_diagnosis_field(self, fake_fs):
@@ -168,4 +175,21 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual(StorageTemperature.TEMPERATURE_LN, sample.storage_temperature)
             self.assertEqual("serum", sample.material_type)
             self.assertEqual(None, sample.diagnosis)
+            self.assertEqual(datetime.datetime(2100, 1, 16), sample.collected_datetime)
+
+    @patchfs
+    def test_missing_collection_date_field(self, fake_fs):
+        self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
+                                                     separator=";",
+                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     storage_temp_map=STORAGE_TEMP_MAP)
+        fake_fs.create_file(self.dir_path + "mock_file.csv",
+                            contents=self.missing_collection_date_field_header
+                                     + self.one_sample_missing_collection_date)
+        for sample in self.sample_repository.get_all():
+            self.assertEqual("33", sample.identifier)
+            self.assertEqual(StorageTemperature.TEMPERATURE_LN, sample.storage_temperature)
+            self.assertEqual("serum", sample.material_type)
+            self.assertEqual("M0580", sample.diagnosis)
+            self.assertEqual(None, sample.collected_datetime)
 
