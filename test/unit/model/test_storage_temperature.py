@@ -38,3 +38,9 @@ class TestStorageTemperature(unittest.TestCase):
             "temperature2to10": "BAD_VALUE",
         }
         self.assertIsNone(parse_storage_temp_from_code(storage_temp_map, "temperature2to10"))
+
+    def test_parse_storage_temperature_from_none_(self):
+        storage_temp_map = {
+            "temperature2to10": "BAD_VALUE",
+        }
+        self.assertIsNone(parse_storage_temp_from_code(storage_temp_map,None))

@@ -4,8 +4,9 @@ import pytest
 from pyfakefs.fake_filesystem_unittest import patchfs
 
 from model.sample import Sample
+from model.storage_temperature import StorageTemperature
 from persistence.sample_xml_repository import SampleXMLRepository
-from util.config import PARSING_MAP
+from util.config import PARSING_MAP, STORAGE_TEMP_MAP
 
 
 class TestSampleXMLRepository(unittest.TestCase):
@@ -13,8 +14,33 @@ class TestSampleXMLRepository(unittest.TestCase):
              '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
              '<materialType>S</materialType>' \
              '<diagnosis>C509</diagnosis>' \
+             '<storage_temperature>temperatureGN</storage_temperature>' \
              '</diagnosisMaterial>' \
              '</STS>'
+
+    sample_no_storage_temperature = \
+        '<STS>' \
+        '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
+        '<materialType>S</materialType>' \
+        '<diagnosis>C509</diagnosis>' \
+        '</diagnosisMaterial>' \
+        '</STS>'
+
+    sample_no_diagnosis = \
+        '<STS>' \
+        '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
+        '<materialType>S</materialType>' \
+        '<storage_temperature>temperatureGN</storage_temperature>' \
+        '</diagnosisMaterial>' \
+        '</STS>'
+
+    sample_no_material_type = \
+        '<STS>' \
+        '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
+        '<diagnosis>C509</diagnosis>' \
+        '<storage_temperature>temperatureGN</storage_temperature>' \
+        '</diagnosisMaterial>' \
+        '</STS>'
 
     wrong_diagnosis = '<STS>' \
                       '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
@@ -132,3 +158,56 @@ class TestSampleXMLRepository(unittest.TestCase):
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample))
         self.assertEqual(None, next(self.sample_repository.get_all()).sample_collection_id)
+
+    @patchfs
+    def test_storage_temperature_ok(self, fake_fs):
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
+                                                     storage_temp_map=STORAGE_TEMP_MAP)
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.sample))
+        self.assertEqual(StorageTemperature.TEMPERATURE_GN, next(self.sample_repository.get_all()).storage_temperature)
+
+    @patchfs
+    def test_storage_temperature_code_not_in_map(self, fake_fs):
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
+                                                     storage_temp_map={"bad": "code"})
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.sample))
+        self.assertIsNone(next(self.sample_repository.get_all()).storage_temperature)
+
+    @patchfs
+    def test_storage_temperature_not_in_sample(self, fake_fs):
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
+                                                     storage_temp_map=STORAGE_TEMP_MAP)
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.sample_no_storage_temperature))
+        for sample in self.sample_repository.get_all():
+            self.assertIsNone(sample.storage_temperature)
+            self.assertEqual("S", sample.material_type)
+            self.assertEqual("C509", sample.diagnosis)
+    @patchfs
+    def test_diagnosis_not_in_sample(self, fake_fs):
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
+                                                     storage_temp_map=STORAGE_TEMP_MAP)
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.sample_no_diagnosis))
+        for sample in self.sample_repository.get_all():
+            self.assertEqual(StorageTemperature.TEMPERATURE_GN, sample.storage_temperature)
+            self.assertEqual("S", sample.material_type)
+            self.assertIsNone(sample.diagnosis)
+
+    @patchfs
+    def test_material_type_not_in_sample(self, fake_fs):
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
+                                                     storage_temp_map=STORAGE_TEMP_MAP)
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.sample_no_material_type))
+        for sample in self.sample_repository.get_all():
+            self.assertEqual(StorageTemperature.TEMPERATURE_GN, sample.storage_temperature)
+            self.assertIsNone(sample.material_type)
+            self.assertEqual("C509", sample.diagnosis)
