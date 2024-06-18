@@ -6,6 +6,7 @@ import icd10
 from fhirclient.models.codeableconcept import CodeableConcept
 from fhirclient.models.coding import Coding
 from fhirclient.models.extension import Extension
+from fhirclient.models.fhirdate import FHIRDate
 from fhirclient.models.fhirreference import FHIRReference
 from fhirclient.models.identifier import Identifier
 from fhirclient.models.meta import Meta
@@ -109,7 +110,8 @@ class Sample:
             specimen.type = self.__create_specimen_type(material_type_map)
         if self.collected_datetime is not None:
             specimen.collection = SpecimenCollection()
-            specimen.collection.collectedDateTime = self.collected_datetime
+            specimen.collection.collectedDateTime = FHIRDate()
+            specimen.collection.collectedDateTime.date = self.collected_datetime
         if subject_id is not None:
             specimen.subject = FHIRReference()
             specimen.subject.reference = f"Patient/{subject_id}"
