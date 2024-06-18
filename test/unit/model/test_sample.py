@@ -86,16 +86,16 @@ class TestSample(unittest.TestCase):
         collected_datetime = datetime.datetime(year=2025,month=3,day=18)
         sample: Sample = Sample(identifier="sampleID", donor_id="donor", collected_datetime=collected_datetime)
         self.assertEqual("2025-03-18T00:00:00", sample.collected_datetime.isoformat())
-        self.assertEqual("2025-03-18T00:00:00", sample.to_fhir().collection.collectedDateTime.isoformat())
+        self.assertEqual("2025-03-18T00:00:00", sample.to_fhir().collection.collectedDateTime.date.isoformat())
 
     def test_collected_datetime_from_string_no_day_ok(self):
         collected_datetime = datetime.datetime.strptime("2022-03", '%Y-%m')
         sample: Sample = Sample(identifier="sampleID", donor_id="donor", collected_datetime=collected_datetime)
         self.assertEqual("2022-03-01T00:00:00", sample.collected_datetime.isoformat())
-        self.assertEqual("2022-03-01T00:00:00", sample.to_fhir().collection.collectedDateTime.isoformat())
+        self.assertEqual("2022-03-01T00:00:00", sample.to_fhir().collection.collectedDateTime.date.isoformat())
 
     def test_collected_datetime_from_string_year_only_ok(self):
         collected_datetime = datetime.datetime.strptime("2022", '%Y')
         sample: Sample = Sample(identifier="sampleID", donor_id="donor", collected_datetime=collected_datetime)
         self.assertEqual("2022-01-01T00:00:00", sample.collected_datetime.isoformat())
-        self.assertEqual("2022-01-01T00:00:00", sample.to_fhir().collection.collectedDateTime.isoformat())
+        self.assertEqual("2022-01-01T00:00:00", sample.to_fhir().collection.collectedDateTime.date.isoformat())
