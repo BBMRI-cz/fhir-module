@@ -44,7 +44,6 @@ class SampleCsvRepository(SampleRepository):
             fields = next(reader)
             for i, field in enumerate(fields):
                 fields_dict[field] = i
-            # TODO smaller try catch block
             try:
                 check_sample_map_format(self._sample_parsing_map)
                 for row in reader:

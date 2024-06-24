@@ -126,7 +126,6 @@ class Sample:
         return specimen
 
     def __create_storage_temperature_extension(self):
-        # TODO SUBJECT TO CHANGE: storage temperature should be taken from json file ? same as material type
         storage_temperature_extension: Extension = Extension()
         storage_temperature_extension.url = "https://fhir.bbmri.de/StructureDefinition/StorageTemperature"
         storage_temperature_extension.valueCodeableConcept = CodeableConcept()
