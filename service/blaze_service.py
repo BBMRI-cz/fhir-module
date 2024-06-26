@@ -5,7 +5,7 @@ import requests
 import schedule
 from requests.adapters import HTTPAdapter, Retry
 from fhirclient.models.bundle import Bundle
-from glom import glom
+from glom import glom, Iter, T, Coalesce
 
 from exception.patient_not_found import PatientNotFoundError
 from model.sample import Sample
@@ -16,6 +16,7 @@ from service.patient_service import PatientService
 from service.sample_service import SampleService
 from util.config import MATERIAL_TYPE_MAP, BLAZE_AUTH
 from util.custom_logger import setup_logger
+from util.sample_util import build_sample_from_json
 
 setup_logger()
 logger = logging.getLogger()
@@ -179,27 +180,84 @@ class BlazeService:
         for sample in self._sample_service.get_all():
             logger.debug(f"Checking if Specimen with ID: {sample.identifier} is present."
                          f"Checking if Patient with ID: {sample.donor_id} is present")
-            if (not self.is_resource_present_in_blaze(resource_type="Specimen", identifier=sample.identifier) and
-                    self.is_resource_present_in_blaze(resource_type="Patient", identifier=sample.donor_id)):
+
+            specimen_present = self.is_resource_present_in_blaze(resource_type="Specimen", identifier=sample.identifier)
+            patient_present = self.is_resource_present_in_blaze(resource_type="Patient", identifier=sample.donor_id)
+
+            if not specimen_present and patient_present:
                 logger.debug(f"Specimen with org. ID: {sample.identifier} is not present in Blaze but the Donor is "
                              f"present. Uploading...")
                 self.__upload_sample(sample)
                 logger.debug(f"Successfully uploaded"
                              f" {self.get_number_of_resources('Specimen') - num_of_samples_before_sync}"
                              f"new samples.")
+            elif specimen_present and patient_present:
+                logger.debug(f"Specimen with org. ID: {sample.identifier} is already present in Blaze."
+                             f"Checking if the sample is up to date.")
+                old_sample = self.__build_existing_sample(sample)
+                if sample == old_sample:
+                    continue
+                else:
+                    old_sample_id = self.__get_fhir_sample_id(sample.identifier)
+                    sample.update_diagnoses(old_sample.diagnoses)
+                    self.__update_sample(sample, old_sample_id)
 
     def __upload_sample(self, sample: Sample):
         custodian_fhir_id: str = None
         if (sample.sample_collection_id is not None and
                 self.is_resource_present_in_blaze("Organization", sample.sample_collection_id)):
             custodian_fhir_id = self.__get_organization_fhir_id(sample.sample_collection_id)
-        self._session.post(url=self._blaze_url + "/Specimen",
-                           json=sample.to_fhir(material_type_map=MATERIAL_TYPE_MAP,
-                                               subject_id=self.__get_fhir_id_of_donor(sample.donor_id),
-                                               custodian_id=custodian_fhir_id)
-                           .as_json(),
-                           verify=False
-                           )
+        response = self._session.post(url=self._blaze_url + "/Specimen",
+                                      json=sample.to_fhir(material_type_map=MATERIAL_TYPE_MAP,
+                                                          subject_id=self.__get_fhir_id_of_donor(sample.donor_id),
+                                                          custodian_id=custodian_fhir_id)
+                                      .as_json(),
+                                      verify=False
+                                      )
+        if response.status_code != 201:
+            logger.error(f"Failed to upload sample with ID: {sample.identifier}. Reason: {response.text}")
+
+    def __update_sample(self, updated_sample: Sample, sample_fhir_id: str):
+        """
+        Updates a sample in the Blaze store.
+        :param sample: Sample object to update.
+        :param sample_fhir_id: FHIR resource ID of the sample.
+        """
+        custodian_fhir_id: str = None
+        if (updated_sample.sample_collection_id is not None and
+                self.is_resource_present_in_blaze("Organization", updated_sample.sample_collection_id)):
+            custodian_fhir_id = self.__get_organization_fhir_id(updated_sample.sample_collection_id)
+        updated_sample_fhir = updated_sample.to_fhir(material_type_map=MATERIAL_TYPE_MAP,
+                                                     subject_id=self.__get_fhir_id_of_donor(updated_sample.donor_id),
+                                                     custodian_id=custodian_fhir_id).as_json()
+        updated_sample_fhir["id"] = sample_fhir_id
+        response = self._session.put(url=self._blaze_url + f"/Specimen/{sample_fhir_id}",
+                                     json=updated_sample_fhir,
+                                     verify=False
+                                     )
+        if response.status_code == 200:
+            logger.info(f"Sample with ID: {updated_sample.identifier} successfully updated.")
+        else:
+            logger.error(f"Failed to update sample with ID: {updated_sample.identifier}. Reason: {response.text}")
+
+    def __build_existing_sample(self, new_sample: Sample) -> Sample:
+        """
+        Builds a Sample object from the Blaze store using the identifier of the new Sample object.
+        :param new_sample: sample to be added (the existing sample is to be built using this sample's FHIR ID)
+        """
+        fhir_sample_id = self.__get_fhir_sample_id(new_sample.identifier)
+        fhir_sample = self._session.get(url=self._blaze_url + f"/Specimen/{fhir_sample_id}",
+                                        verify=False).json()
+        old_donor_id = glom(fhir_sample, ("**.subject", ["reference"]))[0]
+        old_sample_donor_identifier = self.__get_donor_identifier(old_donor_id)
+        old_sample_collection_identifier = None
+        if fhir_sample.get("extension") is not None:
+            for ext in fhir_sample.get("extension"):
+                if ext.get("url") == "https://fhir.bbmri.de/StructureDefinition/Custodian":
+                    old_sample_collection_id = ext.get("valueReference").get("reference")
+                    old_sample_collection_identifier = self.__get_collection_identifier(old_sample_collection_id)
+        old_sample = build_sample_from_json(fhir_sample, old_sample_donor_identifier, old_sample_collection_identifier)
+        return old_sample
 
     def __get_organization_fhir_id(self, organization_identifier: str):
         organization_fhir_id = \
@@ -282,3 +340,65 @@ class BlazeService:
                                    json=sample_collection.to_fhir().as_json(),
                                    verify=False)
         logger.debug(f"Successfully uploaded {self.get_number_of_resources('Organization')} Sample collections.")
+
+    def get_sample_collection_id(self, sample_identifier: str) -> str | None:
+        """Get the identifier of the Sample Collection to which a sample belongs.
+        :param sample_identifier: Identifier of the sample.
+        :return: Identifier of the Sample Collection. if not found, returns None."""
+        sample_id = self.__get_fhir_sample_id(sample_identifier)
+        sample = self._session.get(url=self._blaze_url + f"/Specimen/{sample_id}", verify=False).json()
+        sample_collection_id = None
+        if sample.get("extension") is not None:
+            for ext in sample.get("extension"):
+                if ext.get("url") == "https://fhir.bbmri.de/StructureDefinition/Custodian":
+                    sample_collection_id = ext.get("valueReference").get("reference")
+        return sample_collection_id
+
+    def get_diagnoses_from_sample(self, sample_identifier: str) -> list[str]:
+        """Get diagnoses from a sample in the Blaze store.
+        :param sample_identifier: Identifier of the sample.
+        :return: List of diagnoses."""
+        sample_id = self.__get_fhir_sample_id(sample_identifier)
+        sample: dict = self._session.get(url=self._blaze_url + f"/Specimen/{sample_id}", verify=False).json()
+        diagnoses = []
+        if sample.get("extension") is not None:
+            for ext in sample.get("extension"):
+                if ext.get("url") == "https://fhir.bbmri.de/StructureDefinition/SampleDiagnosis":
+                    diagnoses.append(ext.get("valueCodeableConcept").get("coding")[0].get("code"))
+
+        return diagnoses
+
+    def __get_fhir_sample_id(self, sample_identifier: str) -> str:
+        """Get the FHIR resource ID of a sample using the sample identifier.
+        :param sample_identifier: Identifier of the sample.
+        :return: FHIR resource ID of the sample."""
+
+        sample = self._session.get(url=self._blaze_url + f"/Specimen?identifier={sample_identifier}",
+                                   verify=False).json()
+        return glom(sample, "**.resource.id")[0]
+
+    def __get_collection_identifier(self, fhir_collection_id: str) -> str | None:
+        """Get the identifier of the Sample Collection to which a sample belongs.
+        :param fhir_collection_id: FHIR resource ID of the Sample Collection.
+        :return: Identifier of the Sample Collection. if not found, returns None."""
+        collection = self._session.get(url=self._blaze_url + f"/{fhir_collection_id}").json()
+        identifier_list = (glom(collection, ("**.identifier", ["**.value"]), default=None))
+        if len(identifier_list) > 0:
+            return self.__flatten_list(identifier_list)[0]
+        return None
+
+    def __get_donor_identifier(self, fhir_patient_id: str) -> str | None:
+        """Get the identifier of the Sample Donor from the Blaze store.
+        :param fhir_patient_id: FHIR resource ID of the Sample Donor.
+        :return: Identifier of the Sample Donor. if not found, returns None."""
+        patient = self._session.get(url=self._blaze_url + f"/{fhir_patient_id}").json()
+
+        identifier_list = glom(patient, ("**.identifier", ["**.value"]), default=None)
+        if len(identifier_list) > 0:
+            return self.__flatten_list(identifier_list)[0]
+        return None
+
+    def __flatten_list(self, nested_list):
+        """Flatten a nested list."""
+        return [item for sublist in nested_list for item in
+                (self.__flatten_list(sublist) if isinstance(sublist, list) else [sublist])]

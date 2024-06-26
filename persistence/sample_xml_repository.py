@@ -54,9 +54,12 @@ class SampleXMLRepository(SampleRepository):
                                            self._sample_parsing_map.get("sample_details").get(
                                                "material_type"),
                                            default=None),
-                        diagnosis=glom(xml_sample,
-                                       self._sample_parsing_map.get("sample_details").get(
-                                           "diagnosis"), default=None))
+                        )
+        diagnoses = glom(xml_sample,
+                         self._sample_parsing_map.get("sample_details").get(
+                             "diagnosis"), default=None)
+        if diagnoses is not None:
+            sample.diagnoses = [diagnoses] if isinstance(diagnoses, str) else diagnoses
 
         collection_date = glom(xml_sample, self._sample_parsing_map.get("sample_details").get("collection_date"),
                                default=None)

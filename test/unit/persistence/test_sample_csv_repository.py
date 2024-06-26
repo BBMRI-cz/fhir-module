@@ -83,7 +83,8 @@ class TestSampleCsvRepository(unittest.TestCase):
     @patchfs
     def test_get_all_with_wrong_diagnosis_skips(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.wrong_diagnosis)
-        self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))
+        sample = next(self.sample_repository.get_all())
+        self.assertTrue(len(sample.diagnoses) == 0)
 
     @patchfs
     def test_get_all_three_samples_not_none_diagnosis(self, fake_fs):
@@ -91,7 +92,7 @@ class TestSampleCsvRepository(unittest.TestCase):
                             contents=self.header + self.one_sample + "\n" + self.samples)
         self.assertEqual(3, sum(1 for _ in self.sample_repository.get_all()))
         for sample in self.sample_repository.get_all():
-            self.assertIsNotNone(sample.diagnosis)
+            self.assertIsNotNone(sample.diagnoses)
 
     @patchfs
     def test_with_type_to_collection_map_ok(self, fake_fs):
@@ -142,7 +143,7 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual("33", sample.identifier)
             self.assertEqual(None, sample.storage_temperature)
             self.assertEqual("serum", sample.material_type)
-            self.assertEqual("M0580", sample.diagnosis)
+            self.assertEqual("M0580", sample.diagnoses[0])
             self.assertEqual(datetime.date(2100, 1, 16), sample.collected_datetime)
 
     @patchfs
@@ -158,7 +159,7 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual("33", sample.identifier)
             self.assertEqual(StorageTemperature.TEMPERATURE_LN, sample.storage_temperature)
             self.assertEqual(None, sample.material_type)
-            self.assertEqual("M0580", sample.diagnosis)
+            self.assertEqual("M0580", sample.diagnoses[0])
             self.assertEqual(datetime.date(2100,1,16), sample.collected_datetime)
 
     @patchfs
@@ -174,7 +175,7 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual("33", sample.identifier)
             self.assertEqual(StorageTemperature.TEMPERATURE_LN, sample.storage_temperature)
             self.assertEqual("serum", sample.material_type)
-            self.assertEqual(None, sample.diagnosis)
+            self.assertEqual(None, sample.diagnoses[0])
             self.assertEqual(datetime.date(2100, 1, 16), sample.collected_datetime)
 
     @patchfs
@@ -190,6 +191,6 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual("33", sample.identifier)
             self.assertEqual(StorageTemperature.TEMPERATURE_LN, sample.storage_temperature)
             self.assertEqual("serum", sample.material_type)
-            self.assertEqual("M0580", sample.diagnosis)
+            self.assertEqual("M0580", sample.diagnoses[0])
             self.assertEqual(None, sample.collected_datetime)
 
