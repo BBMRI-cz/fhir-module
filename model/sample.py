@@ -18,7 +18,7 @@ from model.storage_temperature import StorageTemperature
 class Sample:
     """Class representing a biological specimen."""
 
-    def __init__(self, identifier: str, donor_id: str, material_type: str = None, diagnosis: str = None,
+    def __init__(self, identifier: str, donor_id: str, material_type: str = None, diagnoses: list[str] = [],
                  sample_collection_id: str = None,
                  collected_datetime: datetime = None, storage_temperature: StorageTemperature = None) -> None:
         """
@@ -33,9 +33,11 @@ class Sample:
         self._identifier: str = identifier
         self._donor_id: str = donor_id
         self._material_type: str = material_type
-        if diagnosis is not None and not icd10.exists(diagnosis):
-            raise TypeError("The provided string is not a valid ICD-10 code.")
-        self._diagnosis: str = diagnosis
+        self.diagnoses = []
+        for diagnosis in diagnoses:
+            if diagnosis is not None and not icd10.exists(diagnosis):
+                raise TypeError("The provided string is not a valid ICD-10 code.")
+            self._diagnoses: list[str] = diagnoses
         self._sample_collection_id: str = sample_collection_id
         self._collected_datetime: datetime = collected_datetime
         self._storage_temperature: StorageTemperature = storage_temperature
@@ -61,16 +63,17 @@ class Sample:
         self._material_type = sample_type
 
     @property
-    def diagnosis(self) -> str:
+    def diagnoses(self) -> list[str]:
         """Sample content diagnosis using ICD-10 coding."""
-        return self._diagnosis
+        return self._diagnoses
 
-    @diagnosis.setter
-    def diagnosis(self, icd_10_code: str):
+    @diagnoses.setter
+    def diagnoses(self, icd_10_codes: list[str]):
         """Sample content diagnosis using ICD-10 coding."""
-        if not icd10.exists(icd_10_code):
-            raise TypeError("The provided string is not a valid ICD-10 code.")
-        self._diagnosis = icd_10_code
+        for diagnosis in icd_10_codes:
+            if not icd10.exists(diagnosis):
+                raise TypeError("The provided string is not a valid ICD-10 code.")
+        self._diagnoses = icd_10_codes
 
     @property
     def sample_collection_id(self) -> str:
@@ -89,6 +92,7 @@ class Sample:
     @collected_datetime.setter
     def collected_datetime(self, collected_datetime: datetime):
         self._collected_datetime = collected_datetime
+
     @property
     def storage_temperature(self) -> StorageTemperature:
         """Storage temperature of a sample"""
@@ -111,12 +115,15 @@ class Sample:
         if self.collected_datetime is not None:
             specimen.collection = SpecimenCollection()
             specimen.collection.collectedDateTime = FHIRDate()
-            specimen.collection.collectedDateTime.date = self.collected_datetime
+
+            specimen.collection.collectedDateTime.date = self.collected_datetime.date() if isinstance(
+                self.collected_datetime, datetime) else self.collected_datetime
         if subject_id is not None:
             specimen.subject = FHIRReference()
             specimen.subject.reference = f"Patient/{subject_id}"
-        if self.diagnosis is not None:
-            extensions.append(self.__create_diagnosis_extension())
+        if self.diagnoses is not None:
+            extensions.extend(self.__create_diagnoses_extension())
+
         if custodian_id is not None:
             extensions.append(self.__create_custodian_extension(custodian_id))
         if self._storage_temperature is not None:
@@ -125,7 +132,7 @@ class Sample:
             specimen.extension = extensions
         return specimen
 
-    def __create_storage_temperature_extension(self):
+    def __create_storage_temperature_extension(self) -> Extension:
         storage_temperature_extension: Extension = Extension()
         storage_temperature_extension.url = "https://fhir.bbmri.de/StructureDefinition/StorageTemperature"
         storage_temperature_extension.valueCodeableConcept = CodeableConcept()
@@ -133,15 +140,19 @@ class Sample:
         storage_temperature_extension.valueCodeableConcept.coding[0].code = self.storage_temperature.value
         return storage_temperature_extension
 
-    def __create_diagnosis_extension(self):
-        fhir_diagnosis: Extension = Extension()
-        fhir_diagnosis.url = "https://fhir.bbmri.de/StructureDefinition/SampleDiagnosis"
-        fhir_diagnosis.valueCodeableConcept = CodeableConcept()
-        fhir_diagnosis.valueCodeableConcept.coding = [Coding()]
-        fhir_diagnosis.valueCodeableConcept.coding[0].code = self.__diagnosis_with_period()
-        return fhir_diagnosis
+    def __create_diagnoses_extension(self) -> List[Extension]:
+        diagnoses_extensions = []
+        for diagnosis in self.diagnoses:
+            fhir_diagnosis: Extension = Extension()
+            fhir_diagnosis.url = "https://fhir.bbmri.de/StructureDefinition/SampleDiagnosis"
+            fhir_diagnosis.valueCodeableConcept = CodeableConcept()
+            fhir_diagnosis.valueCodeableConcept.coding = [Coding()]
+            fhir_diagnosis.valueCodeableConcept.coding[0].code = self.__diagnosis_with_period(diagnosis)
+            diagnoses_extensions.append(fhir_diagnosis)
+        return diagnoses_extensions
 
-    def __create_custodian_extension(self, custodian_id):
+    @staticmethod
+    def __create_custodian_extension(custodian_id):
         custodian_extension: Extension = Extension()
         custodian_extension.url = "https://fhir.bbmri.de/StructureDefinition/Custodian"
         custodian_extension.valueReference = FHIRReference()
@@ -161,9 +172,36 @@ class Sample:
         fhir_identifier.value = self.identifier
         return [fhir_identifier]
 
-    def __diagnosis_with_period(self) -> str:
+    @staticmethod
+    def __diagnosis_with_period(diagnosis: str) -> str:
         """Returns icd-10 code with a period, e.g., C188 to C18.8"""
-        code = self.diagnosis
+        code = diagnosis
         if len(code) == 4 and "." not in code:
             return code[:3] + '.' + code[3:]
         return code
+
+    def __eq__(self, other):
+        """Check if two samples are equal.
+        @other: Sample to compare with."""
+        if not isinstance(other, Sample):
+            return False
+        return self.identifier == other.identifier and self.donor_id == other.donor_id and \
+            self.material_type == other.material_type and self.__compare_diagnoses(other.diagnoses) and \
+            self.sample_collection_id == other.sample_collection_id and \
+            self.collected_datetime == other.collected_datetime and \
+            self.storage_temperature == other.storage_temperature
+
+    def __compare_diagnoses(self, other_diagnoses: list[str]) -> bool:
+        """Compare diagnoses, regardless of "." in the ICD-10 code.
+        @other_diagnoses: Diagnoses to compare with."""
+        current_diagnoses = list(map(self.__diagnosis_with_period, self.diagnoses))
+        other_diagnoses = list(map(self.__diagnosis_with_period, other_diagnoses))
+        return current_diagnoses == other_diagnoses
+
+    def update_diagnoses(self, new_diagnoses: list[str]):
+        """Update sample diagnoses."""
+        current_diagnoses = list(map(self.__diagnosis_with_period, self.diagnoses))
+        for diagnosis in new_diagnoses:
+            if self.__diagnosis_with_period(diagnosis) not in current_diagnoses:
+                self.diagnoses.append(diagnosis)
+

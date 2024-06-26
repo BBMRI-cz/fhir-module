@@ -38,6 +38,17 @@ class TestSampleXMLRepository(unittest.TestCase):
         '</diagnosisMaterial>' \
         '</STS>'
 
+    sample_multiple_diagnoses = \
+        '<STS>' \
+        '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
+        '<materialType>S</materialType>' \
+        '<diagnosis>C509</diagnosis>' \
+        '<diagnosis>C508</diagnosis>' \
+        '<storage_temperature>temperatureGN</storage_temperature>' \
+        '<cutTime>2021-01-01T00:00:00</cutTime>' \
+        '</diagnosisMaterial>' \
+        '</STS>'
+
     sample_no_material_type = \
         '<STS>' \
         '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
@@ -153,7 +164,7 @@ class TestSampleXMLRepository(unittest.TestCase):
                             .format(sample=self.both_collections))
         self.assertEqual(4, sum(1 for _ in self.sample_repository.get_all()))
         for sample in self.sample_repository.get_all():
-            self.assertIsNotNone(sample.diagnosis)
+            self.assertTrue(len(sample.diagnoses) > 0)
 
     @patchfs
     def test_with_type_to_collection_map_ok(self, fake_fs):
@@ -172,6 +183,28 @@ class TestSampleXMLRepository(unittest.TestCase):
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample))
         self.assertEqual(None, next(self.sample_repository.get_all()).sample_collection_id)
+
+    @patchfs
+    def test_multiple_diagnosis_ok(self, fake_fs):
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'])
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.sample_multiple_diagnoses))
+        for sample in self.sample_repository.get_all():
+            self.assertEqual(2, len(sample.diagnoses))
+            self.assertEqual("C509", sample.diagnoses[0])
+            self.assertEqual("C508", sample.diagnoses[1])
+
+    @patchfs
+    def test_multiple_diagnosis_to_fhir_ok(self, fake_fs):
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'])
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.sample_multiple_diagnoses))
+        for sample in self.sample_repository.get_all():
+            self.assertEqual(2, len(sample.diagnoses))
+            self.assertEqual("C50.9", sample.to_fhir().extension[0].valueCodeableConcept.coding[0].code)
+            self.assertEqual("C50.8", sample.to_fhir().extension[1].valueCodeableConcept.coding[0].code)
 
     @patchfs
     def test_storage_temperature_ok(self, fake_fs):
@@ -201,7 +234,7 @@ class TestSampleXMLRepository(unittest.TestCase):
         for sample in self.sample_repository.get_all():
             self.assertIsNone(sample.storage_temperature)
             self.assertEqual("S", sample.material_type)
-            self.assertEqual("C509", sample.diagnosis)
+            self.assertEqual("C509", sample.diagnoses[0])
             self.assertEqual(datetime.date(2021, 1, 1), sample.collected_datetime)
 
     @patchfs
@@ -214,7 +247,7 @@ class TestSampleXMLRepository(unittest.TestCase):
         for sample in self.sample_repository.get_all():
             self.assertEqual(StorageTemperature.TEMPERATURE_GN, sample.storage_temperature)
             self.assertEqual("S", sample.material_type)
-            self.assertIsNone(sample.diagnosis)
+            self.assertEqual(len(sample.diagnoses), 0)
             self.assertEqual(datetime.date(2021, 1, 1), sample.collected_datetime)
     @patchfs
     def test_material_type_not_in_sample(self, fake_fs):
@@ -226,7 +259,7 @@ class TestSampleXMLRepository(unittest.TestCase):
         for sample in self.sample_repository.get_all():
             self.assertEqual(StorageTemperature.TEMPERATURE_GN, sample.storage_temperature)
             self.assertIsNone(sample.material_type)
-            self.assertEqual("C509", sample.diagnosis)
+            self.assertEqual("C509", sample.diagnoses[0])
             self.assertEqual(datetime.date(2021, 1, 1,), sample.collected_datetime)
 
     @patchfs
@@ -240,4 +273,5 @@ class TestSampleXMLRepository(unittest.TestCase):
             self.assertIsNone(sample.collected_datetime)
             self.assertEqual(StorageTemperature.TEMPERATURE_GN, sample.storage_temperature)
             self.assertEqual("S", sample.material_type)
-            self.assertEqual("C509", sample.diagnosis)
+            self.assertEqual("C509", sample.diagnoses[0])
+

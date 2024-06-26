@@ -1,6 +1,7 @@
 import csv
 import logging
 import os
+import re
 from typing import Generator
 
 from dateutil.parser import ParserError
@@ -64,11 +65,11 @@ class SampleCsvRepository(SampleRepository):
                     if material_type_field is not None:
                         sample.material_type = row[material_type_field]
                     if diagnosis_field is not None:
-                        sample.diagnosis = self.__extract_first_diagnosis(row[diagnosis_field])
+                        sample.diagnoses = self.__extract_all_diagnosis(row[diagnosis_field])
                     if collection_date_field is not None:
                         sample.collected_datetime = date_parser.parse(row[collection_date_field]).date()
                     if self._type_to_collection_map is not None:
-                        sample.sample_collection_id = self._type_to_collection_map.get(sample.diagnosis)
+                        sample.sample_collection_id = self._type_to_collection_map.get(sample.diagnoses[0])
                     if self._storage_temp_map is not None and storage_temp_field is not None:
                         parsed_storage_temp = parse_storage_temp_from_code(
                             self._storage_temp_map,
@@ -81,16 +82,15 @@ class SampleCsvRepository(SampleRepository):
                 pass
 
             except ParserError:
-                logger.warning(f"Error parsing date {row[collection_date_field]}. Please make sure the date is in a valid format.")
+                logger.warning(
+                    f"Error parsing date {row[collection_date_field]}. Please make sure the date is in a valid format.")
                 pass
             except TypeError as err:
                 logger.info(err)
                 pass
 
     @staticmethod
-    def __extract_first_diagnosis(diagnosis_str: str):
-        """Extracts only the first diagnosis, if the file has multiple diagnosis"""
-        if ',' in diagnosis_str:
-            return diagnosis_str.split(',')[0].strip()
-        else:
-            return diagnosis_str.strip()
+    def __extract_all_diagnosis(diagnosis_str: str) -> list[str]:
+        """Extract all diagnosis from a string"""
+        pattern = r'\b[A-Z][0-9]{2}(?:\.)?(?:[0-9]{1,2})?\b'
+        return re.findall(pattern, diagnosis_str)

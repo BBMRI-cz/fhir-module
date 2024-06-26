@@ -35,18 +35,28 @@ class TestSample(unittest.TestCase):
         sample: Sample = Sample(identifier="sampleId", donor_id="patient")
         self.assertEqual("Patient/PatientFHIRId", sample.to_fhir(subject_id="PatientFHIRId").subject.reference)
 
-    def test_get_icd_10_diagnosis_none(self):
+    def test_get_icd_10_diagnoses_none(self):
         sample: Sample = Sample(identifier="sampleId", donor_id="patient")
-        self.assertIsNone(sample.diagnosis)
+        self.assertTrue(len(sample.diagnoses) == 0)
 
-    def test_set_correct_icd_10_diagnosis_ok(self):
-        sample: Sample = Sample(identifier="sampleId", donor_id="patient", diagnosis="C50.1")
-        self.assertEqual("C50.1", sample.diagnosis)
+    def test_set_correct_icd_10_diagnoses_ok(self):
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient", diagnoses=["C50.1"])
+        self.assertEqual("C50.1", sample.diagnoses[0])
 
     def test_diagnosis_without_dot_is_added_to_fhir(self):
-        sample: Sample = Sample(identifier="sampleId", donor_id="patient", diagnosis="C501")
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient", diagnoses=["C501"])
         self.assertTrue(sample.to_fhir().extension)
         self.assertEqual("C50.1", sample.to_fhir().extension[0].valueCodeableConcept.coding[0].code)
+
+    def test_multiple_diagnoses_ok(self):
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient", diagnoses=["C50.1", "C50.2"])
+        self.assertEqual("C50.1", sample.diagnoses[0])
+        self.assertEqual("C50.2", sample.diagnoses[1])
+
+    def test_multiple_diagnoses_to_fhir_ok(self):
+        sample: Sample = Sample(identifier="sampleId", donor_id="patient", diagnoses=["C50.1", "C50.2"])
+        self.assertEqual("C50.1", sample.to_fhir().extension[0].valueCodeableConcept.coding[0].code)
+        self.assertEqual("C50.2", sample.to_fhir().extension[1].valueCodeableConcept.coding[0].code)
 
     def test_to_fhir_no_extensions_if_no_special_attributes(self):
         sample: Sample = Sample(identifier="sampleId", donor_id="patient")
@@ -86,16 +96,16 @@ class TestSample(unittest.TestCase):
         collected_datetime = datetime.datetime(year=2025,month=3,day=18)
         sample: Sample = Sample(identifier="sampleID", donor_id="donor", collected_datetime=collected_datetime)
         self.assertEqual("2025-03-18T00:00:00", sample.collected_datetime.isoformat())
-        self.assertEqual("2025-03-18T00:00:00", sample.to_fhir().collection.collectedDateTime.date.isoformat())
+        self.assertEqual("2025-03-18", sample.to_fhir().collection.collectedDateTime.date.isoformat())
 
     def test_collected_datetime_from_string_no_day_ok(self):
         collected_datetime = datetime.datetime.strptime("2022-03", '%Y-%m')
         sample: Sample = Sample(identifier="sampleID", donor_id="donor", collected_datetime=collected_datetime)
         self.assertEqual("2022-03-01T00:00:00", sample.collected_datetime.isoformat())
-        self.assertEqual("2022-03-01T00:00:00", sample.to_fhir().collection.collectedDateTime.date.isoformat())
+        self.assertEqual("2022-03-01", sample.to_fhir().collection.collectedDateTime.date.isoformat())
 
     def test_collected_datetime_from_string_year_only_ok(self):
         collected_datetime = datetime.datetime.strptime("2022", '%Y')
         sample: Sample = Sample(identifier="sampleID", donor_id="donor", collected_datetime=collected_datetime)
         self.assertEqual("2022-01-01T00:00:00", sample.collected_datetime.isoformat())
-        self.assertEqual("2022-01-01T00:00:00", sample.to_fhir().collection.collectedDateTime.date.isoformat())
+        self.assertEqual("2022-01-01", sample.to_fhir().collection.collectedDateTime.date.isoformat())
