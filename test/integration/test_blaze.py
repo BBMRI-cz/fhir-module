@@ -12,6 +12,7 @@ from model.gender import Gender
 from model.sample import Sample
 from model.sample_collection import SampleCollection
 from model.sample_donor import SampleDonor
+from model.storage_temperature import StorageTemperature
 from persistence.condition_repository import ConditionRepository
 from persistence.factories.repository_factory import RepositoryFactory
 from persistence.sample_collection_repository import SampleCollectionRepository
@@ -51,7 +52,7 @@ class ConditionRepoStub(ConditionRepository):
 class SampleRepoStub(SampleRepository):
     samples = [Sample(identifier="fakeId", donor_id="newId", diagnoses=["C504"], material_type="1",
                         sample_collection_id="test:collection:1",
-                      collected_datetime=datetime.datetime(year=2020, month=2, day=2)),
+                      collected_datetime=datetime.datetime(year=2020, month=2, day=2),storage_temperature=StorageTemperature.TEMPERATURE_GN),
                Sample(identifier="fakeId2", donor_id="fakeId", material_type="2")]
 
     def get_all(self) -> List[Sample]:
@@ -150,6 +151,7 @@ class TestBlazeStore(unittest.TestCase):
         self.blaze_service.sync_samples()
         diagnoses = self.blaze_service.get_diagnoses_from_sample("fakeId")
         self.assertEqual(2, len(diagnoses))
+        sample_repo.pop()
 
     def test_delete_patient(self):
         self.blaze_service.initial_upload_of_all_patients()
@@ -244,6 +246,7 @@ class TestBlazeStore(unittest.TestCase):
         self.blaze_service.sync_samples()
         diagnoses = self.blaze_service.get_diagnoses_from_sample("fakeId")
         self.assertEqual(2, len(diagnoses))
+        sample_repo.pop()
 
     def test_sync_same_sample_add_collection_id(self):
         sample_repo = SampleRepoStub()
@@ -261,3 +264,23 @@ class TestBlazeStore(unittest.TestCase):
         self.blaze_service.upload_sample_collections()
         self.blaze_service.sync_samples()
         self.assertIsNotNone(self.blaze_service.get_sample_collection_id(sample_identifier="fakeId2"))
+        sample_repo.pop()
+
+    def test_sync_sample_add_different_storage_temperature(self):
+        sample_repo = SampleRepoStub()
+        self.blaze_service = BlazeService(patient_service=PatientService(SampleDonorRepoStub()),
+                                          blaze_url='http://localhost:8080/fhir',
+                                          condition_service=ConditionService(ConditionRepoStub()),
+                                          sample_service=SampleService(sample_repo),
+                                          sample_collection_repository=SampleCollectionRepoStub())
+        self.blaze_service.initial_upload_of_all_patients()
+        self.blaze_service.sync_samples()
+        prev_st= self.blaze_service.get_storage_temperature_from_sample("fakeId")
+        self.assertEqual(StorageTemperature.TEMPERATURE_GN.value,prev_st)
+        sample_repo.add(Sample(identifier="fakeId", donor_id="newId", diagnoses=["C505"], material_type="1",
+                               sample_collection_id="test:collection:1",
+                               collected_datetime=datetime.datetime(year=2020, month=2, day=2), storage_temperature=StorageTemperature.TEMPERATURE_OTHER))
+        self.blaze_service.sync_samples()
+        curr_st= self.blaze_service.get_storage_temperature_from_sample("fakeId")
+        self.assertEqual(StorageTemperature.TEMPERATURE_OTHER.value,curr_st)
+
