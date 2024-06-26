@@ -368,6 +368,20 @@ class BlazeService:
 
         return diagnoses
 
+    def get_storage_temperature_from_sample(self, sample_identifier: str) -> str | None:
+        """Get storage temperature from a sample in the Blaze store.
+        :param sample_identifier: Identifier of the sample.
+        :return: Storage temperature."""
+        sample_id = self.__get_fhir_sample_id(sample_identifier)
+        sample: dict = self._session.get(url=self._blaze_url + f"/Specimen/{sample_id}", verify=False).json()
+        storage_temperature = None
+        if sample.get("extension") is not None:
+            for ext in sample.get("extension"):
+                if ext.get("url") == "https://fhir.bbmri.de/StructureDefinition/StorageTemperature":
+                    storage_temperature = ext.get("valueCodeableConcept").get("coding")[0].get("code")
+
+        return storage_temperature
+
     def __get_fhir_sample_id(self, sample_identifier: str) -> str:
         """Get the FHIR resource ID of a sample using the sample identifier.
         :param sample_identifier: Identifier of the sample.
