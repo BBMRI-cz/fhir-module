@@ -5,6 +5,7 @@ services:
       PARSING_MAP_PATH: "/opt/fhir-module/util/default_csv_map.json"
       MATERIAL_TYPE_MAP_PATH: "/opt/fhir-module/util/default_csv_material_type_map.json"
       RECORDS_FILE_TYPE: "csv"
+      COLLECTION_MAPPING_ATTRIBUTE : "diagnosis"
     volumes:
       - type: bind
         source: "test/csv_data"
