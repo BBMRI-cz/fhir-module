@@ -22,6 +22,7 @@ TYPE_TO_COLLECTION_MAP_PATH = os.getenv("TYPE_TO_COLLECTION_MAP_PATH",
                                         os.path.join(ROOT_DIR, 'default_type_to_collection_map.json'))
 STORAGE_TEMP_MAP_PATH = os.getenv("STORAGE_TEMP_MAP_PATH", os.path.join(ROOT_DIR, 'default_storage_temp_map.json'))
 
+COLLECTION_MAPPING_ATTRIBUTE = os.getenv("COLLECTION_MAPPING_ATTRIBUTE", "diagnosis")
 CSV_SEPARATOR = os.getenv("CSV_SEPARATOR", ";")
 RECORDS_FILE_TYPE = os.getenv("RECORDS_FILE_TYPE", "xml")
 BLAZE_AUTH: tuple = (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))

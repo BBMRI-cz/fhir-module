@@ -42,7 +42,11 @@ class SampleDonorCsvRepository(SampleDonorRepository):
                     donor.gender = get_gender_from_abbreviation(row[fields_dict[self._donor_parsing_map.get("gender")]])
                     year_of_birth = row[fields_dict[self._donor_parsing_map.get("birthDate")]]
                     if year_of_birth is not None:
-                        donor.date_of_birth = datetime.strptime(year_of_birth, '%Y')
+                        try:
+                            parsed_date = datetime.strptime(year_of_birth, "%d.%m.%Y")
+                        except ValueError:
+                            parsed_date = datetime.strptime(year_of_birth, "%Y")
+                        donor.date_of_birth = parsed_date
                     if donor.identifier not in self._ids:
                         self._ids.add(donor.identifier)
                         yield donor

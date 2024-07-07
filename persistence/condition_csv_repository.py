@@ -35,8 +35,11 @@ class ConditionCsvRepository(ConditionRepository):
                 fields_dict[field] = i
             for row in reader:
                 try:
-                    diagnosis = self.__extract_first_diagnosis(self, row[
-                        fields_dict[self._sample_parsing_map.get("icd-10_code")]])
+                    diagnosis_field = fields_dict.get(self._sample_parsing_map.get("icd-10_code"))
+                    if diagnosis_field is None:
+                        logger.error("No ICD-10 code field found in the csv file. Skipping...")
+                        return
+                    diagnosis = self.__extract_first_diagnosis(self, row[diagnosis_field])
                     patient_id = row[fields_dict[self._sample_parsing_map.get("patient_id")]]
                     condition = Condition(patient_id=patient_id, icd_10_code=diagnosis)
                     yield condition
