@@ -7,7 +7,7 @@ from persistence.sample_csv_repository import SampleCsvRepository
 from persistence.sample_donor_csv_repository import SampleDonorCsvRepository
 from persistence.sample_donor_repository import SampleDonorRepository
 from persistence.sample_repository import SampleRepository
-from util.config import RECORDS_DIR_PATH, CSV_SEPARATOR, PARSING_MAP, SAMPLE_COLLECTIONS_PATH, TYPE_TO_COLLECTION_MAP
+from util.config import RECORDS_DIR_PATH, CSV_SEPARATOR, PARSING_MAP, SAMPLE_COLLECTIONS_PATH, TYPE_TO_COLLECTION_MAP,STORAGE_TEMP_MAP,COLLECTION_MAPPING_ATTRIBUTE
 
 
 class CSVRepositoryFactory(RepositoryFactory):
@@ -24,7 +24,9 @@ class CSVRepositoryFactory(RepositoryFactory):
         return SampleCsvRepository(records_path=RECORDS_DIR_PATH,
                                    sample_parsing_map=PARSING_MAP['sample_map'],
                                    separator=CSV_SEPARATOR,
-                                   type_to_collection_map=TYPE_TO_COLLECTION_MAP)
+                                   type_to_collection_map=TYPE_TO_COLLECTION_MAP,
+                                   storage_temp_map=STORAGE_TEMP_MAP,
+                                   attribute_to_collection=COLLECTION_MAPPING_ATTRIBUTE)
 
     def create_sample_donor_repository(self) -> SampleDonorRepository:
         return SampleDonorCsvRepository(records_path=RECORDS_DIR_PATH,

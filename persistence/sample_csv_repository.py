@@ -6,6 +6,7 @@ from typing import Generator
 
 from dateutil.parser import ParserError
 
+from exception.nonexistent_attribute_to_collection import NonexistentAttributeToCollectionException
 from exception.wrong_sample_format import WrongSampleMapException
 from model.sample import Sample
 from persistence.sample_repository import SampleRepository
@@ -24,13 +25,15 @@ class SampleCsvRepository(SampleRepository):
     """Class for handling persistence in Csv files"""
 
     def __init__(self, records_path: str, sample_parsing_map: dict, separator: str,
-                 type_to_collection_map: dict = None, storage_temp_map: dict = None):
+                 type_to_collection_map: dict = None, storage_temp_map: dict = None,
+                 attribute_to_collection: str = None):
         self._dir_path = records_path
         self._sample_parsing_map = sample_parsing_map
         self._separator = separator
         logger.debug(f"Loaded the following sample parsing map {sample_parsing_map}")
         self._type_to_collection_map = type_to_collection_map
         self._storage_temp_map = storage_temp_map
+        self._attribute_to_collection = attribute_to_collection
 
     def get_all(self) -> Generator[Sample, None, None]:
         dir_entry: os.DirEntry
@@ -68,8 +71,11 @@ class SampleCsvRepository(SampleRepository):
                         sample.diagnoses = self.__extract_all_diagnosis(row[diagnosis_field])
                     if collection_date_field is not None:
                         sample.collected_datetime = date_parser.parse(row[collection_date_field]).date()
-                    if self._type_to_collection_map is not None:
-                        sample.sample_collection_id = self._type_to_collection_map.get(sample.diagnoses[0])
+                    if self._type_to_collection_map is not None and self._attribute_to_collection is not None:
+                        sample.sample_collection_id = None
+                        if self._attribute_to_collection in fields_dict:
+                            sample.sample_collection_id = self._type_to_collection_map.get(
+                                row[fields_dict[self._attribute_to_collection]])
                     if self._storage_temp_map is not None and storage_temp_field is not None:
                         parsed_storage_temp = parse_storage_temp_from_code(
                             self._storage_temp_map,

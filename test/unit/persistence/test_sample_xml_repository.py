@@ -170,10 +170,12 @@ class TestSampleXMLRepository(unittest.TestCase):
     def test_with_type_to_collection_map_ok(self, fake_fs):
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
                                                      sample_parsing_map=PARSING_MAP['sample_map'],
-                                                     type_to_collection_map={"S": "test:collection:id"})
+                                                     type_to_collection_map={"S": "test:collection:id"},
+                                                     attribute_to_collection="materialType")
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample))
-        self.assertEqual("test:collection:id", next(self.sample_repository.get_all()).sample_collection_id)
+        for sample in self.sample_repository.get_all():
+            self.assertEqual("test:collection:id", sample.sample_collection_id)
 
     @patchfs
     def test_with_wrong_type_to_collection_map_id_is_none(self, fake_fs):
@@ -274,4 +276,15 @@ class TestSampleXMLRepository(unittest.TestCase):
             self.assertEqual(StorageTemperature.TEMPERATURE_GN, sample.storage_temperature)
             self.assertEqual("S", sample.material_type)
             self.assertEqual("C509", sample.diagnoses[0])
+
+    @patchfs
+    def test_collection_with_correct_attribute_to_collection(self,fake_fs):
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
+                                                     type_to_collection_map={"C509": "test:collection:id"},
+                                                     attribute_to_collection="diagnosis")
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.sample))
+        for sample in self.sample_repository.get_all():
+            self.assertEqual("test:collection:id", sample.sample_collection_id)
 

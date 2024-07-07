@@ -99,7 +99,8 @@ class TestSampleCsvRepository(unittest.TestCase):
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
                                                      sample_parsing_map=PARSING_MAP_CSV['sample_map'],
-                                                     type_to_collection_map={"M0580": "test:collection:id"})
+                                                     type_to_collection_map={"M0580": "test:collection:id"},
+                                                     attribute_to_collection="diagnosis")
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
         self.assertEqual("test:collection:id", next(self.sample_repository.get_all()).sample_collection_id)
 
@@ -108,10 +109,40 @@ class TestSampleCsvRepository(unittest.TestCase):
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
                                                      sample_parsing_map=PARSING_MAP_CSV['sample_map'],
-                                                     type_to_collection_map={"not_present": "test:collection:id"})
+                                                     type_to_collection_map={"not_present": "test:collection:id"},
+                                                     attribute_to_collection="diagnosis")
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
         self.assertEqual(None, next(self.sample_repository.get_all()).sample_collection_id)
 
+    @patchfs
+    def test_with_type_to_collection_sampling_type_as_attribute_to_collection_ok(self, fake_fs):
+        self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
+                                                     separator=";",
+                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     type_to_collection_map={"serum": "test:collection:id"},
+                                                     attribute_to_collection="sampling_type")
+        fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
+        self.assertEqual("test:collection:id", next(self.sample_repository.get_all()).sample_collection_id)
+
+    @patchfs
+    def test_with_wrong_type_to_collection_sampling_type_as_attribute_to_collection_id_is_none(self, fake_fs):
+        self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
+                                                     separator=";",
+                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     type_to_collection_map={"not_present": "test:collection:id"},
+                                                     attribute_to_collection="sampling_type")
+        fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
+        self.assertEqual(None, next(self.sample_repository.get_all()).sample_collection_id)
+
+    @patchfs
+    def test_with_non_existent_attribute_to_collection(self,fake_fs):
+        self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
+                                                     separator=";",
+                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     type_to_collection_map={"not_present": "test:collection:id"},
+                                                     attribute_to_collection="non_existent")
+        fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
+        self.assertEqual(None, next(self.sample_repository.get_all()).sample_collection_id)
     @patchfs
     def test_storage_temp_map_ok(self, fake_fs):
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
@@ -129,6 +160,7 @@ class TestSampleCsvRepository(unittest.TestCase):
                                                      storage_temp_map={"bad": "map"})
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
         self.assertEqual(None, next(self.sample_repository.get_all()).storage_temperature)
+
 
     @patchfs
     def test_missing_storage_temp_field(self, fake_fs):
@@ -193,4 +225,5 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual("serum", sample.material_type)
             self.assertEqual("M0580", sample.diagnoses[0])
             self.assertEqual(None, sample.collected_datetime)
+
 

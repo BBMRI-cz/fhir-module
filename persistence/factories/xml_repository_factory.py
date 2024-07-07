@@ -7,7 +7,8 @@ from persistence.sample_donor_repository import SampleDonorRepository
 from persistence.sample_donor_xml_files_repository import SampleDonorXMLFilesRepository
 from persistence.sample_repository import SampleRepository
 from persistence.sample_xml_repository import SampleXMLRepository
-from util.config import RECORDS_DIR_PATH, PARSING_MAP, SAMPLE_COLLECTIONS_PATH, TYPE_TO_COLLECTION_MAP
+from util.config import RECORDS_DIR_PATH, PARSING_MAP, SAMPLE_COLLECTIONS_PATH, TYPE_TO_COLLECTION_MAP, \
+    STORAGE_TEMP_MAP, COLLECTION_MAPPING_ATTRIBUTE
 
 
 class XMLRepositoryFactory(RepositoryFactory):
@@ -22,7 +23,10 @@ class XMLRepositoryFactory(RepositoryFactory):
     def create_sample_repository(self) -> SampleRepository:
         return SampleXMLRepository(records_path=RECORDS_DIR_PATH,
                                    sample_parsing_map=PARSING_MAP['sample_map'],
-                                   type_to_collection_map=TYPE_TO_COLLECTION_MAP)
+                                   type_to_collection_map=TYPE_TO_COLLECTION_MAP,
+                                   storage_temp_map=STORAGE_TEMP_MAP,
+                                   attribute_to_collection=COLLECTION_MAPPING_ATTRIBUTE
+                                   )
 
     def create_sample_donor_repository(self) -> SampleDonorRepository:
         return SampleDonorXMLFilesRepository(records_path=RECORDS_DIR_PATH,
