@@ -71,9 +71,10 @@ class SampleXMLRepository(SampleRepository):
                 logger.warning(f"Error parsing date {collection_date}. Please make sure the date is in a valid format.")
                 pass
         if self._type_to_collection_map is not None and self._attribute_to_collection is not None:
-            collection_id = glom(xml_sample, self._sample_parsing_map.get(self._attribute_to_collection),
+            collection_attribute_value = glom(xml_sample, self._sample_parsing_map.get("sample_details").get(self._attribute_to_collection),
                                  default=None)
-            sample.sample_collection_id = collection_id
+            if collection_attribute_value is not None:
+                sample.sample_collection_id = self._type_to_collection_map.get(collection_attribute_value)
         if self._storage_temp_map is not None:
             storage_temp_code = glom(xml_sample,
                                      self._sample_parsing_map.get("sample_details").get("storage_temperature"),
