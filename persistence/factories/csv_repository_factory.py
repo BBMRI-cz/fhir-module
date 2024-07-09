@@ -25,8 +25,7 @@ class CSVRepositoryFactory(RepositoryFactory):
                                    sample_parsing_map=PARSING_MAP['sample_map'],
                                    separator=CSV_SEPARATOR,
                                    type_to_collection_map=TYPE_TO_COLLECTION_MAP,
-                                   storage_temp_map=STORAGE_TEMP_MAP,
-                                   attribute_to_collection=COLLECTION_MAPPING_ATTRIBUTE)
+                                   storage_temp_map=STORAGE_TEMP_MAP)
 
     def create_sample_donor_repository(self) -> SampleDonorRepository:
         return SampleDonorCsvRepository(records_path=RECORDS_DIR_PATH,

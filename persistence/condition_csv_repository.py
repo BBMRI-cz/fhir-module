@@ -1,6 +1,7 @@
 import logging
 import os
 import csv
+import re
 from typing import List
 
 from model.condition import Condition
@@ -38,19 +39,18 @@ class ConditionCsvRepository(ConditionRepository):
                     diagnosis_field = fields_dict.get(self._sample_parsing_map.get("icd-10_code"))
                     if diagnosis_field is None:
                         logger.error("No ICD-10 code field found in the csv file. Skipping...")
-                        return
-                    diagnosis = self.__extract_first_diagnosis(self, row[diagnosis_field])
+                        continue
+                    diagnoses = self.__extract_all_diagnosis(row[diagnosis_field])
                     patient_id = row[fields_dict[self._sample_parsing_map.get("patient_id")]]
-                    condition = Condition(patient_id=patient_id, icd_10_code=diagnosis)
-                    yield condition
-                except TypeError:
-                    logger.info("Parsed string is not a valid ICD-10 code. Skipping...")
-                    return
+                    for diagnosis in diagnoses:
+                        condition = Condition(patient_id=patient_id, icd_10_code=diagnosis)
+                        yield condition
+                except TypeError as err:
+                    logger.error(f"{err} Skipping...")
+                    continue
 
     @staticmethod
-    def __extract_first_diagnosis(self, diagnosis_str: str):
-        """Extracts only the first diagnosis, in case the file has multiple diagnosis"""
-        if ',' in diagnosis_str:
-            return diagnosis_str.split(',')[0].strip()
-        else:
-            return diagnosis_str.strip()
+    def __extract_all_diagnosis(diagnosis_str: str) -> list[str]:
+        """Extract all diagnosis from a string"""
+        pattern = r'\b[A-Z][0-9]{2}(?:\.)?(?:[0-9]{1,2})?\b'
+        return re.findall(pattern, diagnosis_str)

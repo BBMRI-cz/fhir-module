@@ -20,13 +20,12 @@ class SampleXMLRepository(SampleRepository):
     """Class for handling sample persistence in XML files."""
 
     def __init__(self, records_path: str, sample_parsing_map: dict, type_to_collection_map: dict = None,
-                 storage_temp_map: dict = None, attribute_to_collection: str = None):
+                 storage_temp_map: dict = None):
         self._dir_path = records_path
         self._sample_parsing_map = sample_parsing_map
         logger.debug(f"Loaded the following sample parsing map {sample_parsing_map}")
         self._type_to_collection_map = type_to_collection_map
         self._storage_temp_map = storage_temp_map
-        self._attribute_to_collection = attribute_to_collection
 
     def get_all(self) -> Generator[Sample, None, None]:
         dir_entry: os.DirEntry
@@ -70,8 +69,9 @@ class SampleXMLRepository(SampleRepository):
             except ParserError:
                 logger.warning(f"Error parsing date {collection_date}. Please make sure the date is in a valid format.")
                 pass
-        if self._type_to_collection_map is not None and self._attribute_to_collection is not None:
-            collection_attribute_value = glom(xml_sample, self._sample_parsing_map.get("sample_details").get(self._attribute_to_collection),
+        if self._type_to_collection_map is not None:
+            attribute_to_collection = self._sample_parsing_map.get("sample_details").get("collection")
+            collection_attribute_value = glom(xml_sample, attribute_to_collection,
                                  default=None)
             if collection_attribute_value is not None:
                 sample.sample_collection_id = self._type_to_collection_map.get(collection_attribute_value)
