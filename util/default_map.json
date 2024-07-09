@@ -11,7 +11,8 @@
       "material_type": "materialType",
       "diagnosis": "diagnosis",
       "storage_temperature": "storage_temperature",
-      "collection_date": "cutTime"
+      "collection_date": "cutTime",
+      "collection": "materialType"
     },
     "donor_id": "patient.@id"
   },

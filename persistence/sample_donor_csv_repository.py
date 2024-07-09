@@ -45,13 +45,17 @@ class SampleDonorCsvRepository(SampleDonorRepository):
                         try:
                             parsed_date = datetime.strptime(year_of_birth, "%d.%m.%Y")
                         except ValueError:
-                            parsed_date = datetime.strptime(year_of_birth, "%Y")
+                            try:
+                                parsed_date = datetime.strptime(year_of_birth, "%Y")
+                            except ValueError:
+                                logger.error(f"Could not parse date: {year_of_birth} . Skipping...")
+                                continue
                         donor.date_of_birth = parsed_date
                     if donor.identifier not in self._ids:
                         self._ids.add(donor.identifier)
                         yield donor
-                except TypeError as e:
-                    logger.info(e, "Skipping...")
-                    return
+                except TypeError as err:
+                    logger.info(f"{err} Skipping...")
+                    continue
 
 

@@ -25,15 +25,13 @@ class SampleCsvRepository(SampleRepository):
     """Class for handling persistence in Csv files"""
 
     def __init__(self, records_path: str, sample_parsing_map: dict, separator: str,
-                 type_to_collection_map: dict = None, storage_temp_map: dict = None,
-                 attribute_to_collection: str = None):
+                 type_to_collection_map: dict = None, storage_temp_map: dict = None):
         self._dir_path = records_path
         self._sample_parsing_map = sample_parsing_map
         self._separator = separator
         logger.debug(f"Loaded the following sample parsing map {sample_parsing_map}")
         self._type_to_collection_map = type_to_collection_map
         self._storage_temp_map = storage_temp_map
-        self._attribute_to_collection = attribute_to_collection
 
     def get_all(self) -> Generator[Sample, None, None]:
         dir_entry: os.DirEntry
@@ -50,7 +48,11 @@ class SampleCsvRepository(SampleRepository):
                 fields_dict[field] = i
             try:
                 check_sample_map_format(self._sample_parsing_map)
-                for row in reader:
+            except WrongSampleMapException:
+                logger.info("Given Sample map has a bad format, cannot parse the file")
+                return
+            for row in reader:
+                try:
                     sample = Sample(
                         identifier=row[fields_dict[self._sample_parsing_map.get("sample_details").get("id")]],
                         donor_id=row[fields_dict[self._sample_parsing_map.get("donor_id")]])
@@ -71,11 +73,12 @@ class SampleCsvRepository(SampleRepository):
                         sample.diagnoses = self.__extract_all_diagnosis(row[diagnosis_field])
                     if collection_date_field is not None:
                         sample.collected_datetime = date_parser.parse(row[collection_date_field]).date()
-                    if self._type_to_collection_map is not None and self._attribute_to_collection is not None:
+                    if self._type_to_collection_map is not None:
                         sample.sample_collection_id = None
-                        if self._attribute_to_collection in fields_dict:
+                        attribute_to_collection = self._sample_parsing_map.get("sample_details").get("collection")
+                        if attribute_to_collection in fields_dict:
                             sample.sample_collection_id = self._type_to_collection_map.get(
-                                row[fields_dict[self._attribute_to_collection]])
+                                row[fields_dict[attribute_to_collection]])
                     if self._storage_temp_map is not None and storage_temp_field is not None:
                         parsed_storage_temp = parse_storage_temp_from_code(
                             self._storage_temp_map,
@@ -83,17 +86,18 @@ class SampleCsvRepository(SampleRepository):
                         if parsed_storage_temp is not None:
                             sample.storage_temperature = parsed_storage_temp
                     yield sample
-            except WrongSampleMapException:
-                logger.info("Given Sample map has a bad format, cannot parse the file")
-                pass
 
-            except ParserError:
-                logger.warning(
-                    f"Error parsing date {row[collection_date_field]}. Please make sure the date is in a valid format.")
-                pass
-            except TypeError as err:
-                logger.info(err)
-                pass
+                except ParserError:
+                    logger.warning(
+                        f"Error parsing date {row[collection_date_field]}. Please make sure the date is in a valid format.")
+                    continue
+                except TypeError as err:
+                    logger.info(f"{err} Skipping....")
+                    continue
+                except ValueError as err:
+                    logger.info(f"{err} Skipping....")
+                    continue
+
 
     @staticmethod
     def __extract_all_diagnosis(diagnosis_str: str) -> list[str]:

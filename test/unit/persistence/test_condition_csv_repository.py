@@ -15,6 +15,8 @@ class TestConditionCsvRepository(unittest.TestCase):
 
     one_sample = "33;1111;m;1947;2007-10-16;M0580;85;2100-01-16;serum;-20;0"
 
+    sample_multiple_diagnosis = "33;1111;m;1947;2007-10-16;M0580,C51,E080;85;2100-01-16;serum;-20;0"
+
     samples = "34;1112;f;1958;2100-10-16;M0600;85;2007-10-30;serum;-20;0\n35;1113;m;1959;2100-10-22;M329;49;2007-10-22;serum;-20;1"
 
     dir_path = "/mock/dir/"
@@ -46,6 +48,13 @@ class TestConditionCsvRepository(unittest.TestCase):
         fake_fs.create_file(self.dir_path + "mock_file2.csv", contents=self.header + self.wrong_diagnosis)
         conditions = list(self.condition_repository.get_all())
         self.assertEqual(2, len(conditions))
+
+    @patchfs
+    def test_get_all_with_multiple_diagnosis_from_one_sample(self, fake_fs):
+        fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.sample_multiple_diagnosis)
+        conditions = list(self.condition_repository.get_all())
+        self.assertEqual(3, len(conditions))
+        self.assertEqual("M0580", conditions[0].icd_10_code)
 
 
 if __name__ == '__main__':

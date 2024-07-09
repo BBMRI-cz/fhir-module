@@ -24,9 +24,7 @@ class XMLRepositoryFactory(RepositoryFactory):
         return SampleXMLRepository(records_path=RECORDS_DIR_PATH,
                                    sample_parsing_map=PARSING_MAP['sample_map'],
                                    type_to_collection_map=TYPE_TO_COLLECTION_MAP,
-                                   storage_temp_map=STORAGE_TEMP_MAP,
-                                   attribute_to_collection=COLLECTION_MAPPING_ATTRIBUTE
-                                   )
+                                   storage_temp_map=STORAGE_TEMP_MAP)
 
     def create_sample_donor_repository(self) -> SampleDonorRepository:
         return SampleDonorXMLFilesRepository(records_path=RECORDS_DIR_PATH,
