@@ -72,7 +72,7 @@ class Sample:
         """Sample content diagnosis using ICD-10 coding."""
         for diagnosis in icd_10_codes:
             if not icd10.exists(diagnosis):
-                raise TypeError("The provided string is not a valid ICD-10 code.")
+                raise TypeError(f"The provided string ({diagnosis}) is not a valid ICD-10 code.")
         self._diagnoses = icd_10_codes
 
     @property
