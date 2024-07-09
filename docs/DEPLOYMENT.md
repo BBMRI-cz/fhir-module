@@ -54,7 +54,6 @@ simply specify them in `compose.yaml` in the environment section.
  | DIR_PATH                     | /mock_dir/                                           | Path to a folder containing file(s) with records.                                                                                                                           |
  | RECORDS_FILE_TYPE            | xml                                                  | Type of files containing the records.                                                                                                                                       |
  | CSV_SEPARATOR                | ;                                                    | Separator used inside csv file, if the records are in a csv format.                                                                                                         |
-| COLLECTION_MAPPING_ATTRIBUTE | material_type                                        | Attribute by which the samples are mapped to a corresponding Collection                                                                                                     |
 ## Object mapping
 
 The FHIR module uses dynamically configurable maps currently stored as json files
