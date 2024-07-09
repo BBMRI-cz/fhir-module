@@ -7,7 +7,7 @@ from persistence.sample_csv_repository import SampleCsvRepository
 from persistence.sample_donor_csv_repository import SampleDonorCsvRepository
 from persistence.sample_donor_repository import SampleDonorRepository
 from persistence.sample_repository import SampleRepository
-from util.config import RECORDS_DIR_PATH, CSV_SEPARATOR, PARSING_MAP, SAMPLE_COLLECTIONS_PATH, TYPE_TO_COLLECTION_MAP,STORAGE_TEMP_MAP,COLLECTION_MAPPING_ATTRIBUTE
+from util.config import RECORDS_DIR_PATH, CSV_SEPARATOR, PARSING_MAP, SAMPLE_COLLECTIONS_PATH, TYPE_TO_COLLECTION_MAP,STORAGE_TEMP_MAP
 
 
 class CSVRepositoryFactory(RepositoryFactory):

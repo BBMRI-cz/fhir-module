@@ -8,7 +8,7 @@ from persistence.sample_donor_xml_files_repository import SampleDonorXMLFilesRep
 from persistence.sample_repository import SampleRepository
 from persistence.sample_xml_repository import SampleXMLRepository
 from util.config import RECORDS_DIR_PATH, PARSING_MAP, SAMPLE_COLLECTIONS_PATH, TYPE_TO_COLLECTION_MAP, \
-    STORAGE_TEMP_MAP, COLLECTION_MAPPING_ATTRIBUTE
+    STORAGE_TEMP_MAP
 
 
 class XMLRepositoryFactory(RepositoryFactory):
