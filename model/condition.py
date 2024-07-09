@@ -12,7 +12,7 @@ class Condition:
 
     def __init__(self, icd_10_code: str, patient_id: str):
         if not icd10.exists(icd_10_code):
-            raise TypeError("The provided string is not a valid ICD-10 code.")
+            raise TypeError(f"The provided string ({icd_10_code}) is not a valid ICD-10 code.")
         self._icd_10_code = icd_10_code
         self._patient_id = patient_id
 
