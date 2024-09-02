@@ -1,7 +1,6 @@
 """Module for handling sample donor persistence in XML files"""
 import logging
 import os
-from datetime import datetime
 from typing import List
 
 from dateutil.parser import ParserError
@@ -12,7 +11,6 @@ from model.sample_donor import SampleDonor
 from persistence.sample_donor_repository import SampleDonorRepository
 from persistence.xml_util import parse_xml_file, WrongXMLFormatError
 from util.custom_logger import setup_logger
-from util.date_util import parse_date
 from dateutil import parser as date_parser
 
 setup_logger()

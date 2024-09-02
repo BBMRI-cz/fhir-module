@@ -1,12 +1,10 @@
 import csv
-from datetime import datetime
 import logging
 import os
 from typing import List
 
 from dateutil.parser import ParserError
 
-from util.date_util import parse_date
 from util.enums_util import get_gender_from_abbreviation
 from model.sample_donor import SampleDonor
 from persistence.sample_donor_repository import SampleDonorRepository

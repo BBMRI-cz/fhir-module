@@ -2,12 +2,10 @@ import csv
 import logging
 import os
 import re
-from datetime import datetime
 from typing import Generator
 
 from dateutil.parser import ParserError
 
-from exception.nonexistent_attribute_to_collection import NonexistentAttributeToCollectionException
 from exception.wrong_sample_format import WrongSampleMapException
 from model.sample import Sample
 from persistence.sample_repository import SampleRepository
@@ -103,26 +101,6 @@ class SampleCsvRepository(SampleRepository):
                 except ValueError as err:
                     logger.info(f"{err} Skipping....")
                     continue
-
-    @staticmethod
-    def __parse_date(date_string):
-
-        date_formats = [
-            "%Y-%m-%d",  # 2007-07-15
-            "%d-%m-%Y",  # 15-06-2007
-            "%Y-%d-%m",  # 2007-15-07
-            "%d.%m.%Y",  # 15.06.2007
-            "%Y.%m.%d",  # 2007.04.10
-            "%Y.%d.%m",  # 2007.15.07
-            "%Y"  # 2007
-        ]
-
-        for date_format in date_formats:
-            try:
-                return datetime.strptime(date_string, date_format)
-            except ValueError:
-                continue
-        raise ValueError(f"Date format for '{date_string}' is not recognized.")
 
     @staticmethod
     def __extract_all_diagnosis(diagnosis_str: str) -> list[str]:
