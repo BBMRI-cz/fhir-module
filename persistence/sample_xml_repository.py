@@ -1,6 +1,5 @@
 import logging
 import os
-from datetime import datetime
 from typing import Generator
 
 from dateutil.parser import ParserError
@@ -10,7 +9,7 @@ from model.sample import Sample
 from persistence.sample_repository import SampleRepository
 from persistence.xml_util import parse_xml_file, WrongXMLFormatError
 from util.custom_logger import setup_logger
-from util.date_util import parse_date
+
 from util.enums_util import parse_storage_temp_from_code
 from dateutil import parser as date_parser
 
