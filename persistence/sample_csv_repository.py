@@ -2,6 +2,7 @@ import csv
 import logging
 import os
 import re
+from datetime import datetime
 from typing import Generator
 
 from dateutil.parser import ParserError
@@ -72,7 +73,12 @@ class SampleCsvRepository(SampleRepository):
                     if diagnosis_field is not None:
                         sample.diagnoses = self.__extract_all_diagnosis(row[diagnosis_field])
                     if collection_date_field is not None:
-                        sample.collected_datetime = date_parser.parse(row[collection_date_field]).date()
+                        try:
+                            sample.collected_datetime = date_parser.parse(row[collection_date_field]).date()
+                        except ValueError:
+                            logger.warning(
+                                f"Error parsing date {row[collection_date_field]}. Please make sure the date is in a valid format.")
+                            continue
                     if self._type_to_collection_map is not None:
                         sample.sample_collection_id = None
                         attribute_to_collection = self._sample_parsing_map.get("sample_details").get("collection")
@@ -98,6 +104,25 @@ class SampleCsvRepository(SampleRepository):
                     logger.info(f"{err} Skipping....")
                     continue
 
+    @staticmethod
+    def __parse_date(date_string):
+
+        date_formats = [
+            "%Y-%m-%d",  # 2007-07-15
+            "%d-%m-%Y",  # 15-06-2007
+            "%Y-%d-%m",  # 2007-15-07
+            "%d.%m.%Y",  # 15.06.2007
+            "%Y.%m.%d",  # 2007.04.10
+            "%Y.%d.%m",  # 2007.15.07
+            "%Y"  # 2007
+        ]
+
+        for date_format in date_formats:
+            try:
+                return datetime.strptime(date_string, date_format)
+            except ValueError:
+                continue
+        raise ValueError(f"Date format for '{date_string}' is not recognized.")
 
     @staticmethod
     def __extract_all_diagnosis(diagnosis_str: str) -> list[str]:

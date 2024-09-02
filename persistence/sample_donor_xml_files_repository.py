@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from typing import List
 
+from dateutil.parser import ParserError
 from glom import glom
 
 from model.gender import Gender
@@ -11,6 +12,8 @@ from model.sample_donor import SampleDonor
 from persistence.sample_donor_repository import SampleDonorRepository
 from persistence.xml_util import parse_xml_file, WrongXMLFormatError
 from util.custom_logger import setup_logger
+from util.date_util import parse_date
+from dateutil import parser as date_parser
 
 setup_logger()
 logger = logging.getLogger()
@@ -39,7 +42,11 @@ class SampleDonorXMLFilesRepository(SampleDonorRepository):
             donor.gender = Gender[(glom(contents, self._donor_parsing_map.get("gender"))).upper()]
             year_of_birth = glom(contents, self._donor_parsing_map.get("birthDate"), default=None)
             if year_of_birth is not None:
-                donor.date_of_birth = datetime.strptime(year_of_birth, '%Y')
+                donor.date_of_birth = date_parser.parse(year_of_birth)
+                # donor.date_of_birth = parse_date(year_of_birth)
+        except ParserError:
+            logger.warning(
+                f"Error parsing date. Please make sure the date is in a valid format.")
         except WrongXMLFormatError:
             return
         if donor.identifier not in self._ids:

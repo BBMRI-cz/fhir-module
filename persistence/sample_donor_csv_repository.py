@@ -4,10 +4,14 @@ import logging
 import os
 from typing import List
 
+from dateutil.parser import ParserError
+
+from util.date_util import parse_date
 from util.enums_util import get_gender_from_abbreviation
 from model.sample_donor import SampleDonor
 from persistence.sample_donor_repository import SampleDonorRepository
 from util.custom_logger import setup_logger
+from dateutil import parser as date_parser
 
 setup_logger()
 logger = logging.getLogger()
@@ -43,13 +47,12 @@ class SampleDonorCsvRepository(SampleDonorRepository):
                     year_of_birth = row[fields_dict[self._donor_parsing_map.get("birthDate")]]
                     if year_of_birth is not None:
                         try:
-                            parsed_date = datetime.strptime(year_of_birth, "%d.%m.%Y")
-                        except ValueError:
-                            try:
-                                parsed_date = datetime.strptime(year_of_birth, "%Y")
-                            except ValueError:
-                                logger.error(f"Could not parse date: {year_of_birth} . Skipping...")
-                                continue
+                            parsed_date = date_parser.parse(year_of_birth)
+                            # parsed_date = parse_date(year_of_birth)
+                        except ParserError:
+                            logger.warning(
+                                f"Error parsing date {year_of_birth}. Please make sure the date is in a valid format.")
+                            continue
                         donor.date_of_birth = parsed_date
                     if donor.identifier not in self._ids:
                         self._ids.add(donor.identifier)
@@ -57,5 +60,3 @@ class SampleDonorCsvRepository(SampleDonorRepository):
                 except TypeError as err:
                     logger.info(f"{err} Skipping...")
                     continue
-
-

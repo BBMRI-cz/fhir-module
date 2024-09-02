@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import datetime
 from typing import Generator
 
 from dateutil.parser import ParserError
@@ -9,6 +10,7 @@ from model.sample import Sample
 from persistence.sample_repository import SampleRepository
 from persistence.xml_util import parse_xml_file, WrongXMLFormatError
 from util.custom_logger import setup_logger
+from util.date_util import parse_date
 from util.enums_util import parse_storage_temp_from_code
 from dateutil import parser as date_parser
 
@@ -65,7 +67,7 @@ class SampleXMLRepository(SampleRepository):
                                default=None)
         if collection_date is not None:
             try:
-                sample.collected_datetime = date_parser.parse(collection_date).date()
+                sample.collected_datetime = date_parser.parse(collection_date)
             except ParserError:
                 logger.warning(f"Error parsing date {collection_date}. Please make sure the date is in a valid format.")
                 pass
