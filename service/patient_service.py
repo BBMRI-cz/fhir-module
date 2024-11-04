@@ -4,6 +4,7 @@ from typing import Generator
 from fhirclient.models.bundle import Bundle, BundleEntry, BundleEntryRequest
 from fhirclient.models.resource import Resource
 
+from model.interface.sample_donor_interface import SampleDonorInterface
 from persistence.sample_donor_repository import SampleDonorRepository
 
 
@@ -19,7 +20,7 @@ class PatientService:
             bundle.entry.append(self.__build_bundle_entry_for_post(patient))
         return bundle
 
-    def get_all(self) -> Generator:
+    def get_all(self) -> Generator[SampleDonorInterface, None, None]:
         """Fetches all patients/sample donors from the repository."""
         for donor in self._sample_donor_repository.get_all():
             yield donor
