@@ -6,16 +6,17 @@ import icd10
 from fhirclient.models.codeableconcept import CodeableConcept
 from fhirclient.models.coding import Coding
 from fhirclient.models.extension import Extension
-from fhirclient.models.fhirdate import FHIRDate
+from fhirclient.models.fhirdatetime import FHIRDateTime
 from fhirclient.models.fhirreference import FHIRReference
 from fhirclient.models.identifier import Identifier
 from fhirclient.models.meta import Meta
 from fhirclient.models.specimen import Specimen, SpecimenCollection
 
+from model.interface.sample_interface import SampleInterface
 from model.storage_temperature import StorageTemperature
 
 
-class Sample:
+class Sample(SampleInterface):
     """Class representing a biological specimen."""
 
     def __init__(self, identifier: str, donor_id: str, material_type: str = None, diagnoses: list[str] = [],
@@ -114,7 +115,7 @@ class Sample:
             specimen.type = self.__create_specimen_type(material_type_map)
         if self.collected_datetime is not None:
             specimen.collection = SpecimenCollection()
-            specimen.collection.collectedDateTime = FHIRDate()
+            specimen.collection.collectedDateTime = FHIRDateTime()
 
             specimen.collection.collectedDateTime.date = self.collected_datetime.date() if isinstance(
                 self.collected_datetime, datetime) else self.collected_datetime

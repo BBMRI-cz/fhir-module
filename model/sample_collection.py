@@ -2,8 +2,10 @@
 from fhirclient.models.identifier import Identifier
 from fhirclient.models.organization import Organization
 
+from model.interface.collection_interface import CollectionInterface
 
-class SampleCollection:
+
+class SampleCollection(CollectionInterface):
     """Sample Collection represents a set of samples with at least one common characteristic."""
 
     def __init__(self, identifier: str = None, name: str = None, acronym: str = None):
