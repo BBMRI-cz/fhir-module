@@ -1,0 +1,15 @@
+{
+  "identifier": "bbmri-eric:ID:CZ_MMCI",
+  "name": "biobankName",
+  "alias": "alias",
+  "country": "CZ",
+  "contact_name": "contactName",
+  "contact_surname": "contactSurname",
+  "contact_email": "contactEmail",
+  "infrastructural_capabilities": ["SampleStorage","DataStorage"],
+  "organisational_capabilities": ["RecontactDonors","LabAnalysisData","Other"],
+  "bioprocessing_and_analysis_capabilities": ["SampleProcessing,Other"],
+  "quality_management_standards": "ISO 20387:2018",
+  "juristic_person": "Masaryk Memorial Cancer Institute",
+  "description": "biobankDescription"
+}
