@@ -7,9 +7,10 @@ from fhirclient.models.meta import Meta
 from fhirclient.models.patient import Patient
 
 from model.gender import Gender
+from model.interface.sample_donor_interface import SampleDonorInterface
 
 
-class SampleDonor:
+class SampleDonor(SampleDonorInterface):
     """Class representing a sample donor/patient"""
 
     def __init__(self, identifier: str, gender: Gender = None, birth_date: datetime = None):
