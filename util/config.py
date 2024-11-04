@@ -18,6 +18,7 @@ PARSING_MAP_PATH = os.getenv("PARSING_MAP_PATH", os.path.join(ROOT_DIR, 'default
 PARSING_MAP_CSV_PATH = os.getenv("PARSING_MAP_PATH", os.path.join(ROOT_DIR, 'default_csv_map.json'))
 MATERIAL_TYPE_MAP_PATH = os.getenv("MATERIAL_TYPE_MAP_PATH", os.path.join(ROOT_DIR, 'default_material_type_map.json'))
 SAMPLE_COLLECTIONS_PATH = os.getenv("SAMPLE_COLLECTIONS_PATH", os.path.join(ROOT_DIR, 'default_sample_collection.json'))
+BIOBANK_PATH = os.getenv("BIOBANK_PATH",os.path.join(ROOT_DIR, 'default_biobank.json'))
 TYPE_TO_COLLECTION_MAP_PATH = os.getenv("TYPE_TO_COLLECTION_MAP_PATH",
                                         os.path.join(ROOT_DIR, 'default_type_to_collection_map.json'))
 STORAGE_TEMP_MAP_PATH = os.getenv("STORAGE_TEMP_MAP_PATH", os.path.join(ROOT_DIR, 'default_storage_temp_map.json'))
