@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import cast
 
 import requests
 import schedule
@@ -9,6 +10,7 @@ from glom import glom, Iter, T, Coalesce
 
 from exception.patient_not_found import PatientNotFoundError
 from model.sample import Sample
+from model.sample_collection import SampleCollection
 from model.sample_donor import SampleDonor
 from persistence.sample_collection_repository import SampleCollectionRepository
 from service.condition_service import ConditionService
@@ -53,17 +55,14 @@ class BlazeService:
     def sync(self):
         """Starts the sync between the repositories and the Blaze store."""
         logger.info("Starting sync with Blaze 🔥!")
-        if self.get_number_of_resources("Patient") == 0:
-            self.upload_sample_collections()
-            self.initial_upload_of_all_patients()
-            self.sync_conditions()
-            self.sync_samples()
-        else:
-            logger.debug("Patients already present in the FHIR store.")
-        self.__initialize_scheduler()
-        while True:
-            schedule.run_pending()
-            time.sleep(1)
+        self.upload_sample_collections()
+        self.initial_upload_of_all_patients()
+        self.sync_conditions()
+        self.sync_samples()
+        # self.__initialize_scheduler()
+        # while True:
+        #     schedule.run_pending()
+        #     time.sleep(1)
 
     def __initialize_scheduler(self):
         logger.info("Initializing scheduler...")
@@ -72,6 +71,13 @@ class BlazeService:
         schedule.every().week.do(self.sync_conditions)
         schedule.every().week.do(self.sync_samples)
         logger.info("Scheduler initialized.")
+
+    def run_scheduler(self):
+        self.__initialize_scheduler()
+        logger.info("Running_scheduler.")
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
 
     def initial_upload_of_all_patients(self) -> int:
         """
@@ -107,6 +113,9 @@ class BlazeService:
         :return:
         """
         for donor in self._patient_service.get_all():
+            if not isinstance(donor, SampleDonor):
+                logger.error(f"Donor is not as instance of SampleDonor, but rather {type(donor)}. Skipping")
+            donor = cast(SampleDonor, donor)
             if not self.is_resource_present_in_blaze(resource_type="patient",
                                                      identifier=donor.identifier):
                 try:
@@ -312,6 +321,32 @@ class BlazeService:
             logger.debug(f"response status: {delete_response.status_code}")
             return delete_response.status_code
 
+    def delete_everything(self) -> bool:
+        """Delete all Patient,Sample, and Condition resources from the blaze."""
+        response = self._session.get(url=self._blaze_url + "/Patient")
+        while response.status_code == 200:
+            response_json = response.json()
+            for entry in response_json.get("entry", []):
+                resource = entry.get("resource", {})
+                patient_identifier = resource.get("identifier", [{}])[0].get("value", None)
+                if patient_identifier is not None:
+                    deleted = self.delete_fhir_resource("Patient", patient_identifier)
+                    if not deleted:
+                        logger.error(
+                            f"Could not delete patient with organization identifier {patient_identifier}. Skipping....")
+                links = response_json.get("link", [])
+                link_relations = [link.get("relation") for link in links]
+                if "next" not in link_relations:
+                    break
+                next_index = link_relations.index("next")
+                url = links[next_index].get("url")
+                url_after_fhir = url.find("/fhir")
+                if url_after_fhir == -1:
+                    break
+                next_link = self._blaze_url + url[url_after_fhir + len("/fhir"):]
+                response = self._session.get(url=next_link)
+        return True
+
     def is_resource_present_in_blaze(self, resource_type: str, identifier: str) -> bool:
         """
         Checks if a resource of specific type with a specific identifier is present in the Blaze store.
@@ -334,6 +369,9 @@ class BlazeService:
     def upload_sample_collections(self):
         """Uploads SampleCollections as FHIR organizations."""
         for sample_collection in self._sample_collection_repository.get_all():
+            if not isinstance(sample_collection,SampleCollection):
+                logger.error(f"Sample collection is not type of SampleColletion, but rather {type(sample_collection)} Skipping... ")
+                continue
             if not self.is_resource_present_in_blaze(resource_type="Organization",
                                                      identifier=sample_collection.identifier):
                 self._session.post(url=self._blaze_url + "/Organization",
