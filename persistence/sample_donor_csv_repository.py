@@ -1,7 +1,7 @@
 import csv
 import logging
 import os
-from typing import List
+from typing import List, Generator
 
 from dateutil.parser import ParserError
 
@@ -30,7 +30,8 @@ class SampleDonorCsvRepository(SampleDonorRepository):
         self._miabis_on_fhir_model = miabis_on_fhir_model
         logger.debug(f"Loaded the following donor parsing map {donor_parsing_map}")
 
-    def get_all(self) -> List[SampleDonorInterface]:
+    def get_all(self) -> Generator[SampleDonorInterface,None,None]:
+        self._ids = set()
         dir_entry: os.DirEntry
         for dir_entry in os.scandir(self._dir_path):
             if dir_entry.name.lower().endswith(".csv"):
