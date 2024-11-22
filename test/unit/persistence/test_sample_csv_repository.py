@@ -4,6 +4,7 @@ import unittest
 import pytest
 from pyfakefs.fake_filesystem_unittest import patchfs
 
+from model.miabis.sample_miabis import SampleMiabis
 from model.sample import Sample
 from model.storage_temperature import StorageTemperature
 from persistence.sample_csv_repository import SampleCsvRepository
@@ -23,26 +24,27 @@ class TestSampleCsvRepository(unittest.TestCase):
 
     wrong_diagnosis = "32;1111;f;1945;2007-10-16;wrong;85;2100-01-16;blood-serum;-20;0"
 
-    one_sample = "33;1111;m;1947;2007-10-16;M0580;85;2100-01-16;serum;temperatureLN;0"
+    one_sample = "33;1111;m;1947;2007-10-16;M058;85;2100-01-16;serum;temperatureLN;0"
 
-    samples = "34;1112;f;1958;2100-10-16;M0600;85;2007-10-30;serum;temperatureLN;0 \n35;1113;m;1959;2100-10-22;M329;49;2007-10-22;serum;temperatureOther;1"
+    samples = "34;1112;f;1958;2100-10-16;M060;85;2007-10-30;serum;temperatureLN;0 \n35;1113;m;1959;2100-10-22;M329;49;2007-10-22;serum;temperatureOther;1"
 
-    one_sample_missing_storage_temperature = "33;1111;m;1947;2007-10-16;M0580;85;2100-01-16;serum;0"
+    one_sample_missing_storage_temperature = "33;1111;m;1947;2007-10-16;M058;85;2100-01-16;serum;0"
 
-    one_sample_missing_material_type = "33;1111;m;1947;2007-10-16;M0580;85;2100-01-16;temperatureLN;0"
+    one_sample_missing_material_type = "33;1111;m;1947;2007-10-16;M058;85;2100-01-16;temperatureLN;0"
 
     one_sample_missing_diagnosis = "33;1111;m;1947;2007-10-16;85;2100-01-16;serum;temperatureLN;0"
 
-    one_sample_missing_collection_date = "33;1111;m;1947;2007-10-16;M0580;85;serum;temperatureLN;0"
+    one_sample_missing_collection_date = "33;1111;m;1947;2007-10-16;M058;85;serum;temperatureLN;0"
 
-    sample_multiple_diagnosis = "33;1111;m;1947;2007-10-16;M0580,C51,E080;85;2100-01-16;serum;temperatureLN;0"
+    sample_multiple_diagnosis = "33;1111;m;1947;2007-10-16;M058,C51,E080;85;2100-01-16;serum;temperatureLN;0"
     dir_path = "/mock/dir/"
 
     @pytest.fixture(autouse=True)
     def run_around_tests(self):
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'])
+                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     material_type_map={"serum": "serum"})
         yield  # run test
 
     @patchfs
@@ -53,11 +55,34 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual("33", sample.identifier)
 
     @patchfs
+    def test_miabis_get_all_one_sample_ok(self, fake_fs):
+        self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
+                                                     separator=";",
+                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     material_type_map={"serum": "Serum"},
+                                                     miabis_on_fhir_model=True)
+        fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
+        self.assertEqual(1, sum(1 for _ in self.sample_repository.get_all()))
+
+    @patchfs
     def test_get_all_two_samples_ok(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.samples)
         self.assertEqual(2, sum(1 for _ in self.sample_repository.get_all()))
         for sample in self.sample_repository.get_all():
             self.assertIsInstance(sample, Sample)
+            self.assertIn(sample.identifier, ["34", "35"])
+
+    @patchfs
+    def test_miabis_get_all_two_samples_ok(self, fake_fs):
+        self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
+                                                     separator=";",
+                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     material_type_map={"serum": "Serum"},
+                                                     miabis_on_fhir_model=True)
+        fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.samples)
+        self.assertEqual(2, sum(1 for _ in self.sample_repository.get_all()))
+        for sample in self.sample_repository.get_all():
+            self.assertIsInstance(sample, SampleMiabis)
             self.assertIn(sample.identifier, ["34", "35"])
 
     @patchfs
@@ -70,13 +95,32 @@ class TestSampleCsvRepository(unittest.TestCase):
                                                      separator=";")
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
         self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))
-        wrong_map = {}
+
+    @patchfs
+    def test_miabis_with_wrong_parsing_map(self, fake_fs):
+        wrong_map = {
+            "id": ".",
+            "donor_id": "wrong_string"
+        }
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path, sample_parsing_map=wrong_map,
-                                                     separator=";")
+                                                     separator=";", material_type_map={"serum": "Serum"},
+                                                     miabis_on_fhir_model=True)
+        fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
         self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))
 
     @patchfs
     def test_get_all_three_samples_from_two_collections_ok(self, fake_fs):
+        fake_fs.create_file(self.dir_path + "mock_file.csv",
+                            contents=self.header + self.one_sample + "\n" + self.samples)
+        self.assertEqual(3, sum(1 for _ in self.sample_repository.get_all()))
+
+    @patchfs
+    def test_miabis_get_all_three_samples_from_two_collections_ok(self, fake_fs):
+        self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
+                                                     separator=";",
+                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     material_type_map={"serum": "Serum"},
+                                                     miabis_on_fhir_model=True)
         fake_fs.create_file(self.dir_path + "mock_file.csv",
                             contents=self.header + self.one_sample + "\n" + self.samples)
         self.assertEqual(3, sum(1 for _ in self.sample_repository.get_all()))
@@ -102,7 +146,7 @@ class TestSampleCsvRepository(unittest.TestCase):
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
                                                      sample_parsing_map=spm,
-                                                     type_to_collection_map={"M0580": "test:collection:id"})
+                                                     type_to_collection_map={"M058": "test:collection:id"})
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
         self.assertEqual("test:collection:id", next(self.sample_repository.get_all()).sample_collection_id)
 
@@ -172,7 +216,8 @@ class TestSampleCsvRepository(unittest.TestCase):
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
                                                      sample_parsing_map=PARSING_MAP_CSV['sample_map'],
-                                                     storage_temp_map=STORAGE_TEMP_MAP)
+                                                     storage_temp_map=STORAGE_TEMP_MAP,
+                                                     material_type_map={"serum": "serum"})
         fake_fs.create_file(self.dir_path + "mock_file.csv",
                             contents=self.missing_storage_temperature_field_header
                                      + self.one_sample_missing_storage_temperature)
@@ -180,8 +225,8 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual("33", sample.identifier)
             self.assertEqual(None, sample.storage_temperature)
             self.assertEqual("serum", sample.material_type)
-            self.assertEqual("M0580", sample.diagnoses[0])
-            self.assertEqual(datetime.date(2100, 1, 16), sample.collected_datetime)
+            self.assertEqual("M058", sample.diagnoses[0])
+            self.assertEqual(datetime.datetime(2100, 1, 16), sample.collected_datetime)
 
     @patchfs
     def test_missing_material_type_field(self, fake_fs):
@@ -196,15 +241,16 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual("33", sample.identifier)
             self.assertEqual(StorageTemperature.TEMPERATURE_LN, sample.storage_temperature)
             self.assertEqual(None, sample.material_type)
-            self.assertEqual("M0580", sample.diagnoses[0])
-            self.assertEqual(datetime.date(2100, 1, 16), sample.collected_datetime)
+            self.assertEqual("M058", sample.diagnoses[0])
+            self.assertEqual(datetime.datetime(2100, 1, 16), sample.collected_datetime)
 
     @patchfs
     def test_missing_diagnosis_field(self, fake_fs):
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
                                                      sample_parsing_map=PARSING_MAP_CSV['sample_map'],
-                                                     storage_temp_map=STORAGE_TEMP_MAP)
+                                                     storage_temp_map=STORAGE_TEMP_MAP,
+                                                     material_type_map={"serum": "serum"})
         fake_fs.create_file(self.dir_path + "mock_file.csv",
                             contents=self.header
                                      + self.one_sample_missing_diagnosis)
@@ -220,7 +266,8 @@ class TestSampleCsvRepository(unittest.TestCase):
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
                                                      sample_parsing_map=PARSING_MAP_CSV['sample_map'],
-                                                     storage_temp_map=STORAGE_TEMP_MAP)
+                                                     storage_temp_map=STORAGE_TEMP_MAP,
+                                                     material_type_map={"serum": "serum"})
         fake_fs.create_file(self.dir_path + "mock_file.csv",
                             contents=self.missing_collection_date_field_header
                                      + self.one_sample_missing_collection_date)
@@ -228,7 +275,7 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual("33", sample.identifier)
             self.assertEqual(StorageTemperature.TEMPERATURE_LN, sample.storage_temperature)
             self.assertEqual("serum", sample.material_type)
-            self.assertEqual("M0580", sample.diagnoses[0])
+            self.assertEqual("M058", sample.diagnoses[0])
             self.assertEqual(None, sample.collected_datetime)
 
     @patchfs
@@ -236,7 +283,8 @@ class TestSampleCsvRepository(unittest.TestCase):
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
                                                      sample_parsing_map=PARSING_MAP_CSV['sample_map'],
-                                                     storage_temp_map=STORAGE_TEMP_MAP)
+                                                     storage_temp_map=STORAGE_TEMP_MAP,
+                                                     material_type_map={"serum": "serum"})
         fake_fs.create_file(self.dir_path + "mock_file.csv",
                             contents=self.header
                                      + self.sample_multiple_diagnosis)
@@ -244,7 +292,7 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual("33", sample.identifier)
             self.assertEqual(StorageTemperature.TEMPERATURE_LN, sample.storage_temperature)
             self.assertEqual("serum", sample.material_type)
-            self.assertEqual("M0580", sample.diagnoses[0])
+            self.assertEqual("M058", sample.diagnoses[0])
             self.assertEqual("C51", sample.diagnoses[1])
             self.assertEqual("E080", sample.diagnoses[2])
-            self.assertEqual(datetime.date(2100, 1, 16), sample.collected_datetime)
+            self.assertEqual(datetime.datetime(2100, 1, 16), sample.collected_datetime)
