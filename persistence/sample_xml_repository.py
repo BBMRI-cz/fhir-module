@@ -90,6 +90,7 @@ class SampleXMLRepository(SampleRepository):
         if collection_datetime_string is not None:
             try:
                 collected_datetime = date_parser.parse(collection_datetime_string)
+                collected_datetime = collected_datetime.replace(hour=0, minute=0, second=0)
             except ParserError:
                 raise ParserError(
                     f"Error parsing date {collection_datetime_string} for sample with identifier {identifier}."
@@ -111,9 +112,14 @@ class SampleXMLRepository(SampleRepository):
                 storage_temperature = parse_storage_temp_from_code(self._storage_temp_map, storage_temp_code)
 
         if self._miabis_on_fhir_model:
+            diagnoses_with_observed_datetime = []
+            for diagnosis in diagnoses:
+                # TODO CHANGE COLLECTION DATETIME IS NOT OBSERVED DATETIME
+                diagnoses_with_observed_datetime.append((diagnosis, collected_datetime))
             sample = SampleMiabis(identifier=identifier, donor_id=donor_id, material_type=material_type,
-                                  diagnoses=diagnoses, sample_collection_id=sample_collection_id,
-                                  collected_datetime=collected_datetime, storage_temperature=storage_temperature)
+                                  sample_collection_id=sample_collection_id,
+                                  collected_datetime=collected_datetime, storage_temperature=storage_temperature,
+                                  diagnoses_with_observed_datetime=diagnoses_with_observed_datetime)
         else:
             sample = Sample(identifier=identifier, donor_id=donor_id, material_type=material_type, diagnoses=diagnoses,
                             sample_collection_id=sample_collection_id, collected_datetime=collected_datetime,

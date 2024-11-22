@@ -38,13 +38,13 @@ class SampleCsvRepository(SampleRepository):
         self._miabis_on_fhir_model = miabis_on_fhir_model
         self._fields_dict = {}
 
-    def get_all(self) -> Generator[Sample, None, None]:
+    def get_all(self) -> Generator[SampleInterface, None, None]:
         dir_entry: os.DirEntry
         for dir_entry in os.scandir(self._dir_path):
             if dir_entry.name.lower().endswith(".csv"):
                 yield from self.__extract_sample_from_csv_file(dir_entry)
 
-    def __extract_sample_from_csv_file(self, dir_entry: os.DirEntry) -> Sample:
+    def __extract_sample_from_csv_file(self, dir_entry: os.DirEntry) -> SampleInterface:
         with open(dir_entry, "r") as file_content:
             reader = csv.reader(file_content, delimiter=self._separator)
             self._fields_dict = {}
@@ -60,46 +60,7 @@ class SampleCsvRepository(SampleRepository):
                 try:
                     sample = self.__build_sample(row)
                     yield sample
-                    # sample = Sample(
-                    #     identifier=row[fields_dict[self._sample_parsing_map.get("sample_details").get("id")]],
-                    #     donor_id=row[fields_dict[self._sample_parsing_map.get("donor_id")]])
-                    # material_type_field = fields_dict.get(
-                    #     self._sample_parsing_map.get("sample_details").get("material_type"))
-                    # diagnosis_field = fields_dict.get(self._sample_parsing_map.get("sample_details").get("diagnosis"))
-                    #
-                    # storage_temp_field = fields_dict.get(self._sample_parsing_map
-                    #                                      .get("sample_details")
-                    #                                      .get("storage_temperature"))
-                    #
-                    # collection_date_field = fields_dict.get(self._sample_parsing_map
-                    #                                         .get("sample_details")
-                    #                                         .get("collection_date"))
-                    # if material_type_field is not None:
-                    #     sample.material_type = row[material_type_field]
-                    # if diagnosis_field is not None:
-                    #     sample.diagnoses = self.__extract_all_diagnosis(row[diagnosis_field])
-                    # if collection_date_field is not None:
-                    #     try:
-                    #         sample.collected_datetime = date_parser.parse(row[collection_date_field]).date()
-                    #     except ValueError:
-                    #         logger.warning(
-                    #             f"Error parsing date {row[collection_date_field]}. Please make sure the date is in a valid format.")
-                    #         continue
-                    # if self._type_to_collection_map is not None:
-                    #     sample.sample_collection_id = None
-                    #     attribute_to_collection = self._sample_parsing_map.get("sample_details").get("collection")
-                    #     if attribute_to_collection in fields_dict:
-                    #         sample.sample_collection_id = self._type_to_collection_map.get(
-                    #             row[fields_dict[attribute_to_collection]])
-                    # if self._storage_temp_map is not None and storage_temp_field is not None:
-                    #     parsed_storage_temp = parse_storage_temp_from_code(
-                    #         self._storage_temp_map,
-                    #         row[storage_temp_field])
-                    #     if parsed_storage_temp is not None:
-                    #         sample.storage_temperature = parsed_storage_temp
-                    # yield sample
-
-                except ParserError:
+                except ParserError as err:
                     logger.warning(f"{err}. Skipping .....")
                     continue
                 except TypeError as err:
@@ -140,6 +101,7 @@ class SampleCsvRepository(SampleRepository):
         if collection_date_field is not None:
             try:
                 collection_datetime = date_parser.parse(data[collection_date_field])
+                collection_datetime = collection_datetime.replace(hour=0,minute=0,second=0)
             except ParserError:
                 raise ParserError(
                     f"Error parsing date for sample with identifier {identifier} "
@@ -156,8 +118,14 @@ class SampleCsvRepository(SampleRepository):
         # TODO Add diagnosis_observed_datetime field
         # TODO might be problem with storage temperature? each uses different class right now
         if self._miabis_on_fhir_model:
-            sample = SampleMiabis(identifier=identifier, donor_id=donor_id, material_type=material_type,
-                                  diagnoses=diagnoses, sample_collection_id=sample_collection_id,
+            diagnoses_with_observed_datetime = []
+            for diagnosis in diagnoses:
+                # TODO CHANGE COLLECTION DATETIME IS NOT OBSERVED DATETIME
+                diagnoses_with_observed_datetime.append((diagnosis, collection_datetime))
+            sample = SampleMiabis(identifier=identifier, donor_id=donor_id,
+                                  diagnoses_with_observed_datetime=diagnoses_with_observed_datetime,
+                                  material_type=material_type,
+                                  sample_collection_id=sample_collection_id,
                                   collected_datetime=collection_datetime,
                                   storage_temperature=storage_temperature)
         else:
