@@ -1,5 +1,6 @@
 FROM python:3.11-alpine
 RUN apk add --no-cache --upgrade bash
+RUN apk add --no-cache curl bash
 ENV APP_DIR="/opt/fhir-module"
 ENV RECORDS_DIR="/opt/records"
 RUN mkdir -p $APP_DIR $RECORDS_DIR

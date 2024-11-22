@@ -11,4 +11,5 @@ PyYAML~=6.0
 pylint
 icd10-cm
 glom
+flask
 miabis-on-fhir
