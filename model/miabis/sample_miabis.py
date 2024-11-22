@@ -1,41 +1,21 @@
 from datetime import datetime
 
-from miabis_model import Sample, StorageTemperature, Observation, DiagnosisReport, Condition
-import fhirclient.models.observation as fhir_observation
+from miabis_model import Sample, StorageTemperature, Condition
 
 from model.interface.sample_interface import SampleInterface
 
 
 class SampleMiabis(Sample, SampleInterface):
 
-    def __init__(self, identifier: str, donor_id: str, material_type: str = None, diagnoses: list[str] = None,
+    def __init__(self, identifier: str, donor_id: str,
+                 diagnoses_with_observed_datetime: list[tuple[str, datetime | None]], material_type: str = None,
                  sample_collection_id: str = None,
-                 collected_datetime: datetime = None, storage_temperature: StorageTemperature = None,
-                 diagnosis_observed_datetime: datetime = None):
+                 collected_datetime: datetime = None, storage_temperature: StorageTemperature = None):
         super().__init__(identifier, donor_identifier=donor_id, material_type=material_type,
-                         collected_datetime=collected_datetime, storage_temperature=storage_temperature)
-        self.diagnosis_observed_datetime = diagnosis_observed_datetime
+                         collected_datetime=collected_datetime, storage_temperature=storage_temperature,
+                         diagnoses_with_observed_datetime=diagnoses_with_observed_datetime)
         self.sample_collection_id = sample_collection_id
-        if diagnoses is None:
-            self.diagnoses = []
-            self._observations = []
-        else:
-            observations = []
-            self.diagnoses = diagnoses
-            for diagnosis in self.diagnoses:
-                observations.append(Observation(diagnosis, sample_identifier=identifier, patient_identifier=donor_id,
-                                                diagnosis_observed_datetime=diagnosis_observed_datetime))
-            self._observations = observations
-        self._diagnosis_report = DiagnosisReport(sample_identifier=identifier, patient_identifier=donor_id)
-        self._condition = Condition(patient_identifier=donor_id)
-
-    @property
-    def diagnoses(self) -> list[str]:
-        return self._diagnoses
-
-    @diagnoses.setter
-    def diagnoses(self, diagnoses: list[str]):
-        self._diagnoses = diagnoses
+        self.condition = Condition(patient_identifier=donor_id)
 
     @property
     def sample_collection_id(self) -> str:
@@ -46,21 +26,16 @@ class SampleMiabis(Sample, SampleInterface):
         self._sample_collection_id = collection_id
 
     @property
-    def diagnosis_observed_datetime(self):
-        return self._diagnosis_observed_datetime
-
-    @diagnosis_observed_datetime.setter
-    def diagnosis_observed_datetime(self, observed_datetime: datetime):
-        self._diagnosis_observed_datetime = observed_datetime
-
-    @property
-    def observations(self) -> list[Observation]:
-        return self._observations
+    def diagnoses(self) -> list[str]:
+        diagnoses = []
+        for diagnosis_with_datetime in self.diagnoses_icd10_code_with_observed_datetime:
+            diagnoses.append(diagnosis_with_datetime[0])
+        return diagnoses
 
     @property
-    def diagnosis_report(self) -> DiagnosisReport:
-        return self._diagnosis_report
-
-    @property
-    def condition(self) -> Condition:
+    def condition(self):
         return self._condition
+
+    @condition.setter
+    def condition(self, condition: Condition):
+        self._condition = condition
