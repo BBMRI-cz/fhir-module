@@ -28,7 +28,7 @@ def is_endpoint_available(endpoint_url, max_attempts=10, wait_time=60) -> bool:
             return True
         except requests.exceptions.RequestException as e:
             logger.info(
-                f"Attempt {attempts + 1}/{max_attempts}: Endpoint not available yet. Retrying in {wait_time} seconds.")
+                f"Attempt {attempts + 1}/{max_attempts} on endpoint {endpoint_url}: Endpoint not available yet. Retrying in {wait_time} seconds.")
             attempts += 1
             time.sleep(wait_time)
 

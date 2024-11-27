@@ -3,7 +3,7 @@ import unittest
 import pytest
 from pyfakefs.fake_filesystem_unittest import patchfs
 
-from model.gender import Gender
+from miabis_model import Gender
 from model.sample_donor import SampleDonor
 from persistence.sample_donor_csv_repository import SampleDonorCsvRepository
 from util.config import PARSING_MAP_CSV

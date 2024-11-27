@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import List
 
-import icd10
+import simple_icd_10 as icd10
 from fhirclient.models.codeableconcept import CodeableConcept
 from fhirclient.models.coding import Coding
 from fhirclient.models.extension import Extension
@@ -19,7 +19,7 @@ from model.storage_temperature import StorageTemperature
 class Sample(SampleInterface):
     """Class representing a biological specimen."""
 
-    def __init__(self, identifier: str, donor_id: str, material_type: str = None, diagnoses: list[str] = [],
+    def __init__(self, identifier: str, donor_id: str, material_type: str = None, diagnoses: list[str] = None,
                  sample_collection_id: str = None,
                  collected_datetime: datetime = None, storage_temperature: StorageTemperature = None) -> None:
         """
@@ -35,9 +35,10 @@ class Sample(SampleInterface):
         self._donor_id: str = donor_id
         self._material_type: str = material_type
         self.diagnoses = []
-        for diagnosis in diagnoses:
-            if diagnosis is not None and not icd10.exists(diagnosis):
-                raise TypeError("The provided string is not a valid ICD-10 code.")
+        if diagnoses is not None:
+            for diagnosis in diagnoses:
+                if diagnosis is not None and not icd10.is_valid_item(diagnosis):
+                    raise TypeError(f"The provided string {diagnosis} is not a valid ICD-10 code.")
             self._diagnoses: list[str] = diagnoses
         self._sample_collection_id: str = sample_collection_id
         self._collected_datetime: datetime = collected_datetime
@@ -72,7 +73,7 @@ class Sample(SampleInterface):
     def diagnoses(self, icd_10_codes: list[str]):
         """Sample content diagnosis using ICD-10 coding."""
         for diagnosis in icd_10_codes:
-            if not icd10.exists(diagnosis):
+            if not icd10.is_valid_item(diagnosis):
                 raise TypeError(f"The provided string ({diagnosis}) is not a valid ICD-10 code.")
         self._diagnoses = icd_10_codes
 
@@ -92,6 +93,8 @@ class Sample(SampleInterface):
 
     @collected_datetime.setter
     def collected_datetime(self, collected_datetime: datetime):
+        if not isinstance(collected_datetime,datetime):
+            raise TypeError(f"Collected datetime should be type of datetime, but is : {type(collected_datetime)}")
         self._collected_datetime = collected_datetime
 
     @property
@@ -103,7 +106,7 @@ class Sample(SampleInterface):
     def storage_temperature(self, storage_temperature: StorageTemperature):
         self._storage_temperature = storage_temperature
 
-    def to_fhir(self, material_type_map: dict = None, subject_id: str = None, custodian_id: str = None):
+    def to_fhir(self, subject_id: str = None, custodian_id: str = None):
         """Return sample representation in FHIR.
         @subject_id: FHIR Resource ID of the sample donor."""
         specimen = Specimen()
@@ -111,8 +114,9 @@ class Sample(SampleInterface):
         specimen.meta.profile = ["https://fhir.bbmri.de/StructureDefinition/Specimen"]
         specimen.identifier = self.__create_fhir_identifier()
         extensions: List[Extension] = []
-        if material_type_map is not None and self.material_type in material_type_map:
-            specimen.type = self.__create_specimen_type(material_type_map)
+        # if material_type_map is not None and self.material_type in material_type_map:
+        if self.material_type is not None:
+            specimen.type = self.__create_specimen_type()
         if self.collected_datetime is not None:
             specimen.collection = SpecimenCollection()
             specimen.collection.collectedDateTime = FHIRDateTime()
@@ -160,10 +164,10 @@ class Sample(SampleInterface):
         custodian_extension.valueReference.reference = f"Organization/{custodian_id}"
         return custodian_extension
 
-    def __create_specimen_type(self, material_type_map) -> CodeableConcept:
+    def __create_specimen_type(self) -> CodeableConcept:
         specimen_type = CodeableConcept()
         specimen_type.coding = [Coding()]
-        specimen_type.coding[0].code = material_type_map.get(self.material_type)
+        specimen_type.coding[0].code = self.material_type
         specimen_type.coding[0].system = "https://fhir.bbmri.de/CodeSystem/SampleMaterialType"
         return specimen_type
 
@@ -189,7 +193,7 @@ class Sample(SampleInterface):
         return self.identifier == other.identifier and self.donor_id == other.donor_id and \
             self.material_type == other.material_type and self.__compare_diagnoses(other.diagnoses) and \
             self.sample_collection_id == other.sample_collection_id and \
-            self.collected_datetime == other.collected_datetime and \
+            self.collected_datetime.date() == other.collected_datetime.date() and \
             self.storage_temperature == other.storage_temperature
 
     def __compare_diagnoses(self, other_diagnoses: list[str]) -> bool:

@@ -10,26 +10,34 @@ from persistence.sample_donor_csv_repository import SampleDonorCsvRepository
 from persistence.sample_donor_repository import SampleDonorRepository
 from persistence.sample_repository import SampleRepository
 from util.config import RECORDS_DIR_PATH, CSV_SEPARATOR, PARSING_MAP, SAMPLE_COLLECTIONS_PATH, TYPE_TO_COLLECTION_MAP, \
-    STORAGE_TEMP_MAP, MATERIAL_TYPE_MAP_PATH, MATERIAL_TYPE_MAP, BIOBANK_PATH
+    STORAGE_TEMP_MAP, MATERIAL_TYPE_MAP_PATH, MATERIAL_TYPE_MAP, BIOBANK_PATH, MIABIS_MATERIAL_TYPE_MAP, \
+    MIABIS_STORAGE_TEMP_MAP
 
 
 class CSVRepositoryFactory(RepositoryFactory):
     """This class instantiates repositories that work with csv files"""
+
     def create_condition_repository(self, miabis_on_fhir_model: bool = False) -> ConditionRepository:
         return ConditionCsvRepository(records_path=RECORDS_DIR_PATH,
                                       separator=CSV_SEPARATOR,
                                       condition_parsing_map=PARSING_MAP['condition_map'])
 
     def create_sample_collection_repository(self, miabis_on_fhir_model: bool = False) -> SampleCollectionRepository:
-        return SampleCollectionJSONRepository(SAMPLE_COLLECTIONS_PATH,miabis_on_fhir_model)
+        return SampleCollectionJSONRepository(SAMPLE_COLLECTIONS_PATH, miabis_on_fhir_model)
 
     def create_sample_repository(self, miabis_on_fhir_model: bool = False) -> SampleRepository:
+        if miabis_on_fhir_model:
+            material_type_map = MIABIS_MATERIAL_TYPE_MAP
+            storage_temp_map = MIABIS_STORAGE_TEMP_MAP
+        else:
+            material_type_map = MATERIAL_TYPE_MAP
+            storage_temp_map = STORAGE_TEMP_MAP
         return SampleCsvRepository(records_path=RECORDS_DIR_PATH,
                                    sample_parsing_map=PARSING_MAP['sample_map'],
                                    separator=CSV_SEPARATOR,
                                    type_to_collection_map=TYPE_TO_COLLECTION_MAP,
-                                   storage_temp_map=STORAGE_TEMP_MAP,
-                                   material_type_map=MATERIAL_TYPE_MAP,
+                                   storage_temp_map=storage_temp_map,
+                                   material_type_map=material_type_map,
                                    miabis_on_fhir_model=miabis_on_fhir_model)
 
     def create_sample_donor_repository(self, miabis_on_fhir_model: bool = False) -> SampleDonorRepository:

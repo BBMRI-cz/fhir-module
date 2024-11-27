@@ -1,9 +1,11 @@
 import datetime
 import unittest
+from typing import cast
 
 import pytest
 from pyfakefs.fake_filesystem_unittest import patchfs
 
+from model.miabis.sample_miabis import SampleMiabis
 from model.sample import Sample
 from model.storage_temperature import StorageTemperature
 from persistence.sample_xml_repository import SampleXMLRepository
@@ -15,6 +17,7 @@ class TestSampleXMLRepository(unittest.TestCase):
              '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
              '<materialType>S</materialType>' \
              '<diagnosis>C509</diagnosis>' \
+             '<diagnosis_date>2007-10-16</diagnosis_date>' \
              '<storage_temperature>temperatureGN</storage_temperature>' \
              '<cutTime>2021-01-01T00:00:00</cutTime>' \
              '</diagnosisMaterial>' \
@@ -112,7 +115,8 @@ class TestSampleXMLRepository(unittest.TestCase):
     @pytest.fixture(autouse=True)
     def run_around_tests(self):
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
-                                                     sample_parsing_map=PARSING_MAP['sample_map'])
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
+                                                     material_type_map={"S": "Urine"})
         yield  # run test
 
     @patchfs
@@ -195,8 +199,8 @@ class TestSampleXMLRepository(unittest.TestCase):
                             .format(sample=self.sample_multiple_diagnoses))
         for sample in self.sample_repository.get_all():
             self.assertEqual(2, len(sample.diagnoses))
-            self.assertEqual("C509", sample.diagnoses[0])
-            self.assertEqual("C508", sample.diagnoses[1])
+            self.assertEqual("C50.9", sample.diagnoses[0])
+            self.assertEqual("C50.8", sample.diagnoses[1])
 
     @patchfs
     def test_multiple_diagnosis_to_fhir_ok(self, fake_fs):
@@ -231,13 +235,14 @@ class TestSampleXMLRepository(unittest.TestCase):
     def test_storage_temperature_not_in_sample(self, fake_fs):
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
                                                      sample_parsing_map=PARSING_MAP['sample_map'],
-                                                     storage_temp_map=STORAGE_TEMP_MAP)
+                                                     storage_temp_map=STORAGE_TEMP_MAP,
+                                                     material_type_map={"S": "Urine"})
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample_no_storage_temperature))
         for sample in self.sample_repository.get_all():
             self.assertIsNone(sample.storage_temperature)
-            self.assertEqual("S", sample.material_type)
-            self.assertEqual("C509", sample.diagnoses[0])
+            self.assertEqual("Urine", sample.material_type)
+            self.assertEqual("C50.9", sample.diagnoses[0])
             self.assertEqual(datetime.datetime(2021, 1, 1, 0, 0), sample.collected_datetime)
 
     @patchfs
@@ -249,7 +254,7 @@ class TestSampleXMLRepository(unittest.TestCase):
                             .format(sample=self.sample_no_diagnosis))
         for sample in self.sample_repository.get_all():
             self.assertEqual(StorageTemperature.TEMPERATURE_GN, sample.storage_temperature)
-            self.assertEqual("S", sample.material_type)
+            self.assertEqual("Urine", sample.material_type)
             self.assertEqual(len(sample.diagnoses), 0)
             self.assertEqual(datetime.datetime(2021, 1, 1, 0, 0), sample.collected_datetime)
 
@@ -263,21 +268,22 @@ class TestSampleXMLRepository(unittest.TestCase):
         for sample in self.sample_repository.get_all():
             self.assertEqual(StorageTemperature.TEMPERATURE_GN, sample.storage_temperature)
             self.assertIsNone(sample.material_type)
-            self.assertEqual("C509", sample.diagnoses[0])
+            self.assertEqual("C50.9", sample.diagnoses[0])
             self.assertEqual(datetime.datetime(2021, 1, 1, 0, 0), sample.collected_datetime)
 
     @patchfs
     def test_no_collection_date(self, fake_fs):
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
                                                      sample_parsing_map=PARSING_MAP['sample_map'],
-                                                     storage_temp_map=STORAGE_TEMP_MAP)
+                                                     storage_temp_map=STORAGE_TEMP_MAP,
+                                                     material_type_map={"S": "Urine"})
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample_no_collection_date))
         for sample in self.sample_repository.get_all():
             self.assertIsNone(sample.collected_datetime)
             self.assertEqual(StorageTemperature.TEMPERATURE_GN, sample.storage_temperature)
-            self.assertEqual("S", sample.material_type)
-            self.assertEqual("C509", sample.diagnoses[0])
+            self.assertEqual("Urine", sample.material_type)
+            self.assertEqual("C50.9", sample.diagnoses[0])
 
     @patchfs
     def test_collection_with_correct_attribute_to_collection(self, fake_fs):
@@ -290,3 +296,20 @@ class TestSampleXMLRepository(unittest.TestCase):
                             .format(sample=self.sample))
         for sample in self.sample_repository.get_all():
             self.assertEqual("test:collection:id", sample.sample_collection_id)
+
+    @patchfs
+    def test_diagnosis_date_miabis_model(self, fake_fs):
+        self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
+                                                     storage_temp_map=STORAGE_TEMP_MAP,
+                                                     material_type_map={"S": "Urine"},
+                                                     miabis_on_fhir_model=True)
+
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
+                            .format(sample=self.sample))
+        for sample in self.sample_repository.get_all():
+            self.assertIsInstance(sample, SampleMiabis)
+            sample = cast(SampleMiabis, sample)
+            observations = sample.observations
+            self.assertEqual(observations[0].diagnosis_observed_datetime,
+                             datetime.datetime(year=2007, month=10, day=16))

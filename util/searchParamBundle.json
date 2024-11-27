@@ -1,0 +1,35 @@
+{
+    "entry": [
+        {
+            "request": {
+                "method": "POST",
+                "url": "SearchParameter"
+            },
+            "resource": {
+                "resourceType": "SearchParameter",
+                "id": "ExtensionMemberEntitySearch",
+                "url": "https://fhir.bbmri-eric.eu/fhir/SearchParameter/GroupMember",
+                "base": [
+                  "Group"
+                ],
+                "target": [
+                  "Specimen",
+                  "Group",
+                  "Organization"
+                ],
+                "chain": [
+                  "*"
+                ],
+                "name": "groupMember",
+                "description": "Search parameter for searching Group by provided members via extension",
+                "status": "active",
+                "code": "groupMember",
+                "type": "reference",
+                "expression": "Group.extension('http://hl7.org/fhir/5.0/StructureDefinition/extension-Group.member.entity').value"
+              }
+              
+        }
+    ],
+    "type": "transaction",
+    "resourceType": "Bundle"
+}

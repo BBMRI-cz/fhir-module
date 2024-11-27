@@ -12,11 +12,14 @@ from model.sample import Sample
 from model.miabis.sample_miabis import SampleMiabis
 from persistence.sample_repository import SampleRepository
 from util.custom_logger import setup_logger
-from util.enums_util import parse_storage_temp_from_code
+from util.enums_util import parse_storage_temp_from_code as module_parse_storage_temp_from_code
+from miabis_model.storage_temperature import parse_storage_temp_from_code as miabis_parse_storage_temp_from_code
 
 from persistence.csv_util import check_sample_map_format
 
 from dateutil import parser as date_parser
+
+from util.sample_util import diagnosis_with_period, extract_all_diagnosis
 
 setup_logger()
 logger = logging.getLogger()
@@ -71,8 +74,6 @@ class SampleCsvRepository(SampleRepository):
                     continue
 
     def __build_sample(self, data: list[str]) -> SampleInterface:
-        # TODO Add diagnosis_observed_datetime field
-        # TODO material type will be mapped to a standardized value here, not in the Sample object
         identifier = data[self._fields_dict[self._sample_parsing_map.get("sample_details").get("id")]]
         donor_id = data[self._fields_dict[self._sample_parsing_map.get("donor_id")]]
         material_type = None
@@ -85,14 +86,20 @@ class SampleCsvRepository(SampleRepository):
                                                 .get("diagnosis"))
         diagnoses = []
         if diagnosis_field is not None:
-            diagnoses = self.__extract_all_diagnosis(data[diagnosis_field])
-
+            diagnoses = extract_all_diagnosis(data[diagnosis_field])
+        if not diagnoses:
+            raise ValueError(f"No correct diagnosis has been found for sample with id {identifier}.")
         storage_temperature = None
         storage_temp_field = self._fields_dict.get(self._sample_parsing_map
                                                    .get("sample_details")
                                                    .get("storage_temperature"))
         if storage_temp_field is not None and self._storage_temp_map is not None:
-            storage_temperature = parse_storage_temp_from_code(self._storage_temp_map, data[storage_temp_field])
+            if self._miabis_on_fhir_model:
+                storage_temperature = miabis_parse_storage_temp_from_code(self._storage_temp_map,
+                                                                          data[storage_temp_field])
+            else:
+                storage_temperature = module_parse_storage_temp_from_code(self._storage_temp_map,
+                                                                          data[storage_temp_field])
 
         collection_datetime = None
         collection_date_field = self._fields_dict.get(self._sample_parsing_map
@@ -101,13 +108,26 @@ class SampleCsvRepository(SampleRepository):
         if collection_date_field is not None:
             try:
                 collection_datetime = date_parser.parse(data[collection_date_field])
-                collection_datetime = collection_datetime.replace(hour=0,minute=0,second=0)
+                collection_datetime = collection_datetime.replace(hour=0, minute=0, second=0)
             except ParserError:
                 raise ParserError(
                     f"Error parsing date for sample with identifier {identifier} "
                     f"while parsing collection datetime with value {data[collection_date_field]}. "
                     f"Please make sure the date is in a valid format.")
-
+        diagnosis_datetime = None
+        diagnosis_datetime_field = self._fields_dict.get(self._sample_parsing_map
+                                                         .get("sample_details")
+                                                         .get("diagnosis_date"))
+        if diagnosis_datetime_field is not None:
+            try:
+                diagnosis_datetime = date_parser.parse(data[diagnosis_datetime_field])
+                diagnosis_datetime = diagnosis_datetime.replace(hour=0, minute=0, second=0)
+            except ParserError:
+                raise ParserError(
+                    f"Error parsing date for sample with identifier {identifier} "
+                    f"while parsing diagnosis datetime with value {data[diagnosis_datetime_field]}. "
+                    f"Please make sure the date is in a valid format."
+                )
         sample_collection_id = None
         if self._type_to_collection_map is not None:
             sample_collection_id = None
@@ -115,13 +135,10 @@ class SampleCsvRepository(SampleRepository):
             if attribute_to_collection in self._fields_dict:
                 sample_collection_id = self._type_to_collection_map.get(
                     data[self._fields_dict[attribute_to_collection]])
-        # TODO Add diagnosis_observed_datetime field
-        # TODO might be problem with storage temperature? each uses different class right now
         if self._miabis_on_fhir_model:
             diagnoses_with_observed_datetime = []
             for diagnosis in diagnoses:
-                # TODO CHANGE COLLECTION DATETIME IS NOT OBSERVED DATETIME
-                diagnoses_with_observed_datetime.append((diagnosis, collection_datetime))
+                diagnoses_with_observed_datetime.append((diagnosis, diagnosis_datetime))
             sample = SampleMiabis(identifier=identifier, donor_id=donor_id,
                                   diagnoses_with_observed_datetime=diagnoses_with_observed_datetime,
                                   material_type=material_type,
@@ -133,9 +150,3 @@ class SampleCsvRepository(SampleRepository):
                             sample_collection_id=sample_collection_id, collected_datetime=collection_datetime,
                             storage_temperature=storage_temperature)
         return sample
-
-    @staticmethod
-    def __extract_all_diagnosis(diagnosis_str: str) -> list[str]:
-        """Extract all diagnosis from a string"""
-        pattern = r'\b[A-Z][0-9]{2}(?:\.)?(?:[0-9]{1,2})?\b'
-        return re.findall(pattern, diagnosis_str)

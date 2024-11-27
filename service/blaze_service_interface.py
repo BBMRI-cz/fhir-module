@@ -12,3 +12,7 @@ class BlazeServiceInterface(abc.ABC):
     def delete_everything(self):
         """delete all records from the blaze service"""
         pass
+
+    def run_scheduler(self):
+        """schedule to run sync periodically"""
+        pass

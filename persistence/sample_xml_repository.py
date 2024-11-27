@@ -1,6 +1,5 @@
 import logging
 import os
-import re
 from typing import Generator
 
 from dateutil.parser import ParserError
@@ -13,8 +12,11 @@ from persistence.sample_repository import SampleRepository
 from persistence.xml_util import parse_xml_file, WrongXMLFormatError
 from util.custom_logger import setup_logger
 
-from util.enums_util import parse_storage_temp_from_code
+from util.enums_util import parse_storage_temp_from_code as module_parse_storage_temp_from_code
+from miabis_model.storage_temperature import parse_storage_temp_from_code as miabis_parse_storage_temp_from_code
 from dateutil import parser as date_parser
+
+from util.sample_util import diagnosis_with_period, extract_all_diagnosis
 
 setup_logger()
 logger = logging.getLogger()
@@ -80,9 +82,11 @@ class SampleXMLRepository(SampleRepository):
         if diagnoses_unparsed is not None:
             if isinstance(diagnoses_unparsed, list):
                 for diagnosis in diagnoses_unparsed:
-                    diagnoses.extend(self.__extract_all_diagnosis(diagnosis))
+                    diagnoses.extend(extract_all_diagnosis(diagnosis))
             else:
-                diagnoses = self.__extract_all_diagnosis(diagnoses_unparsed)
+                diagnoses = extract_all_diagnosis(diagnoses_unparsed)
+        if not diagnoses:
+            raise ValueError(f"No correct diagnosis found for sample with identifier {identifier}.")
         collected_datetime = None
         collection_datetime_string = glom(xml_sample,
                                           self._sample_parsing_map.get("sample_details").get("collection_date"),
@@ -96,6 +100,19 @@ class SampleXMLRepository(SampleRepository):
                     f"Error parsing date {collection_datetime_string} for sample with identifier {identifier}."
                     f" Please make sure the date is in a valid format.")
 
+        diagnosis_datetime = None
+        diagnosis_datetime_string = glom(xml_sample,
+                                         self._sample_parsing_map.get("sample_details").get("diagnosis_date"),
+                                         default=None)
+        if diagnosis_datetime_string is not None:
+            try:
+                diagnosis_datetime = date_parser.parse(diagnosis_datetime_string)
+                diagnosis_datetime = diagnosis_datetime.replace(hour=0, minute=0, second=0)
+            except ParserError:
+                raise ParserError(
+                    f"Error parsing date {diagnosis_datetime_string} for sample with identifier {identifier}."
+                    f" Please make sure the date is in a valid format."
+                )
         sample_collection_id = None
         if self._type_to_collection_map is not None:
             attribute_to_collection = self._sample_parsing_map.get("sample_details").get("collection")
@@ -109,13 +126,15 @@ class SampleXMLRepository(SampleRepository):
                                      self._sample_parsing_map.get("sample_details").get("storage_temperature"),
                                      default=None)
             if storage_temp_code is not None:
-                storage_temperature = parse_storage_temp_from_code(self._storage_temp_map, storage_temp_code)
+                if self._miabis_on_fhir_model:
+                    storage_temperature = miabis_parse_storage_temp_from_code(self._storage_temp_map, storage_temp_code)
+                else:
+                    storage_temperature = module_parse_storage_temp_from_code(self._storage_temp_map, storage_temp_code)
 
         if self._miabis_on_fhir_model:
             diagnoses_with_observed_datetime = []
             for diagnosis in diagnoses:
-                # TODO CHANGE COLLECTION DATETIME IS NOT OBSERVED DATETIME
-                diagnoses_with_observed_datetime.append((diagnosis, collected_datetime))
+                diagnoses_with_observed_datetime.append((diagnosis_with_period(diagnosis), diagnosis_datetime))
             sample = SampleMiabis(identifier=identifier, donor_id=donor_id, material_type=material_type,
                                   sample_collection_id=sample_collection_id,
                                   collected_datetime=collected_datetime, storage_temperature=storage_temperature,
@@ -125,13 +144,6 @@ class SampleXMLRepository(SampleRepository):
                             sample_collection_id=sample_collection_id, collected_datetime=collected_datetime,
                             storage_temperature=storage_temperature)
         return sample
-
-    @staticmethod
-    def __extract_all_diagnosis(diagnosis_str: str) -> list[str]:
-        """Extract all diagnosis from a string"""
-        pattern = r'\b[A-Z][0-9]{2}(?:\.)?(?:[0-9]{1,2})?\b'
-        return re.findall(pattern, diagnosis_str)
-
 
 def flatten_list(nested_list):
     return [item for sublist in nested_list for item in

@@ -5,6 +5,8 @@ from typing import List, Generator
 
 from dateutil.parser import ParserError
 
+from model.gender import Gender as ModuleGender
+from miabis_model import Gender as MiabisGender
 from model.interface.sample_donor_interface import SampleDonorInterface
 from util.enums_util import get_gender_from_abbreviation
 from model.sample_donor import SampleDonor
@@ -62,7 +64,19 @@ class SampleDonorCsvRepository(SampleDonorRepository):
         gender_field = self._fields_dict[self._donor_parsing_map.get("gender")]
         if gender_field is None:
             raise ValueError(f"No gender provided for patient with identifier {identifier}")
-        gender = miabis_get_gender_from_abbreviation(data[gender_field])
+        if len(data[gender_field]) != 1:
+            try:
+                if self._miabis_on_fhir_model:
+                    gender = MiabisGender[data[gender_field].upper()]
+                else:
+                    gender = ModuleGender[data[gender_field].upper()]
+            except (ValueError, KeyError):
+                if self._miabis_on_fhir_model:
+                    gender = MiabisGender.UNKNOWN
+                else:
+                    gender = ModuleGender.UNKNOWN
+        else:
+            gender = miabis_get_gender_from_abbreviation(data[gender_field])
         birth_date_field = self._fields_dict[self._donor_parsing_map.get("birthDate")]
         date_of_birth = None
         if birth_date_field is not None:
@@ -71,7 +85,7 @@ class SampleDonorCsvRepository(SampleDonorRepository):
                 date_of_birth = birth_date
             except ParserError:
                 raise ParserError(f"Error while parsing donor with identifier {identifier}. "
-                                  f"Incorrect parsing date. Please make sure the date is in a valid format.")
+                                  f"Incorrect parsing date {data[birth_date_field]}. Please make sure the date is in a valid format.")
         if self._miabis_on_fhir_model:
             donor = SampleDonorMiabis(identifier=identifier, gender=gender, birth_date=date_of_birth)
         else:

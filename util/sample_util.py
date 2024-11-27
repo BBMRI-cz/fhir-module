@@ -1,3 +1,5 @@
+import re
+
 from model.sample import Sample
 from model.storage_temperature import StorageTemperature
 from dateutil import parser as date_parser
@@ -18,7 +20,8 @@ def build_sample_from_json(sample_json: dict, donor_identifier: str, collection_
     if sample_json.get("type") is not None:
         material_type = sample_json.get("type").get("coding")[0].get("code")
     if sample_json.get("collection") is not None:
-        collected_datetime = date_parser.parse(sample_json.get("collection").get("collectedDateTime")).date()
+        collected_datetime = date_parser.parse(sample_json.get("collection").get("collectedDateTime"))
+        collected_datetime = collected_datetime.replace(hour=0, minute=0, second=0)
     for ext in sample_json.get("extension", []):
         match ext["url"]:
             case "https://fhir.bbmri.de/StructureDefinition/SampleDiagnosis":
@@ -30,3 +33,20 @@ def build_sample_from_json(sample_json: dict, donor_identifier: str, collection_
                     storage_temperature)
     return sample
 
+
+def diagnosis_with_period(diagnosis: str) -> str:
+    """Returns icd-10 code with a period, e.g., C188 to C18.8"""
+    code = diagnosis
+    if len(code) == 4 and "." not in code:
+        return code[:3] + '.' + code[3:]
+    return code
+
+
+def extract_all_diagnosis(diagnosis_str: str) -> list[str]:
+    """Extract all diagnosis from a string"""
+    parsed_diagnoses = []
+    pattern = r'\b[A-Z][0-9]{2}(?:\.)?(?:[0-9]{1,2})?\b'
+    diagnoses = re.findall(pattern, diagnosis_str)
+    for diagnosis in diagnoses:
+        parsed_diagnoses.append(diagnosis_with_period(diagnosis))
+    return parsed_diagnoses

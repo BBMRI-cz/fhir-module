@@ -8,7 +8,7 @@ from service.condition_service import ConditionService
 from service.miabis_blaze_service import MiabisBlazeService
 from service.patient_service import PatientService
 from service.sample_service import SampleService
-from util.config import BLAZE_URL
+from util.config import BLAZE_URL, MIABIS_BLAZE_URL
 from util.custom_logger import setup_logger
 from util.http_util import is_endpoint_available
 from persistence.factories.factory_util import get_repository_factory
@@ -23,7 +23,9 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
     logger.info("Starting FHIR_Module...")
 
-    if is_endpoint_available(endpoint_url=BLAZE_URL, wait_time=10, max_attempts=5):
+    if is_endpoint_available(endpoint_url=BLAZE_URL, wait_time=10, max_attempts=5) and is_endpoint_available(
+             endpoint_url=MIABIS_BLAZE_URL, wait_time=10, max_attempts=5):
+
         validator_factory = get_validator_factory()
         validator = validator_factory.create_validator()
 
@@ -40,7 +42,7 @@ if __name__ == "__main__":
         sample_collection_repository_miabis = repository_factory.create_sample_collection_repository(True)
         biobank_repository = repository_factory.create_biobank_repository()
         miabis_blaze_service = MiabisBlazeService(patient_service=patient_service_miabis,
-                                                  sample_service=sample_service_miabis, blaze_url=BLAZE_URL,
+                                                  sample_service=sample_service_miabis, blaze_url=MIABIS_BLAZE_URL,
                                                   sample_collection_repository=sample_collection_repository_miabis,
                                                   biobank_repository=biobank_repository)
 
@@ -49,10 +51,10 @@ if __name__ == "__main__":
         except (NoFilesProvidedException, NonexistentAttributeParsingMapException, WrongParsingMapException):
             logger.error("Incorrect parsing map and/or file structure. Exiting FHIR_module.")
             sys.exit()
-        # blaze_service.sync()
-        app = create_api(miabis_blaze_service,blaze_service)
-        miabis_blaze_service.sync()
         blaze_service.sync()
+        blaze_service.delete_everything()
+        app = create_api(miabis_blaze_service, blaze_service)
+        miabis_blaze_service.sync()
         scheduler_miabis_thread = threading.Thread(target=miabis_blaze_service.run_scheduler, daemon=True)
         scheduler_thread = threading.Thread(target=blaze_service.run_scheduler, daemon=True)
         scheduler_thread.start()
