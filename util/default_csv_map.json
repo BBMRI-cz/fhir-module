@@ -11,12 +11,14 @@
       "diagnosis": "diagnosis",
       "storage_temperature": "storage_temperature",
       "collection_date": "sampling_date",
+      "diagnosis_date": "diagnosis_date",
       "collection": "diagnosis"
     },
     "donor_id": "patient_pseudonym"
   },
   "condition_map": {
     "icd-10_code": "diagnosis",
-    "patient_id": "patient_pseudonym"
+    "patient_id": "patient_pseudonym",
+    "diagnosis_date": "diagnosis_date"
   }
 }

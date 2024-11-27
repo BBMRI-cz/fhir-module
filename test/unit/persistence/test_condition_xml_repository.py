@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime
 
 import pytest
 from pyfakefs.fake_filesystem_unittest import patchfs
@@ -11,7 +12,8 @@ from util.config import PARSING_MAP
 class TestConditionXMLRepository(unittest.TestCase):
     sample = '<STS>' \
              '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
-             '<diagnosis>C509</diagnosis>' \
+             '<diagnosis>C509</diagnosis>'\
+             '<diagnosis_date>2007-10-16</diagnosis_date>'\
              '</diagnosisMaterial>' \
              '</STS>'
 
@@ -47,6 +49,7 @@ class TestConditionXMLRepository(unittest.TestCase):
         for condition in self.condition_repository.get_all():
             self.assertIsInstance(condition, Condition)
             self.assertEqual("C50.9", condition.icd_10_code)
+            self.assertEqual(datetime(year=2007, month=10, day=16), condition.diagnosis_datetime)
 
     @patchfs
     def test_get_all_from_one_file_with_two_conditions(self, fake_fs):

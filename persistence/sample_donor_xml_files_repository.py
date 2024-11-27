@@ -15,6 +15,8 @@ from persistence.xml_util import parse_xml_file, WrongXMLFormatError
 from util.custom_logger import setup_logger
 from dateutil import parser as date_parser
 
+from util.enums_util import get_gender_from_abbreviation
+
 setup_logger()
 logger = logging.getLogger()
 
@@ -57,8 +59,14 @@ class SampleDonorXMLFilesRepository(SampleDonorRepository):
     def __build_donor(self, data: OrderedDict[str, Any]) -> SampleDonorInterface:
         """Build sample donor object based on MIABIS on FHIR specification"""
         identifier = glom(data, self._donor_parsing_map.get("id"))
-        # TODO what if gender if just an abbrevation?
-        gender = Gender[(glom(data, self._donor_parsing_map.get("gender"))).upper()]
+        gender_string = (glom(data, self._donor_parsing_map.get("gender"))).upper()
+        if len(gender_string) != 1:
+            try:
+                gender = Gender[gender_string]
+            except ValueError:
+                gender = Gender.UNKNOWN
+        else:
+            gender = get_gender_from_abbreviation(gender_string)
         birth_date = glom(data, self._donor_parsing_map.get("birthDate"), default=None)
         if birth_date is not None:
             try:

@@ -1,5 +1,6 @@
 import datetime
 import unittest
+from typing import cast
 
 import pytest
 from pyfakefs.fake_filesystem_unittest import patchfs
@@ -12,7 +13,7 @@ from util.config import PARSING_MAP_CSV, STORAGE_TEMP_MAP, MATERIAL_TYPE_MAP
 
 
 class TestSampleCsvRepository(unittest.TestCase):
-    header = "sample_ID;patient_pseudonym;sex;birth_year;date_of_diagnosis;diagnosis;donor_age;sampling_date;sampling_type;storage_temperature;available_number_of_samples \n"
+    header = "sample_ID;patient_pseudonym;sex;birth_year;diagnosis_date;diagnosis;donor_age;sampling_date;sampling_type;storage_temperature;available_number_of_samples \n"
 
     missing_storage_temperature_field_header = "sample_ID;patient_pseudonym;sex;birth_year;date_of_diagnosis;diagnosis;donor_age;sampling_date;sampling_type;available_number_of_samples \n"
 
@@ -128,8 +129,7 @@ class TestSampleCsvRepository(unittest.TestCase):
     @patchfs
     def test_get_all_with_wrong_diagnosis_skips(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.wrong_diagnosis)
-        sample = next(self.sample_repository.get_all())
-        self.assertTrue(len(sample.diagnoses) == 0)
+        self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))
 
     @patchfs
     def test_get_all_three_samples_not_none_diagnosis(self, fake_fs):
@@ -225,7 +225,7 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual("33", sample.identifier)
             self.assertEqual(None, sample.storage_temperature)
             self.assertEqual("serum", sample.material_type)
-            self.assertEqual("M058", sample.diagnoses[0])
+            self.assertEqual("M05.8", sample.diagnoses[0])
             self.assertEqual(datetime.datetime(2100, 1, 16), sample.collected_datetime)
 
     @patchfs
@@ -241,7 +241,7 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual("33", sample.identifier)
             self.assertEqual(StorageTemperature.TEMPERATURE_LN, sample.storage_temperature)
             self.assertEqual(None, sample.material_type)
-            self.assertEqual("M058", sample.diagnoses[0])
+            self.assertEqual("M05.8", sample.diagnoses[0])
             self.assertEqual(datetime.datetime(2100, 1, 16), sample.collected_datetime)
 
     @patchfs
@@ -275,7 +275,7 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual("33", sample.identifier)
             self.assertEqual(StorageTemperature.TEMPERATURE_LN, sample.storage_temperature)
             self.assertEqual("serum", sample.material_type)
-            self.assertEqual("M058", sample.diagnoses[0])
+            self.assertEqual("M05.8", sample.diagnoses[0])
             self.assertEqual(None, sample.collected_datetime)
 
     @patchfs
@@ -289,6 +289,33 @@ class TestSampleCsvRepository(unittest.TestCase):
                             contents=self.header
                                      + self.sample_multiple_diagnosis)
         for sample in self.sample_repository.get_all():
+            self.assertEqual("33", sample.identifier)
+            self.assertEqual(StorageTemperature.TEMPERATURE_LN, sample.storage_temperature)
+            self.assertEqual("serum", sample.material_type)
+            self.assertEqual("M058", sample.diagnoses[0])
+            self.assertEqual("C51", sample.diagnoses[1])
+            self.assertEqual("E080", sample.diagnoses[2])
+            self.assertEqual(datetime.datetime(2100, 1, 16), sample.collected_datetime)
+
+    @patchfs
+    def test_diagnosis_observed_miabis_repo(self, fake_fs):
+        self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
+                                                     separator=";",
+                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     storage_temp_map=STORAGE_TEMP_MAP,
+                                                     material_type_map={"serum": "serum"},
+                                                     miabis_on_fhir_model=True)
+
+        fake_fs.create_file(self.dir_path + "mock_file.csv",
+                            contents=self.header
+                                     + self.sample_multiple_diagnosis)
+
+        for sample in self.sample_repository.get_all():
+            self.assertIsInstance(sample, SampleMiabis)
+            sample = cast(SampleMiabis, sample)
+            observations = sample._observations
+            self.assertEqual(observations[0].diagnosis_observed_datetime,
+                             datetime.datetime(year=2007, month=10, day=16))
             self.assertEqual("33", sample.identifier)
             self.assertEqual(StorageTemperature.TEMPERATURE_LN, sample.storage_temperature)
             self.assertEqual("serum", sample.material_type)

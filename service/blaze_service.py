@@ -5,7 +5,7 @@ from typing import cast
 import requests
 import schedule
 from requests.adapters import HTTPAdapter, Retry
-from fhirclient.models.bundle import Bundle
+from fhirclient.models.bundle import Bundle, BundleEntry, BundleEntryRequest
 from glom import glom, Iter, T, Coalesce
 
 from exception.patient_not_found import PatientNotFoundError
@@ -56,13 +56,9 @@ class BlazeService:
         """Starts the sync between the repositories and the Blaze store."""
         logger.info("Starting sync with Blaze 🔥!")
         self.upload_sample_collections()
-        self.initial_upload_of_all_patients()
+        self.sync_patients()
         self.sync_conditions()
         self.sync_samples()
-        # self.__initialize_scheduler()
-        # while True:
-        #     schedule.run_pending()
-        #     time.sleep(1)
 
     def __initialize_scheduler(self):
         logger.info("Initializing scheduler...")
@@ -149,6 +145,7 @@ class BlazeService:
                 continue
             if not patient_has_condition:
                 self.__upload_condition(condition)
+        logger.info("Upload of conditions ended.")
         logger.debug(
             f"Successfully uploaded {self.get_number_of_resources('Condition') - num_of_conditions_before_upload}"
             f" new conditions.")
@@ -205,11 +202,13 @@ class BlazeService:
                              f"Checking if the sample is up to date.")
                 old_sample = self.__build_existing_sample(sample)
                 if sample == old_sample:
+                    logger.info(f"Sample is up to date. Skipping....")
                     continue
                 else:
                     old_sample_id = self.__get_fhir_sample_id(sample.identifier)
                     sample.update_diagnoses(old_sample.diagnoses)
                     self.__update_sample(sample, old_sample_id)
+        logger.info("Upload of samples ended.")
 
     def __upload_sample(self, sample: Sample):
         custodian_fhir_id: str = None
@@ -217,9 +216,9 @@ class BlazeService:
                 self.is_resource_present_in_blaze("Organization", sample.sample_collection_id)):
             custodian_fhir_id = self.__get_organization_fhir_id(sample.sample_collection_id)
         response = self._session.post(url=self._blaze_url + "/Specimen",
-                                      json=sample.to_fhir(material_type_map=MATERIAL_TYPE_MAP,
-                                                          subject_id=self.__get_fhir_id_of_donor(sample.donor_id),
-                                                          custodian_id=custodian_fhir_id)
+                                      json=sample.to_fhir(
+                                          subject_id=self.__get_fhir_id_of_donor(sample.donor_id),
+                                          custodian_id=custodian_fhir_id)
                                       .as_json(),
                                       verify=False
                                       )
@@ -236,9 +235,9 @@ class BlazeService:
         if (updated_sample.sample_collection_id is not None and
                 self.is_resource_present_in_blaze("Organization", updated_sample.sample_collection_id)):
             custodian_fhir_id = self.__get_organization_fhir_id(updated_sample.sample_collection_id)
-        updated_sample_fhir = updated_sample.to_fhir(material_type_map=MATERIAL_TYPE_MAP,
-                                                     subject_id=self.__get_fhir_id_of_donor(updated_sample.donor_id),
-                                                     custodian_id=custodian_fhir_id).as_json()
+        updated_sample_fhir = updated_sample.to_fhir(
+            subject_id=self.__get_fhir_id_of_donor(updated_sample.donor_id),
+            custodian_id=custodian_fhir_id).as_json()
         updated_sample_fhir["id"] = sample_fhir_id
         response = self._session.put(url=self._blaze_url + f"/Specimen/{sample_fhir_id}",
                                      json=updated_sample_fhir,
@@ -305,21 +304,50 @@ class BlazeService:
             return 404
         for url in list_of_full_urls:
             logger.info("Deleting " + url)
+            resource_type, fhir_id = url.split("/")[-2:]
             if resource_type.capitalize() == "Patient":
                 patient_reference = url[url.find("Patient/"):]
                 logger.info(f"In order to delete Patient successfully, "
                             f"all resources which reference this patient needs to be deleted as well.")
                 self.delete_fhir_resource("Condition", patient_reference, "reference")
                 self.delete_fhir_resource("Specimen", patient_reference, "reference")
-            deleted_resource = self._session.get(url=url).json()
+            deleted_resource = self._session.get(url=f"{self._blaze_url}/{resource_type}/{fhir_id}").json()
             logger.debug(f"{deleted_resource}")
-            delete_response = self._session.delete(url=url)
+            delete_response = self._session.delete(url=f"{self._blaze_url}/{resource_type}/{fhir_id}")
             if delete_response.status_code != 204:
                 reason_index = delete_response.text.find("diagnostics")
                 if reason_index != -1:
                     logger.debug(f"could not delete. Reason: {delete_response.text[reason_index:]}")
             logger.debug(f"response status: {delete_response.status_code}")
             return delete_response.status_code
+
+    def delete_donor(self, donor_fhir_id: str) -> list[BundleEntry] | bool:
+        """deletes donor along with his Conditions and Samples"""
+        entries = []
+
+        if not self.is_resource_present_based_by_fhir_id("Patient", donor_fhir_id):
+            logger.info(f"Donor with FHIR id {donor_fhir_id} is not present in the blaze store.")
+        donor_entry = self.__create_delete_bundle_entry("Patient", donor_fhir_id)
+        entries.append(donor_entry)
+        conditions_response = self._session.get(url=self._blaze_url + f"/Condition"
+                                                                      f"?subject=Patient/{donor_fhir_id}",
+                                                verify=False)
+        samples_response = self._session.get(url=self._blaze_url + f"/Specimen"
+                                                                   f"?subject=Patient/{donor_fhir_id}",
+                                             verify=False)
+        for condition_json in conditions_response.json().get("entry", []):
+            condition_resource = condition_json.get("resource", {})
+            condition_fhir_id = condition_resource.get("id", None)
+            if condition_fhir_id is not None:
+                entries.append(self.__create_delete_bundle_entry("Condition", condition_fhir_id))
+        for sample_json in samples_response.json().get("entry", []):
+            sample_resource = sample_json.get("resource", {})
+            sample_fhir_id = sample_resource.get("id", None)
+            if sample_fhir_id is not None:
+                entries.append(self.__create_delete_bundle_entry("Specimen", sample_fhir_id))
+        bundle = self.__create_bundle(entries)
+        response = self._session.post(f"{self._blaze_url}", json=bundle.as_json())
+        return response.status_code == 200 or response.status_code == 204
 
     def delete_everything(self) -> bool:
         """Delete all Patient,Sample, and Condition resources from the blaze."""
@@ -328,23 +356,27 @@ class BlazeService:
             response_json = response.json()
             for entry in response_json.get("entry", []):
                 resource = entry.get("resource", {})
+                patient_fhir_id = resource.get("id", None)
                 patient_identifier = resource.get("identifier", [{}])[0].get("value", None)
                 if patient_identifier is not None:
-                    deleted = self.delete_fhir_resource("Patient", patient_identifier)
+                    logger.info(
+                        f"Deleting patient with id {patient_identifier}, along with his Condition and Specimen resources.")
+                    deleted = self.delete_donor(patient_fhir_id)
                     if not deleted:
                         logger.error(
                             f"Could not delete patient with organization identifier {patient_identifier}. Skipping....")
-                links = response_json.get("link", [])
-                link_relations = [link.get("relation") for link in links]
-                if "next" not in link_relations:
-                    break
-                next_index = link_relations.index("next")
-                url = links[next_index].get("url")
-                url_after_fhir = url.find("/fhir")
-                if url_after_fhir == -1:
-                    break
-                next_link = self._blaze_url + url[url_after_fhir + len("/fhir"):]
-                response = self._session.get(url=next_link)
+            links = response_json.get("link", [])
+            link_relations = [link.get("relation") for link in links]
+            if "next" not in link_relations:
+                break
+            next_index = link_relations.index("next")
+            url = links[next_index].get("url")
+            url_after_fhir = url.find("/fhir")
+            if url_after_fhir == -1:
+                break
+            next_link = self._blaze_url + url[url_after_fhir + len("/fhir"):]
+            response = self._session.get(url=next_link)
+        logger.info("Delete successful")
         return True
 
     def is_resource_present_in_blaze(self, resource_type: str, identifier: str) -> bool:
@@ -353,7 +385,7 @@ class BlazeService:
         :param resource_type: FHIR resource type.
         :param identifier: Identifier belonging to the resource.
         It is not the FHIR resource ID!
-        :return:
+        :return: bool
         """
         try:
             count = (self._session.get(
@@ -366,11 +398,25 @@ class BlazeService:
         except TypeError:
             return False
 
+    def is_resource_present_based_by_fhir_id(self, resource_type: str, fhir_identifier: str) -> bool:
+        """
+        Checks if a resource of specific type with a specific FHIR identifier is present in the Blaze store.
+        :param resource_type: FHIR resource type.
+        :param fhir_identifier: Identifier belonging to the resource.
+        It is not the FHIR resource ID!
+        :return: bool
+        """
+        response = self._session.get(f"{self._blaze_url}/{resource_type}/{fhir_identifier}")
+        if response.status_code == 200:
+            return True
+        return False
+
     def upload_sample_collections(self):
         """Uploads SampleCollections as FHIR organizations."""
         for sample_collection in self._sample_collection_repository.get_all():
-            if not isinstance(sample_collection,SampleCollection):
-                logger.error(f"Sample collection is not type of SampleColletion, but rather {type(sample_collection)} Skipping... ")
+            if not isinstance(sample_collection, SampleCollection):
+                logger.error(
+                    f"Sample collection is not type of SampleColletion, but rather {type(sample_collection)} Skipping... ")
                 continue
             if not self.is_resource_present_in_blaze(resource_type="Organization",
                                                      identifier=sample_collection.identifier):
@@ -454,3 +500,19 @@ class BlazeService:
         """Flatten a nested list."""
         return [item for sublist in nested_list for item in
                 (self.__flatten_list(sublist) if isinstance(sublist, list) else [sublist])]
+
+    @staticmethod
+    def __create_delete_bundle_entry(resource_type: str, resource_fhir_id: str) -> BundleEntry:
+        entry = BundleEntry()
+        entry.request = BundleEntryRequest()
+        entry.request.method = "DELETE"
+        entry.request.url = f"{resource_type}/{resource_fhir_id}"
+        return entry
+
+    @staticmethod
+    def __create_bundle(entries: list[BundleEntry]) -> Bundle:
+        """Create a bundle used for deleting multiple FHIR resources in a transaction"""
+        bundle = Bundle()
+        bundle.type = "transaction"
+        bundle.entry = entries
+        return bundle

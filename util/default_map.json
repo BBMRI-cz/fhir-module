@@ -10,6 +10,7 @@
       "id": "@sampleId",
       "material_type": "materialType",
       "diagnosis": "diagnosis",
+      "diagnosis_date": "diagnosis_date",
       "storage_temperature": "storage_temperature",
       "collection_date": "cutTime",
       "collection": "materialType"
@@ -18,6 +19,7 @@
   },
   "condition_map": {
     "icd-10_code": "**.diagnosis",
+    "diagnosis_date": "**.diagnosis_date",
     "patient_id": "patient.@id"
   }
 }

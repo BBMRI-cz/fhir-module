@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime
 
 import fhirclient.models.condition
 
@@ -19,6 +20,11 @@ class TestCondition(unittest.TestCase):
         with self.assertRaises(TypeError):
             Condition("rand_string", "patient-ID")
 
+    def test_diagnosis_datetime(self):
+        condition = Condition("C18.8", "patient-ID", datetime(year=2007, month=10, day=16))
+        self.assertIsInstance(condition, Condition)
+        self.assertEqual(datetime(year=2007, month=10, day=16), condition.diagnosis_datetime)
+
     def test_get_icd_10_code(self):
         condition = Condition("C18.8", "patient-ID")
         self.assertEqual("C18.8", condition.icd_10_code)
@@ -38,3 +44,8 @@ class TestCondition(unittest.TestCase):
         self.assertEqual("C18.8", condition.to_fhir("fake_fhir_id").code.coding[0].code)
         condition = Condition("A18", "patient-ID")
         self.assertEqual("A18", condition.to_fhir("fake_fhir_id").code.coding[0].code)
+
+    def test_to_fhir_diagnosis_datetime(self):
+        condition = Condition("C18.8", "patient-ID", datetime(year=2007, month=10, day=16))
+        condition_fhir = condition.to_fhir("fake_fhir_id")
+        self.assertEqual("2007-10-16", condition_fhir.onsetDateTime.date.isoformat())
