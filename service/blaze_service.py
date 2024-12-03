@@ -62,10 +62,7 @@ class BlazeService:
 
     def __initialize_scheduler(self):
         logger.info("Initializing scheduler...")
-        schedule.every().week.do(self.upload_sample_collections)
-        schedule.every().week.do(self.sync_patients)
-        schedule.every().week.do(self.sync_conditions)
-        schedule.every().week.do(self.sync_samples)
+        schedule.every().week.do(self.sync)
         logger.info("Scheduler initialized.")
 
     def run_scheduler(self):
