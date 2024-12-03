@@ -31,7 +31,7 @@ class SampleDonorXMLFilesRepository(SampleDonorRepository):
         self._miabis_on_fhir_model = miabis_on_fhir_model
         logger.debug(f"Loaded the following donor parsing map {donor_parsing_map}")
 
-    def get_all(self) -> Generator[SampleDonorInterface,None,None]:
+    def get_all(self) -> Generator[SampleDonorInterface, None, None]:
         dir_entry: os.DirEntry
         for dir_entry in os.scandir(self._dir_path):
             if dir_entry.name.lower().endswith(".xml"):
@@ -48,9 +48,7 @@ class SampleDonorXMLFilesRepository(SampleDonorRepository):
         except WrongXMLFormatError:
             logger.warning(f"Wrong format of xml file, please make sure the file {dir_entry} is correct")
             return
-        except TypeError as err:
-            logger.warning(err)
-        except ValueError as err:
+        except (ValueError, TypeError, KeyError) as err:
             logger.warning(err)
         if donor is not None and donor.identifier not in self._ids:
             self._ids.add(donor.identifier)

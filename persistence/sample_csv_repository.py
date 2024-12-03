@@ -63,13 +63,7 @@ class SampleCsvRepository(SampleRepository):
                 try:
                     sample = self.__build_sample(row)
                     yield sample
-                except ParserError as err:
-                    logger.warning(f"{err}. Skipping .....")
-                    continue
-                except TypeError as err:
-                    logger.info(f"{err} Skipping....")
-                    continue
-                except ValueError as err:
+                except (ValueError, TypeError, KeyError, ParserError) as err:
                     logger.info(f"{err} Skipping....")
                     continue
 

@@ -58,6 +58,9 @@ class SampleDonorCsvRepository(SampleDonorRepository):
                 except TypeError as err:
                     logger.info(f"{err} Skipping...")
                     continue
+                except KeyError as err:
+                    logger.info(f"{err} Skipping...")
+                    continue
 
     def __build_donor(self, data: list[str]) -> SampleDonorInterface:
         identifier = data[self._fields_dict[self._donor_parsing_map.get("id")]]
