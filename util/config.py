@@ -33,8 +33,14 @@ MIABIS_STORAGE_TEMP_MAP_PATH = os.getenv("MIABIS_STORAGE_TEMP_MAP_PATH",
                                          os.path.join(ROOT_DIR, 'default_miabis_storage_temp_map.json'))
 CSV_SEPARATOR = os.getenv("CSV_SEPARATOR", ";")
 RECORDS_FILE_TYPE = os.getenv("RECORDS_FILE_TYPE", "xml")
+NEW_FILE_PERIOD_DAYS = os.getenv("NEW_FILE_PERIOD_DAYS", 30)
 BLAZE_AUTH: tuple = (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))
 MIABIS_BLAZE_AUTH: tuple = (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))
+
+SMTP_HOST = os.getenv("SMTP_HOST", "localhost")
+SMTP_PORT = os.getenv("SMTP_PORT", 1025)
+
+EMAIL_RECEIVER = os.getenv("EMAIL_RECEIVER","test@example.com")
 with open(PARSING_MAP_PATH) as json_file:
     try:
         PARSING_MAP = json.load(json_file)
