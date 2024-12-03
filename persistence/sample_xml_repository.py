@@ -52,7 +52,7 @@ class SampleXMLRepository(SampleRepository):
             except ParserError as err:
                 logger.warning(f"{err}. Skipping.....")
                 continue
-            except (TypeError, ValueError) as err:
+            except (TypeError, ValueError, KeyError) as err:
                 logger.warning(f"{err}. Skipping")
                 continue
             except (WrongXMLFormatError, PathAccessError, TypeError):
