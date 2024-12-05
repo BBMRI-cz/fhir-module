@@ -193,7 +193,7 @@ class Sample(SampleInterface):
         return self.identifier == other.identifier and self.donor_id == other.donor_id and \
             self.material_type == other.material_type and self.__compare_diagnoses(other.diagnoses) and \
             self.sample_collection_id == other.sample_collection_id and \
-            self.collected_datetime.date() == other.collected_datetime.date() and \
+            self.collected_datetime == other.collected_datetime and \
             self.storage_temperature == other.storage_temperature
 
     def __compare_diagnoses(self, other_diagnoses: list[str]) -> bool:
