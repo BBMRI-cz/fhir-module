@@ -40,7 +40,7 @@ MIABIS_BLAZE_AUTH: tuple = (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS",
 SMTP_HOST = os.getenv("SMTP_HOST", "localhost")
 SMTP_PORT = os.getenv("SMTP_PORT", 1025)
 
-EMAIL_RECEIVER = os.getenv("EMAIL_RECEIVER","test@example.com")
+EMAIL_RECEIVER = os.getenv("EMAIL_RECEIVER", "test@example.com")
 with open(PARSING_MAP_PATH) as json_file:
     try:
         PARSING_MAP = json.load(json_file)
