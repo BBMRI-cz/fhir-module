@@ -1,4 +1,4 @@
-sample_ID;patient_pseudonym;sex;birth_year;date_of_diagnosis;diagnosis;donor_age;sampling_date;sampling_type;storage_temperature;available_number_of_samples
-1;1111;f;1999;16.10.2027;M33,M0580;25;16.10.2017;blood-serum;-20;0
-2;2222;f;2000;16.10.2028;M08,M0580;24;30.10.2018;whole-blood;-20;0
-3;3333;f;1988;22.10.2029;M05;36;22.10.2019;tissue-other;-20;1
+sample_ID;patient_pseudonym;sex;birth_year;date_of_diagnosis;diagnosis;donor_age;sampling_date;sampling_type;storage_temperature
+1;1111;f;1999;16.10.2027;M33,M058;25;16.10.2017;blood-serum;-20
+2;2222;f;2000;16.10.2028;M08,M058;24;30.10.2018;whole-blood;-20
+3;3333;f;1988;22.10.2029;M05;36;22.10.2019;tissue-other;-20
