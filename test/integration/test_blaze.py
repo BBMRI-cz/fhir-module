@@ -50,7 +50,7 @@ class ConditionRepoStub(ConditionRepository):
 
 
 class SampleRepoStub(SampleRepository):
-    samples = [Sample(identifier="fakeId", donor_id="newId", diagnoses=["C504"], material_type="1",
+    samples = [Sample(identifier="fakeId", donor_id="newId", diagnoses=["C50.4"], material_type="1",
                         sample_collection_id="test:collection:1",
                       collected_datetime=datetime.datetime(year=2020, month=2, day=2),storage_temperature=StorageTemperature.TEMPERATURE_GN),
                Sample(identifier="fakeId2", donor_id="fakeId", material_type="2")]
@@ -205,6 +205,7 @@ class TestBlazeStore(unittest.TestCase):
         self.assertEqual(2, self.blaze_service.get_number_of_resources("Specimen"))
 
     def test_sync_same_samples_twice_no_duplicates(self):
+        self.blaze_service.upload_sample_collections()
         self.blaze_service.sync_patients()
         self.blaze_service.sync_samples()
         self.assertEqual(2, self.blaze_service.get_number_of_resources("Specimen"))
