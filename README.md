@@ -9,17 +9,60 @@ to other IT tools and services in our ecosystem on a local level.
 The goal of this project is to create a highly customizable data integration tool for biobanks that are a
 part of BBMRI-ERIC. This tool should support ETL processes by providing the following functionality:
 
-- Data harmonization to [HL7 FHIR](https://www.hl7.org/fhir/) (under development)
-- Data quality validation (coming soon)
+- Data harmonization to [HL7 FHIR](https://www.hl7.org/fhir/)
+    - HARMONIZATION for [BBMRI.de](https://simplifier.net/bbmri.de) profile - currently used by BBMRI-ERIC Locator
+    - HARMONIZATION for [MIABIS on FHIR](https://simplifier.net/miabis) profile - FHIR profile representing latest MIABIS version (MIABIS Core 3.0 + Individual-level sample components)
+- Data quality validation - validates the provided files and mappings - see [Deployment](docs/DEPLOYMENT.md)
 - Reporting and monitoring (coming soon)
 
 ## State
 
-Supports syncing of patients between a [Blaze FHIR store](https://github.com/samply/blaze) and a repository of XML or CSV files
+Supports syncing of patients and their samples between a [Blaze FHIR store](https://github.com/samply/blaze) and a repository of XML or CSV files
 stored on a regular filesystem.
+This application Transforms data into the two FHIR profiles, BBMRI.de and MIABIS on FHIR, as mentioned above.
+Each representation is stored in an independent Blaze FHIR store. MIABIS on FHIR representation serves as a pilot use-case of the newly created profile.
+
 Currently, the XML files must have the same structure as this [test file](./test/xml_data/MMCI_1.xml).
 This module cannot work with different types of files at the same time, so the records needs to be in either XML or CSV format, not both.
 
+### Contents of provided record file(s)
+In order to successfully transform data about patients and samples, the users need to provide this data:
+- patient_data:
+  - (pseudo)-anonymized ID of a donor
+  - donor_birthdate
+  - gender
+- sample_data:
+  - (pseudo)-anonymized ID of the sample
+  - material type 
+  - - diagnosis_datetime - date that the diagnosis was first observed (optional but recommended for better findability in Locator)
+  - storage temperature - (optional but recommended for better findability in Locator)
+  - ICD10 diagnosis code
+  - new (or already provided) attribute, which specifies to which collection this sample belongs to
+
+### Workflow
+At the start, the FHIR module syncs the provided records - Transforms the provided records into BBMRI.de and MIABIS on FHIR representations and uploads them to the Blaze FHIR store respectively.
+
+The FHIR module periodically - every week - syncs the Blaze store with the records currently present. Only new patients/samples are uploaded.
+
+Additionally, after initial upload, users can manually start the sync of BBMRI.de or MIABIS on FHIR profile representation using the commands:
+```shell
+docker exec fhir-module curl -X POST http://127.0.0.1:5000/sync
+```
+for syncing the BBMRI.de representation.
+```shell
+docker exec fhir-module curl -X POST http://127.0.0.1:5000/miabis-sync
+```
+for syncing the MIABIS on FHIR representation.
+
+Users can also delete all of the records currently present in the FHIR store, again either BBMRI.de or MIABIS on FHIR representation using the commands:
+```shell
+docker exec fhir-module curl -X POST http://127.0.0.1:5000/delete
+```
+for deleting data representing the BBMRI.de.
+```shell
+docker exec fhir-module curl -X POST http://127.0.0.1:5000/miabis-delete
+```
+for deleting data representing the MIABIS on FHIR.
 ## Quick Start
 
 ### Docker
