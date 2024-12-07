@@ -172,7 +172,7 @@ class BlazeService:
         except IndexError:
             raise PatientNotFoundError
         search_url = f"{self._blaze_url}/Condition?patient={patient_fhir_id}" \
-                     f"&code=http://hl7.org/fhir/sid/icd-10|{icd_10_code}"
+                     f"&code={icd_10_code}"
         return self._session.get(search_url, verify=False).json().get("total") > 0
 
     def sync_samples(self):
