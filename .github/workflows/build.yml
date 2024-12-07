@@ -141,7 +141,10 @@ jobs:
         run: .github/scripts/wait-for-url.sh  http://localhost:5432/health
 
       - name: Docker Logs
-        run: docker logs blaze
+        run: docker logs test-blaze
+
+      - name: Docker Logs
+        run: docker logs miabis-blaze
 
       - name: Docker Logs
         run: sleep 20 && docker logs fhir-module
@@ -186,7 +189,10 @@ jobs:
         run: .github/scripts/wait-for-url.sh  http://localhost:5432/health
 
       - name: Docker Logs
-        run: docker logs blaze
+        run: docker logs test-blaze
+
+      - name: Docker Logs
+        run: docker logs miabis-blaze
 
       - name: Docker Logs
         run: sleep 20 && docker logs fhir-module
