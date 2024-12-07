@@ -13,9 +13,28 @@
     "dataset_type": "Other",
     "sample_source": "Human",
     "sample_collection_setting": "Unknown",
-    "collection_design": "Other",
+    "collection_design": ["Other"],
     "use_and_access_conditions": "SpecificResearchUse",
-    "publications": "example",
+    "publications": ["example"],
+    "material_types": ["Other"]
+  },
+    {
+    "identifier": "bbmri-eric:ID:CZ_MMCI:collection:Cells",
+    "managing_biobank_id": "bbmri-eric:ID:CZ_MMCI",
+    "name": "Test Collection",
+    "contact_name": "exampleName",
+    "contact_surname": "exampleSurname",
+    "contact_email": "exampleEmail",
+    "country": "CZ",
+    "alias": "exampleAlias",
+    "url": "example.com",
+    "description": "exampleDescription",
+    "dataset_type": "Other",
+    "sample_source": "Human",
+    "sample_collection_setting": "Unknown",
+    "collection_design": ["Other"],
+    "use_and_access_conditions": "SpecificResearchUse",
+    "publications": ["example"],
     "material_types": ["Other"]
   }
 ]
