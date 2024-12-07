@@ -5,8 +5,8 @@ from typing import List, OrderedDict, Any, Generator
 
 from dateutil.parser import ParserError
 from glom import glom
-
-from model.gender import Gender
+from miabis_model import Gender as MiabisGender
+from model.gender import Gender as ModuleGender
 from model.interface.sample_donor_interface import SampleDonorInterface
 from model.sample_donor import SampleDonor
 from model.miabis.sample_donor_miabis import SampleDonorMiabis
@@ -60,9 +60,15 @@ class SampleDonorXMLFilesRepository(SampleDonorRepository):
         gender_string = (glom(data, self._donor_parsing_map.get("gender"))).upper()
         if len(gender_string) != 1:
             try:
-                gender = Gender[gender_string]
+                if self._miabis_on_fhir_model:
+                    gender = MiabisGender[gender_string]
+                else:
+                    gender = ModuleGender[gender_string]
             except ValueError:
-                gender = Gender.UNKNOWN
+                if self._miabis_on_fhir_model:
+                    gender = MiabisGender.UNKNOWN
+                else:
+                    gender = ModuleGender.UNKNOWN
         else:
             gender = get_gender_from_abbreviation(gender_string)
         birth_date = glom(data, self._donor_parsing_map.get("birthDate"), default=None)
