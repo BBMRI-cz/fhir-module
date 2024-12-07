@@ -137,15 +137,20 @@ jobs:
       - name: Wait for Blaze
         run: .github/scripts/wait-for-url.sh  http://localhost:8080/health
 
+      - name: Wait for MIABIS Blaze
+        run: .github/scripts/wait-for-url.sh  http://localhost:5432/health
+
       - name: Docker Logs
         run: docker logs blaze
 
       - name: Docker Logs
         run: sleep 20 && docker logs fhir-module
 
-      - name: Verify upload succeeded
-        run: .github/scripts/check-patient-exists.sh
+      - name: Verify upload succeeded for blaze
+        run: .github/scripts/check-patient-exists.sh http://localhost:8080/fhir
 
+      - name: Verify upload succeeded for MIABIS blaze
+        run: .github/scripts/check-patient-exists.sh http://localhost:5432/fhir
 
   system-test-csv:
     name: System test csv files
@@ -177,6 +182,9 @@ jobs:
       - name: Wait for Blaze
         run: .github/scripts/wait-for-url.sh  http://localhost:8080/health
 
+      - name: Wait for MIABIS Blaze
+        run: .github/scripts/wait-for-url.sh  http://localhost:5432/health
+
       - name: Docker Logs
         run: docker logs blaze
 
@@ -184,8 +192,10 @@ jobs:
         run: sleep 20 && docker logs fhir-module
 
       - name: Verify upload succeeded
-        run: .github/scripts/check-patient-exists.sh
+        run: .github/scripts/check-patient-exists.sh http://localhost:8080/fhir
 
+      - name: Verify upload succeeded for MIABIS blaze
+        run: .github/scripts/check-patient-exists.sh http://localhost:5432/fhir
 
 
   build-push-image:
