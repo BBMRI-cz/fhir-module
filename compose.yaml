@@ -1,8 +1,6 @@
-version: "3.9"
-
 services:
   fhir-module:
-    image: ghcr.io/bbmri-cz/fhir-module:latest
+    image: local_fhir_module
     container_name: fhir-module
     profiles:
       - dev
@@ -11,7 +9,8 @@ services:
       - fhir-integration
     restart: no
     environment:
-      BLAZE_URL: "http://blaze:8080/fhir"
+      BLAZE_URL: "http://test-blaze:8080/fhir"
+      MIABIS_BLAZE_URL: "http://miabis-blaze:8080/fhir"
       DIR_PATH: "/opt/records"
       PYTHONWARNINGS: "ignore:Unverified HTTPS request"
     volumes:
@@ -20,19 +19,43 @@ services:
         target: "/opt/records"
 
 
-  blaze:
-    container_name: blaze
-    image: "samply/blaze:0.22"
+
+  miabis-blaze:
+    container_name: miabis-blaze
+    image: "samply/blaze:latest"
+    networks:
+      - fhir-integration
+    profiles:
+      - dev
+      - prod
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xmx2g"
+      DB_SEARCH_PARAM_BUNDLE: "/app/searchParamBundle.json"
+      LOG_LEVEL: "debug"
+    ports:
+      - "5432:8080"
+    volumes:
+      - type: bind
+        source: "util/searchParamBundle.json"
+        target: "/app/searchParamBundle.json"
+
+  test-blaze:
+    container_name: test-blaze
+    image: "samply/blaze:latest"
     networks:
       - fhir-integration
     profiles:
       - dev
     environment:
-      BASE_URL: "http://localhost:8080"
       JAVA_TOOL_OPTIONS: "-Xmx2g"
+      DB_SEARCH_PARAM_BUNDLE: "/app/searchParamBundle.json"
       LOG_LEVEL: "debug"
     ports:
       - "8080:8080"
+    volumes:
+      - type: bind
+        source: "util/searchParamBundle.json"
+        target: "/app/searchParamBundle.json"
 
 networks:
   fhir-integration:

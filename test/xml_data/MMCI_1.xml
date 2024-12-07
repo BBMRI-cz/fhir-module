@@ -50,7 +50,7 @@
         </tissue>
     </LTS>
     <STS>
-        <diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">
+        <diagnosisMaterial number="136043" sampleId="BBM:2032:136043" year="2032">
             <materialType>S</materialType>
             <diagnosis>C509</diagnosis>
             <takingDate>2032-10-4T10:02:00</takingDate>
