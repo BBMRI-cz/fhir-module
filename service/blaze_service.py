@@ -420,7 +420,7 @@ class BlazeService:
                 self._session.post(url=self._blaze_url + "/Organization",
                                    json=sample_collection.to_fhir().as_json(),
                                    verify=False)
-        logger.debug(f"Successfully uploaded {self.get_number_of_resources('Organization')} Sample collections.")
+                logger.debug(f"Successfully uploaded {self.get_number_of_resources('Organization')} Sample collections.")
 
     def get_sample_collection_id(self, sample_identifier: str) -> str | None:
         """Get the identifier of the Sample Collection to which a sample belongs.
