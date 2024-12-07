@@ -6,7 +6,7 @@ import schedule
 from blaze_client import BlazeClient, NonExistentResourceException
 import logging
 
-from miabis_model.util.parsing_util import get_nested_value
+from requests import HTTPError
 
 from model.miabis.collection_miabis import CollectionMiabis
 from model.miabis.sample_donor_miabis import SampleDonorMiabis
@@ -73,7 +73,7 @@ class MiabisBlazeService(BlazeServiceInterface):
         except requests.exceptions.ConnectionError:
             logger.error(f"Cannot connect to the blaze server!")
             return
-        except (ValueError, KeyError, TypeError) as err:
+        except (ValueError, KeyError, TypeError, HTTPError) as err:
             logger.error(f"{err}")
             return
         logger.info(f"MIABIS on FHIR: Sync of biobank and collection resources is done.")
@@ -91,7 +91,11 @@ class MiabisBlazeService(BlazeServiceInterface):
                 continue
             donor = cast(SampleDonorMiabis, donor)
             if not self.blaze_client.is_resource_present_in_blaze("Patient", donor.identifier, "identifier"):
-                self.blaze_client.upload_donor(donor)
+                try:
+                 self.blaze_client.upload_donor(donor)
+                except HTTPError as e:
+                    logger.error(f"Error uploading the patient: {e}")
+                    continue
                 logger.debug(f"MIABIS ON FHIR: successfully uploaded patient with identifier {donor.identifier}")
             else:
                 logger.debug(f"MIABIS on FHIR: donor with id {donor.identifier} already present. Checking if all the data about the patient are same")
@@ -144,7 +148,7 @@ class MiabisBlazeService(BlazeServiceInterface):
                         if sample.sample_collection_id is not None:
                             collection_with_new_samples_map.setdefault(sample.sample_collection_id, []).append(
                                 sample_fhir_id)
-            except NonExistentResourceException as err:
+            except (NonExistentResourceException,HTTPError) as err:
                 logger.error(f"MIABIS on FHIR: {err}")
 
         for collection_id, sample_fhir_ids in collection_with_new_samples_map.items():
