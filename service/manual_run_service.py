@@ -19,26 +19,26 @@ def create_api(miabis_blaze_service: MiabisBlazeService, blaze_service: BlazeSer
     def miabis_sync():
         logger.info("MIABIS on FHIR: Manually starting sync.")
         threading.Thread(target=miabis_blaze_service.sync).start()
-        return jsonify({"message": "sync finished. see logs of fhir-module for more info"})
+        return jsonify({"message": "MIABIS sync started. see logs of fhir-module for more info"})
 
     @app.route('/sync', methods=['POST'])
     def sync_now():
         logger.info("Manually starting sync.")
         threading.Thread(target=blaze_service.sync).start()
-        return jsonify({"message": "sync finished"})
+        return jsonify({"message": "sync started. see logs of fhir-module for more info"})
 
     @app.route('/miabis-delete', methods=['POST'])
     def miabis_delete():
         logger.info("MIABIS on FHIR: Manually deleting every resource")
         threading.Thread(target=miabis_blaze_service.delete_everything).start()
-        return jsonify({"message": "delete finished"})
+        return jsonify({"message": "MIABIS delete started. see logs of fhir-module for more info"})
 
 
     @app.route('/delete', methods=['POST'])
     def delete():
         logger.info("Manually deleting every resource")
         threading.Thread(target=blaze_service.delete_everything).start()
-        return jsonify({"message": "delete finished"})
+        return jsonify({"message": "delete started. see logs of fhir-module for more info"})
 
 
     return app
