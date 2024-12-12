@@ -39,6 +39,23 @@ In order to successfully transform data about patients and samples, the users ne
   - ICD10 diagnosis code
   - new (or already provided) attribute, which specifies to which collection this sample belongs to
 
+
+## Quick Start
+
+### Docker
+
+Prerequisites:
+
+- [Docker engine v24.0.0](https://docs.docker.com/engine/release-notes/24.0/#2400)
+- [Docker compose v2.20](https://docs.docker.com/compose/release-notes/#2200)
+
+To spin up an instance of the FHIR module along with [Blaze](https://github.com/samply/blaze), clone the repository and
+run the following command:
+
+```shell
+docker compose --profile dev up -d
+```
+
 ### Workflow
 At the start, the FHIR module syncs the provided records - Transforms the provided records into BBMRI.de and MIABIS on FHIR representations and uploads them to the Blaze FHIR store respectively.
 
@@ -63,21 +80,7 @@ for deleting data representing the BBMRI.de.
 docker exec fhir-module curl -X POST http://127.0.0.1:5000/miabis-delete
 ```
 for deleting data representing the MIABIS on FHIR.
-## Quick Start
 
-### Docker
-
-Prerequisites:
-
-- [Docker engine v24.0.0](https://docs.docker.com/engine/release-notes/24.0/#2400)
-- [Docker compose v2.20](https://docs.docker.com/compose/release-notes/#2200)
-
-To spin up an instance of the FHIR module along with [Blaze](https://github.com/samply/blaze), clone the repository and
-run the following command:
-
-```shell
-docker compose --profile dev up -d
-```
 For additional information about deployment, refer to the [Deployment documentation](docs/DEPLOYMENT.md).
 ## Contributing
 

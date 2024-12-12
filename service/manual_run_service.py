@@ -1,4 +1,6 @@
-from flask import Flask, request, jsonify
+import threading
+
+from flask import Flask, request, jsonify, after_this_request
 import logging
 
 from service.miabis_blaze_service import MiabisBlazeService
@@ -13,30 +15,34 @@ app = Flask(__name__)
 
 
 def create_api(miabis_blaze_service: MiabisBlazeService, blaze_service: BlazeService):
-
     @app.route('/miabis-sync', methods=['POST'])
     def miabis_sync():
+
         logger.info("MIABIS on FHIR: Manually starting sync.")
-        miabis_blaze_service.sync()
-        return jsonify({"message": "sync finished. see logs of fhir-module for more info"})
+        threading.Thread(target=miabis_blaze_service.sync).start()
+        # miabis_blaze_service.sync()
+        return jsonify({"message": "sync started. see logs of fhir-module for more info"})
 
     @app.route('/sync', methods=['POST'])
     def sync_now():
         logger.info("Manually starting sync.")
-        blaze_service.sync()
+        threading.Thread(target=blaze_service.sync).start()
+        # blaze_service.sync()
         return jsonify({"message": "sync finished"})
 
     @app.route('/miabis-delete', methods=['POST'])
     def miabis_delete():
         logger.info("MIABIS on FHIR: Manually deleting every resource")
-        miabis_blaze_service.delete_everything()
+        threading.Thread(target=miabis_blaze_service.delete_everything).start()
+        # miabis_blaze_service.delete_everything()
         return jsonify({"message": "delete finished"})
 
 
     @app.route('/delete', methods=['POST'])
     def delete():
         logger.info("Manually deleting every resource")
-        blaze_service.delete_everything()
+        threading.Thread(target=blaze_service.delete_everything).start()
+        # blaze_service.delete_everything()
         return jsonify({"message": "delete finished"})
 
 
