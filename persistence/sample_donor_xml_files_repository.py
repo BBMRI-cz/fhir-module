@@ -32,6 +32,7 @@ class SampleDonorXMLFilesRepository(SampleDonorRepository):
         logger.debug(f"Loaded the following donor parsing map {donor_parsing_map}")
 
     def get_all(self) -> Generator[SampleDonorInterface, None, None]:
+        self._ids = set()
         dir_entry: os.DirEntry
         for dir_entry in os.scandir(self._dir_path):
             if dir_entry.name.lower().endswith(".xml"):
