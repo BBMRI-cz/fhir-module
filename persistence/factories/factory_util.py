@@ -1,5 +1,6 @@
 from exception.wrong_records_file_type_exception import WrongRecordsFileTypeException
 from persistence.factories.csv_repository_factory import CSVRepositoryFactory
+from persistence.factories.json_repository_factory import JsonRepositoryFactory
 from persistence.factories.repository_factory import RepositoryFactory
 from persistence.factories.xml_repository_factory import XMLRepositoryFactory
 from util.config import RECORDS_FILE_TYPE
@@ -13,6 +14,8 @@ def get_repository_factory() -> RepositoryFactory:
             return CSVRepositoryFactory()
         case "xml":
             return XMLRepositoryFactory()
+        case "json":
+            return JsonRepositoryFactory()
         case _:
             raise WrongRecordsFileTypeException("RECORDS_FILE_TYPE environment variable has unsupported file type.")
 
