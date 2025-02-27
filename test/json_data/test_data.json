@@ -1,0 +1,38 @@
+[
+  {
+        "PatientId": "139409",
+        "SpecimenId": "995114",
+        "DateOfDiagnosis": "2020-06-17T00:00:00",
+        "Diagnosis": "C446",
+        "DiagnosisAgeDonor": 86,
+        "DonorAge": "1934-04",
+        "SamplingDate": "2018-08-31T00:00:00",
+        "SampleType": "tumor-tissue-ffpe",
+        "Sex": "M",
+        "StorageTemperature": "temperatureRoom"
+    },
+    {
+        "PatientId": "139410",
+        "SpecimenId": "995173",
+        "DateOfDiagnosis": "2019-11-01T00:00:00",
+        "Diagnosis": "C490",
+        "DiagnosisAgeDonor": 58,
+        "DonorAge": "1961-02",
+        "SamplingDate": "2019-01-02T00:00:00",
+        "SampleType": "tumor-tissue-ffpe",
+        "Sex": "M",
+        "StorageTemperature": "temperatureRoom"
+    },
+    {
+        "PatientId": "139411",
+        "SpecimenId": "995191",
+        "DateOfDiagnosis": "2019-11-01T00:00:00",
+        "Diagnosis": "C445",
+        "DiagnosisAgeDonor": 69,
+        "DonorAge": "1949-11",
+        "SamplingDate": "2019-01-29T00:00:00",
+        "SampleType": "tumor-tissue-ffpe",
+        "Sex": "F",
+        "StorageTemperature": "temperatureRoom"
+    }
+]
