@@ -13,11 +13,13 @@ logger = logging.getLogger()
 app = Flask(__name__)
 
 
-def create_api(miabis_blaze_service: MiabisBlazeService, blaze_service: BlazeService):
+def create_api(blaze_service: BlazeService,miabis_blaze_service: MiabisBlazeService = None):
 
     @app.route('/miabis-sync', methods=['POST'])
     def miabis_sync():
         logger.info("MIABIS on FHIR: Manually starting sync.")
+        if miabis_blaze_service is None:
+            return jsonify({"message": "MIABIS on FHIR is not provided. If you wish to work with MIABIS on FHIR please change environmental variable in config"})
         threading.Thread(target=miabis_blaze_service.sync).start()
         return jsonify({"message": "MIABIS sync started. see logs of fhir-module for more info"})
 
@@ -30,6 +32,8 @@ def create_api(miabis_blaze_service: MiabisBlazeService, blaze_service: BlazeSer
     @app.route('/miabis-delete', methods=['POST'])
     def miabis_delete():
         logger.info("MIABIS on FHIR: Manually deleting every resource")
+        if miabis_blaze_service is None:
+            return jsonify({"message": "MIABIS on FHIR is not provided. If you wish to work with MIABIS on FHIR please change environmental variable in config"})
         threading.Thread(target=miabis_blaze_service.delete_everything).start()
         return jsonify({"message": "MIABIS delete started. see logs of fhir-module for more info"})
 
