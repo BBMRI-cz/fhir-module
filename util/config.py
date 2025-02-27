@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 from json import JSONDecodeError
+from distutils.util import strtobool
 
 from util.custom_logger import setup_logger
 
@@ -31,6 +32,9 @@ TYPE_TO_COLLECTION_MAP_PATH = os.getenv("TYPE_TO_COLLECTION_MAP_PATH",
 STORAGE_TEMP_MAP_PATH = os.getenv("STORAGE_TEMP_MAP_PATH", os.path.join(ROOT_DIR, 'default_storage_temp_map.json'))
 MIABIS_STORAGE_TEMP_MAP_PATH = os.getenv("MIABIS_STORAGE_TEMP_MAP_PATH",
                                          os.path.join(ROOT_DIR, 'default_miabis_storage_temp_map.json'))
+
+STANDARDISED = bool(strtobool(os.getenv("STANDARDISED","False")))
+MIABIS_ON_FHIR = bool(strtobool(os.getenv("MIABIS_ON_FHIR","True")))
 CSV_SEPARATOR = os.getenv("CSV_SEPARATOR", ";")
 RECORDS_FILE_TYPE = os.getenv("RECORDS_FILE_TYPE", "xml")
 NEW_FILE_PERIOD_DAYS = os.getenv("NEW_FILE_PERIOD_DAYS", 30)
