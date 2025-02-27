@@ -8,8 +8,9 @@ from pyfakefs.fake_filesystem_unittest import patchfs
 from model.miabis.sample_miabis import SampleMiabis
 from model.sample import Sample
 from model.storage_temperature import StorageTemperature
+from miabis_model.storage_temperature import StorageTemperature as MiabisStorageTemperature
 from persistence.sample_csv_repository import SampleCsvRepository
-from util.config import PARSING_MAP_CSV, STORAGE_TEMP_MAP, MATERIAL_TYPE_MAP
+from util.config import PARSING_MAP_CSV, STORAGE_TEMP_MAP
 
 
 class TestSampleCsvRepository(unittest.TestCase):
@@ -152,12 +153,16 @@ class TestSampleCsvRepository(unittest.TestCase):
 
     @patchfs
     def test_with_wrong_type_to_collection_map_id_is_none(self, fake_fs):
+        spm = PARSING_MAP_CSV['sample_map']
+        spm['sample_details']['collection'] = "sampling_type"
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     sample_parsing_map=spm,
                                                      type_to_collection_map={"not_present": "test:collection:id"})
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
-        self.assertEqual(None, next(self.sample_repository.get_all()).sample_collection_id)
+        sample = next(self.sample_repository.get_all())
+        self.assertEqual(None, sample.sample_collection_id)
+        # self.assertEqual(None, next(self.sample_repository.get_all()).sample_collection_id)
 
     @patchfs
     def test_with_type_to_collection_sampling_type_as_attribute_to_collection_ok(self, fake_fs):
@@ -317,7 +322,7 @@ class TestSampleCsvRepository(unittest.TestCase):
             self.assertEqual(observations[0].diagnosis_observed_datetime,
                              datetime.datetime(year=2007, month=10, day=16))
             self.assertEqual("33", sample.identifier)
-            self.assertEqual(StorageTemperature.TEMPERATURE_LN, sample.storage_temperature)
+            self.assertEqual(MiabisStorageTemperature.TEMPERATURE_LN, sample.storage_temperature)
             self.assertEqual("serum", sample.material_type)
             self.assertEqual("M058", sample.diagnoses[0])
             self.assertEqual("C51", sample.diagnoses[1])
