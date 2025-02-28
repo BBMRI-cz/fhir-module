@@ -72,7 +72,7 @@ class SampleJsonRepository(SampleRepository):
         donor_id = str(data.get(self._sample_parsing_map.get("donor_id")))
         # TODO JSON FILE ARE ALREADY STANDARDIZED FOR MATERIAL TYPE AND STORAGE_TEMPERATURE
         material_type = data.get(self._sample_parsing_map.get("sample_details").get("material_type"),None)
-        if not self.standardized:
+        if not self.standardized or self._miabis_on_fhir_model:
             if material_type is not None and self._material_type_map is not None:
                 material_type = self._material_type_map.get(material_type)
         diagnosis_string = data.get(self._sample_parsing_map.
