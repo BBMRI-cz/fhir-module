@@ -11,6 +11,7 @@ services:
     environment:
       BLAZE_URL: "http://test-blaze:8080/fhir"
       MIABIS_BLAZE_URL: "http://miabis-blaze:8080/fhir"
+      MIABIS_ON_FHIR: "True"
       DIR_PATH: "/opt/records"
       PYTHONWARNINGS: "ignore:Unverified HTTPS request"
     volumes:
