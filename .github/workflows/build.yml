@@ -205,7 +205,7 @@ jobs:
 
   system-test-json:
     name: System test json files
-    needs: [ system-test ]
+    needs: [ system-test-csv ]
     runs-on: ubuntu-latest
 
     steps:
@@ -253,7 +253,7 @@ jobs:
 
   build-push-image:
     name: Publish docker image
-    needs: [ system-test-csv ]
+    needs: [ system-test-json ]
     runs-on: ubuntu-latest
 
     steps:
