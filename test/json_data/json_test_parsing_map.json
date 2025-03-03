@@ -1,0 +1,24 @@
+{
+    "donor_map": {
+      "id": "PatientId",
+      "gender": "Sex",
+      "birthDate": "DonorAge"
+    },
+    "sample_map": {
+      "sample_details": {
+        "id": "SpecimenId",
+        "material_type": "SampleType",
+        "diagnosis": "Diagnosis",
+        "collection_date": "SamplingDate",
+        "diagnosis_date": "DateOfDiagnosis",
+        "storage_temperature": "StorageTemperature",
+        "collection": "SampleType"
+      },
+      "donor_id": "PatientId"
+    },
+    "condition_map": {
+      "icd-10_code": "Diagnosis",
+      "patient_id": "PatientId",
+      "diagnosis_date":"DateOfDiagnosis"
+    }
+  }

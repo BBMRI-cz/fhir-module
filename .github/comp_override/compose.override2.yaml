@@ -1,0 +1,19 @@
+services:
+  fhir-module:
+    environment:
+      PARSING_MAP_PATH: "/opt/mappings/json_parsing_map.json"
+      MIABIS_MATERIAL_TYPE_MAP_PATH: "/opt/mappings/miabis_material_type_map.json"
+      RECORDS_FILE_TYPE: "json"
+      STANDARDISED: "True"
+    volumes:
+      - type: bind
+        source: "test/json_data/test_data.json"
+        target: "/opt/records/test_data.json"
+
+      - type: bind
+        source: "test/json_data/json_test_parsing_map.json"
+        target: "/opt/mappings/json_parsing_map.json"
+
+      - type: bind
+        source: "test/json_data/miabis_material_type_map.json"
+        target: "/opt/mappings/miabis_material_type_map.json"
