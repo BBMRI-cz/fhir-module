@@ -83,7 +83,6 @@ class SampleDonorJsonRepository(SampleDonorRepository):
             gender = miabis_get_gender_from_abbreviation(gender)
 
         birth_date = data.get(self._donor_parsing_map.get("birthDate"))
-        date_of_birth = None
         if birth_date is not None:
             try:
                 # TODO BIOBANK WITH JSON FILES ONLY HAVE AGE OF DONOR
@@ -92,8 +91,8 @@ class SampleDonorJsonRepository(SampleDonorRepository):
                 raise ParserError(f"Error while parsing donor with identifier {identifier}. "
                                   f"Incorrect parsing date {birth_date}. Please make sure the date is in a valid format.")
         if self._miabis_on_fhir_model:
-            donor = SampleDonorMiabis(identifier=identifier, gender=gender, birth_date=date_of_birth)
+            donor = SampleDonorMiabis(identifier=identifier, gender=gender, birth_date=birth_date)
         else:
-            donor = SampleDonor(identifier=identifier, gender=gender, birth_date=date_of_birth)
+            donor = SampleDonor(identifier=identifier, gender=gender, birth_date=birth_date)
         return donor
 
