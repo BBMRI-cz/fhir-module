@@ -19,11 +19,14 @@ part of BBMRI-ERIC. This tool should support ETL processes by providing the foll
 
 Supports syncing of patients and their samples between a [Blaze FHIR store](https://github.com/samply/blaze) and a repository of XML or CSV files
 stored on a regular filesystem.
+
+This application supports transformation from 3 file types. XML,CSV, and JSON.
+
 This application Transforms data into the two FHIR profiles, BBMRI.de and MIABIS on FHIR, as mentioned above.
 Each representation is stored in an independent Blaze FHIR store. MIABIS on FHIR representation serves as a pilot use-case of the newly created profile.
 
 Currently, the XML files must have the same structure as this [test file](./test/xml_data/MMCI_1.xml).
-This module cannot work with different types of files at the same time, so the records needs to be in either XML or CSV format, not both.
+This module cannot work with different types of files at the same time, so all the records needs to be in either XML,CSV or JSON.
 
 ### Contents of provided record file(s)
 In order to successfully transform data about patients and samples, the users need to provide this data:
