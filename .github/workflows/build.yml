@@ -203,6 +203,53 @@ jobs:
       - name: Verify upload succeeded for MIABIS blaze
         run: .github/scripts/check-patient-exists.sh http://localhost:5432/fhir
 
+  system-test-json:
+    name: System test json files
+    needs: [ system-test ]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: fhir-module-image
+          path: /tmp
+
+      - name: Load FHIR-Module Image
+        run: docker load --input /tmp/fhir-module.tar
+
+      - name: Create docker network
+        run: docker network create system-test
+
+      - name: Run sandbox in dev env (use compose.override.yaml  to work with csv files)
+        run: docker compose -f compose.yaml -f .github/comp_override/compose.override2.yaml --profile dev up -d
+
+      - name: Wait for Blaze
+        run: .github/scripts/wait-for-url.sh  http://localhost:8080/health
+
+      - name: Wait for MIABIS Blaze
+        run: .github/scripts/wait-for-url.sh  http://localhost:5432/health
+
+      - name: Docker Logs
+        run: docker logs test-blaze
+
+      - name: Docker Logs
+        run: docker logs miabis-blaze
+
+      - name: Docker Logs
+        run: sleep 20 && docker logs fhir-module
+
+      - name: Verify upload succeeded
+        run: .github/scripts/check-patient-exists.sh http://localhost:8080/fhir
+
+      - name: Verify upload succeeded for MIABIS blaze
+        run: .github/scripts/check-patient-exists.sh http://localhost:5432/fhir
 
   build-push-image:
     name: Publish docker image
