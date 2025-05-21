@@ -309,9 +309,10 @@ class BlazeService:
                             f"all resources which reference this patient needs to be deleted as well.")
                 self.delete_fhir_resource("Condition", patient_reference, "reference")
                 self.delete_fhir_resource("Specimen", patient_reference, "reference")
-            deleted_resource = self._session.get(url=f"{self._blaze_url}/{resource_type}/{fhir_id}").json()
+            deleted_resource = self._session.get(url=f"{self._blaze_url}/{resource_type}/{fhir_id}",
+                                                 verify=False).json()
             logger.debug(f"{deleted_resource}")
-            delete_response = self._session.delete(url=f"{self._blaze_url}/{resource_type}/{fhir_id}")
+            delete_response = self._session.delete(url=f"{self._blaze_url}/{resource_type}/{fhir_id}", verify=False)
             if delete_response.status_code != 204:
                 reason_index = delete_response.text.find("diagnostics")
                 if reason_index != -1:
@@ -344,12 +345,12 @@ class BlazeService:
             if sample_fhir_id is not None:
                 entries.append(self.__create_delete_bundle_entry("Specimen", sample_fhir_id))
         bundle = self.__create_bundle(entries)
-        response = self._session.post(f"{self._blaze_url}", json=bundle.as_json())
+        response = self._session.post(f"{self._blaze_url}", json=bundle.as_json(), verify=False)
         return response.status_code == 200 or response.status_code == 204
 
     def delete_everything(self) -> bool:
         """Delete all Patient,Sample, and Condition resources from the blaze."""
-        response = self._session.get(url=self._blaze_url + "/Patient")
+        response = self._session.get(url=self._blaze_url + "/Patient", verify=False)
         while response.status_code == 200:
             response_json = response.json()
             for entry in response_json.get("entry", []):
@@ -373,7 +374,7 @@ class BlazeService:
             if url_after_fhir == -1:
                 break
             next_link = self._blaze_url + url[url_after_fhir + len("/fhir"):]
-            response = self._session.get(url=next_link)
+            response = self._session.get(url=next_link, verify=False)
         logger.info("Delete successful")
         return True
 
@@ -404,7 +405,7 @@ class BlazeService:
         It is not the FHIR resource ID!
         :return: bool
         """
-        response = self._session.get(f"{self._blaze_url}/{resource_type}/{fhir_identifier}")
+        response = self._session.get(f"{self._blaze_url}/{resource_type}/{fhir_identifier}", verify=False)
         if response.status_code == 200:
             return True
         return False
@@ -478,7 +479,7 @@ class BlazeService:
         """Get the identifier of the Sample Collection to which a sample belongs.
         :param fhir_collection_id: FHIR resource ID of the Sample Collection.
         :return: Identifier of the Sample Collection. if not found, returns None."""
-        collection = self._session.get(url=self._blaze_url + f"/{fhir_collection_id}").json()
+        collection = self._session.get(url=self._blaze_url + f"/{fhir_collection_id}", verify=False).json()
         identifier_list = (glom(collection, ("**.identifier", ["**.value"]), default=None))
         if len(identifier_list) > 0:
             return self.__flatten_list(identifier_list)[0]
@@ -488,7 +489,7 @@ class BlazeService:
         """Get the identifier of the Sample Donor from the Blaze store.
         :param fhir_patient_id: FHIR resource ID of the Sample Donor.
         :return: Identifier of the Sample Donor. if not found, returns None."""
-        patient = self._session.get(url=self._blaze_url + f"/{fhir_patient_id}").json()
+        patient = self._session.get(url=self._blaze_url + f"/{fhir_patient_id}", verify=False).json()
 
         identifier_list = glom(patient, ("**.identifier", ["**.value"]), default=None)
         if len(identifier_list) > 0:
