@@ -3,14 +3,14 @@ import logging
 import os
 from typing import List
 
-from glom import glom, Coalesce, T
+from dateutil import parser as date_parser
+from dateutil.parser import ParserError
+from glom import glom
 
 from model.condition import Condition
 from persistence.condition_repository import ConditionRepository
 from persistence.xml_util import parse_xml_file, WrongXMLFormatError
 from util.custom_logger import setup_logger
-from dateutil import parser as date_parser
-from dateutil.parser import ParserError
 
 setup_logger()
 logger = logging.getLogger()
@@ -39,7 +39,7 @@ class ConditionXMLRepository(ConditionRepository):
             return
         try:
             for diagnosis in glom(file_content, self._sample_parsing_map.get("icd-10_code")):
-                patient_id = patient_id = glom(file_content, self._sample_parsing_map.get("patient_id"))
+                patient_id = glom(file_content, self._sample_parsing_map.get("patient_id"))
                 try:
                     diagnosis_datetime = glom(file_content, self._sample_parsing_map.get("diagnosis_date"),
                                               default=None)

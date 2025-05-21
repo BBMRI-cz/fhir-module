@@ -66,6 +66,7 @@ class SampleDonorCsvRepository(SampleDonorRepository):
             logger.debug(f"Error while opening file {dir_entry.name}. error: {e}")
             logger.info(f"Error while opening file {dir_entry.name} [Skipping...]")
             return
+
     def __build_donor(self, data: list[str]) -> SampleDonorInterface:
         identifier = data[self._fields_dict[self._donor_parsing_map.get("id")]]
         gender_field = self._fields_dict[self._donor_parsing_map.get("gender")]

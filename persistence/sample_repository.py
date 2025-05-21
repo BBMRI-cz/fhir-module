@@ -3,7 +3,6 @@ import abc
 from typing import Generator
 
 from model.interface.sample_interface import SampleInterface
-from model.sample import Sample
 
 
 class SampleRepository:

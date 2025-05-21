@@ -2,20 +2,18 @@ import logging
 import os
 from typing import Generator
 
+from dateutil import parser as date_parser
 from dateutil.parser import ParserError
 from glom import glom, PathAccessError
+from miabis_model.storage_temperature import parse_storage_temp_from_code as miabis_parse_storage_temp_from_code
 
 from model.interface.sample_interface import SampleInterface
-from model.sample import Sample
 from model.miabis.sample_miabis import SampleMiabis
+from model.sample import Sample
 from persistence.sample_repository import SampleRepository
 from persistence.xml_util import parse_xml_file, WrongXMLFormatError
 from util.custom_logger import setup_logger
-
 from util.enums_util import parse_storage_temp_from_code as module_parse_storage_temp_from_code
-from miabis_model.storage_temperature import parse_storage_temp_from_code as miabis_parse_storage_temp_from_code
-from dateutil import parser as date_parser
-
 from util.sample_util import diagnosis_with_period, extract_all_diagnosis
 
 setup_logger()
@@ -146,6 +144,7 @@ class SampleXMLRepository(SampleRepository):
                             sample_collection_id=sample_collection_id, collected_datetime=collected_datetime,
                             storage_temperature=storage_temperature)
         return sample
+
 
 def flatten_list(nested_list):
     return [item for sublist in nested_list for item in

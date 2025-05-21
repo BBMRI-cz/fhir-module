@@ -1,27 +1,23 @@
-import csv
+import json
 import json
 import logging
 import os
-import re
 from json import JSONDecodeError
 from typing import Generator
 
+from dateutil import parser as date_parser
 from dateutil.parser import ParserError
+from miabis_model.storage_temperature import parse_storage_temp_from_code as miabis_parse_storage_temp_from_code
 
 from exception.wrong_sample_format import WrongSampleMapException
 from model.interface.sample_interface import SampleInterface
-from model.sample import Sample
 from model.miabis.sample_miabis import SampleMiabis
+from model.sample import Sample
+from persistence.csv_util import check_sample_map_format
 from persistence.sample_repository import SampleRepository
 from util.custom_logger import setup_logger
 from util.enums_util import parse_storage_temp_from_code as module_parse_storage_temp_from_code
-from miabis_model.storage_temperature import parse_storage_temp_from_code as miabis_parse_storage_temp_from_code
-
-from persistence.csv_util import check_sample_map_format
-
-from dateutil import parser as date_parser
-
-from util.sample_util import diagnosis_with_period, extract_all_diagnosis
+from util.sample_util import extract_all_diagnosis
 
 setup_logger()
 logger = logging.getLogger()

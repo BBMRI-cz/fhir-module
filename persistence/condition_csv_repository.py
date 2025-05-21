@@ -1,15 +1,14 @@
+import csv
 import logging
 import os
-import csv
-import re
-from typing import List, Generator
+from typing import Generator
+
+from dateutil import parser as date_parser
+from dateutil.parser import ParserError
 
 from model.condition import Condition
 from persistence.condition_repository import ConditionRepository
 from util.custom_logger import setup_logger
-from dateutil import parser as date_parser
-from dateutil.parser import ParserError
-
 from util.sample_util import extract_all_diagnosis
 
 setup_logger()
