@@ -152,8 +152,8 @@ class BlazeService:
         self._session.post(url=self._blaze_url + "/Condition",
                            json=condition.to_fhir(subject_id=patient_fhir_id).as_json(),
                            verify=False)
-        logger.debug(f"Condition {condition.icd_10_code} successfully uploaded for patient"
-                     f"with FHIR id: {patient_fhir_id} and org. id: {condition.patient_id}.")
+        logger.info(f"Condition {condition.icd_10_code} successfully uploaded for patient"
+                    f"with FHIR id: {patient_fhir_id} and org. id: {condition.patient_id}.")
 
     def __get_fhir_id_of_donor(self, patient_id: str) -> str:
         """
@@ -191,9 +191,7 @@ class BlazeService:
                 logger.debug(f"Specimen with org. ID: {sample.identifier} is not present in Blaze but the Donor is "
                              f"present. Uploading...")
                 self.__upload_sample(sample)
-                logger.debug(f"Successfully uploaded"
-                             f" {self.get_number_of_resources('Specimen') - num_of_samples_before_sync}"
-                             f"new samples.")
+                logger.info(f"Succesfully uploaded Specimen with org ID: {sample.identifier}")
             elif specimen_present and patient_present:
                 logger.debug(f"Specimen with org. ID: {sample.identifier} is already present in Blaze."
                              f"Checking if the sample is up to date.")
@@ -205,6 +203,9 @@ class BlazeService:
                     old_sample_id = self.__get_fhir_sample_id(sample.identifier)
                     sample.update_diagnoses(old_sample.diagnoses)
                     self.__update_sample(sample, old_sample_id)
+        logger.info(f"Successfully uploaded"
+                    f" {self.get_number_of_resources('Specimen') - num_of_samples_before_sync}"
+                    f"new samples.")
         logger.info("Upload of samples ended.")
 
     def __upload_sample(self, sample: Sample):
@@ -420,7 +421,8 @@ class BlazeService:
                 self._session.post(url=self._blaze_url + "/Organization",
                                    json=sample_collection.to_fhir().as_json(),
                                    verify=False)
-                logger.debug(f"Successfully uploaded {self.get_number_of_resources('Organization')} Sample collections.")
+                logger.debug(
+                    f"Successfully uploaded {self.get_number_of_resources('Organization')} Sample collections.")
 
     def get_sample_collection_id(self, sample_identifier: str) -> str | None:
         """Get the identifier of the Sample Collection to which a sample belongs.
