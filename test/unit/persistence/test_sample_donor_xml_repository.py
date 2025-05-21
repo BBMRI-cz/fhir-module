@@ -13,6 +13,7 @@ class TestDonorXMLRepo(unittest.TestCase):
     content = '<patient xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' \
               'xmlns="http://www.bbmri.cz/schemas/biobank/data" xsi:noNamespaceSchemaLocation="exportNIS.xsd" ' \
               'id="9999" sex="female"></patient>'
+    wrong_format_content ="This is a wrong format for an xml file."
     dir_path = "/mock_dir/"
 
     @pytest.fixture(autouse=True)
@@ -54,3 +55,11 @@ class TestDonorXMLRepo(unittest.TestCase):
         for _ in self.donor_repository.get_all():
             counter += 1
         self.assertEqual(0, counter)
+
+    @patchfs
+    def test_get_all_with_wrong_file_format_throws_no_errors(self, fake_fs):
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.wrong_format_content)
+        counter = 0
+        for _ in self.donor_repository.get_all():
+            counter += 1
+            self.assertEqual(0,counter)

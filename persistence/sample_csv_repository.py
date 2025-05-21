@@ -48,24 +48,29 @@ class SampleCsvRepository(SampleRepository):
                 yield from self.__extract_sample_from_csv_file(dir_entry)
 
     def __extract_sample_from_csv_file(self, dir_entry: os.DirEntry) -> SampleInterface:
-        with open(dir_entry, "r") as file_content:
-            reader = csv.reader(file_content, delimiter=self._separator)
-            self._fields_dict = {}
-            fields = next(reader)
-            for i, field in enumerate(fields):
-                self._fields_dict[field] = i
-            try:
-                check_sample_map_format(self._sample_parsing_map)
-            except WrongSampleMapException:
-                logger.info("Given Sample map has a bad format, cannot parse the file")
-                return
-            for row in reader:
+        try:
+            with open(dir_entry, "r") as file_content:
+                reader = csv.reader(file_content, delimiter=self._separator)
+                self._fields_dict = {}
+                fields = next(reader)
+                for i, field in enumerate(fields):
+                    self._fields_dict[field] = i
                 try:
-                    sample = self.__build_sample(row)
-                    yield sample
-                except (ValueError, TypeError, KeyError, ParserError) as err:
-                    logger.info(f"{err} Skipping....")
-                    continue
+                    check_sample_map_format(self._sample_parsing_map)
+                except WrongSampleMapException:
+                    logger.info("Given Sample map has a bad format, cannot parse the file")
+                    return
+                for row in reader:
+                    try:
+                        sample = self.__build_sample(row)
+                        yield sample
+                    except (ValueError, TypeError, KeyError, ParserError) as err:
+                        logger.info(f"{err} Skipping....")
+                        continue
+        except OSError as e:
+            logger.debug(f"Error while opening file {dir_entry.name}: {e}")
+            logger.info(f"Error while opening file {dir_entry.name} [Skipping...]")
+            return
 
     def __build_sample(self, data: list[str]) -> SampleInterface:
         identifier = data[self._fields_dict[self._sample_parsing_map.get("sample_details").get("id")]]

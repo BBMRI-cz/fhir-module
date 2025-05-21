@@ -1,3 +1,4 @@
+import os
 import unittest
 
 import pytest
@@ -48,6 +49,15 @@ class TestDonorCsvRepo(unittest.TestCase):
             self.assertEqual("1113", donor.identifier)
             counter += 1
         self.assertEqual(1, counter)
+
+
+    @patchfs
+    def test_file_with_no_permissions_trows_no_error(self, fake_fs):
+        fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.content)
+        # set permission to no access
+        os.chmod(self.dir_path + "mock_file.csv", 0o000)
+        self.assertEqual(0, sum(1 for _ in self.donor_repository.get_all()))
+
 
     @patchfs
     def test_get_all_with_empty_repository_throws_no_errors(self, fake_fs):

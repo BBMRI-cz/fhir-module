@@ -32,7 +32,7 @@ class SampleDonorCsvRepository(SampleDonorRepository):
         self._miabis_on_fhir_model = miabis_on_fhir_model
         logger.debug(f"Loaded the following donor parsing map {donor_parsing_map}")
 
-    def get_all(self) -> Generator[SampleDonorInterface,None,None]:
+    def get_all(self) -> Generator[SampleDonorInterface, None, None]:
         self._ids = set()
         dir_entry: os.DirEntry
         for dir_entry in os.scandir(self._dir_path):
@@ -40,28 +40,32 @@ class SampleDonorCsvRepository(SampleDonorRepository):
                 yield from self.__extract_donor_from_csv_file(dir_entry)
 
     def __extract_donor_from_csv_file(self, dir_entry: os.DirEntry) -> SampleDonorInterface:
-        with open(dir_entry, "r") as file_content:
-            reader = csv.reader(file_content, delimiter=self.separator)
-            self._fields_dict = {}
-            fields = next(reader)
-            for i, field in enumerate(fields):
-                self._fields_dict[field] = i
-            for row in reader:
-                try:
-                    donor = self.__build_donor(row)
-                    if donor.identifier not in self._ids:
-                        self._ids.add(donor.identifier)
-                        yield donor
-                except ParserError as err:
-                    logger.info(f"{err}Skipping...")
-                    continue
-                except TypeError as err:
-                    logger.info(f"{err} Skipping...")
-                    continue
-                except KeyError as err:
-                    logger.info(f"{err} Skipping...")
-                    continue
-
+        try:
+            with open(dir_entry, "r") as file_content:
+                reader = csv.reader(file_content, delimiter=self.separator)
+                self._fields_dict = {}
+                fields = next(reader)
+                for i, field in enumerate(fields):
+                    self._fields_dict[field] = i
+                for row in reader:
+                    try:
+                        donor = self.__build_donor(row)
+                        if donor.identifier not in self._ids:
+                            self._ids.add(donor.identifier)
+                            yield donor
+                    except ParserError as err:
+                        logger.info(f"{err}Skipping...")
+                        continue
+                    except TypeError as err:
+                        logger.info(f"{err} Skipping...")
+                        continue
+                    except KeyError as err:
+                        logger.info(f"{err} Skipping...")
+                        continue
+        except OSError as e:
+            logger.debug(f"Error while opening file {dir_entry.name}. error: {e}")
+            logger.info(f"Error while opening file {dir_entry.name} [Skipping...]")
+            return
     def __build_donor(self, data: list[str]) -> SampleDonorInterface:
         identifier = data[self._fields_dict[self._donor_parsing_map.get("id")]]
         gender_field = self._fields_dict[self._donor_parsing_map.get("gender")]
@@ -94,4 +98,3 @@ class SampleDonorCsvRepository(SampleDonorRepository):
         else:
             donor = SampleDonor(identifier=identifier, gender=gender, birth_date=date_of_birth)
         return donor
-

@@ -33,7 +33,7 @@ class SampleDonorJsonRepository(SampleDonorRepository):
         self._miabis_on_fhir_model = miabis_on_fhir_model
         logger.debug(f"Loaded the following donor parsing map {donor_parsing_map}")
 
-    def get_all(self) -> Generator[SampleDonorInterface,None,None]:
+    def get_all(self) -> Generator[SampleDonorInterface, None, None]:
         self._ids = set()
         dir_entry: os.DirEntry
         for dir_entry in os.scandir(self._dir_path):
@@ -41,31 +41,36 @@ class SampleDonorJsonRepository(SampleDonorRepository):
                 yield from self.__extract_donor_from_csv_file(dir_entry)
 
     def __extract_donor_from_csv_file(self, dir_entry: os.DirEntry) -> SampleDonorInterface:
-        with open(dir_entry, "r", encoding="utf-8-sig") as json_file:
-            try:
-                donors_json = json.load(json_file)
-            except JSONDecodeError:
-                logger.error("Biobank file does not have a correct JSON format. Exiting...")
-                return
-            for donor_json in donors_json:
+        try:
+            with open(dir_entry, "r", encoding="utf-8-sig") as json_file:
                 try:
-                    donor = self.__build_donor(donor_json)
-                    if donor.identifier not in self._ids:
-                        self._ids.add(donor.identifier)
-                        yield donor
-                except ParserError as err:
-                    logger.info(f"{err}Skipping...")
-                    continue
-                except TypeError as err:
-                    logger.info(f"{err} Skipping...")
-                    continue
-                except KeyError as err:
-                    logger.info(f"{err} Skipping...")
-                    continue
+                    donors_json = json.load(json_file)
+                except JSONDecodeError:
+                    logger.error("Biobank file does not have a correct JSON format. Exiting...")
+                    return
+                for donor_json in donors_json:
+                    try:
+                        donor = self.__build_donor(donor_json)
+                        if donor.identifier not in self._ids:
+                            self._ids.add(donor.identifier)
+                            yield donor
+                    except ParserError as err:
+                        logger.info(f"{err}Skipping...")
+                        continue
+                    except TypeError as err:
+                        logger.info(f"{err} Skipping...")
+                        continue
+                    except KeyError as err:
+                        logger.info(f"{err} Skipping...")
+                        continue
+        except OSError as e:
+            logger.debug(f"Error while opening file {dir_entry.name}: {e}")
+            logger.info(f"Error while opening file {dir_entry.name} [Skipping...]")
+            return
 
     def __build_donor(self, data: dict) -> SampleDonorInterface:
         identifier = str(data.get(self._donor_parsing_map.get("id")))
-        gender = data.get(self._donor_parsing_map.get("gender"),None)
+        gender = data.get(self._donor_parsing_map.get("gender"), None)
         if gender is None:
             raise ValueError(f"No gender provided for patient with identifier {identifier}")
         if len(gender) != 1:
@@ -85,7 +90,6 @@ class SampleDonorJsonRepository(SampleDonorRepository):
         birth_date = data.get(self._donor_parsing_map.get("birthDate"))
         if birth_date is not None:
             try:
-                # TODO BIOBANK WITH JSON FILES ONLY HAVE AGE OF DONOR
                 birth_date = date_parser.parse(birth_date)
             except ParserError:
                 raise ParserError(f"Error while parsing donor with identifier {identifier}. "
@@ -95,4 +99,3 @@ class SampleDonorJsonRepository(SampleDonorRepository):
         else:
             donor = SampleDonor(identifier=identifier, gender=gender, birth_date=birth_date)
         return donor
-
