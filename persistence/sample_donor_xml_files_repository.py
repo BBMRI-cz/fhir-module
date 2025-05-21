@@ -1,20 +1,20 @@
 """Module for handling sample donor persistence in XML files"""
 import logging
 import os
-from typing import List, OrderedDict, Any, Generator
+from typing import OrderedDict, Any, Generator
 
+from dateutil import parser as date_parser
 from dateutil.parser import ParserError
 from glom import glom
 from miabis_model import Gender as MiabisGender
+
 from model.gender import Gender as ModuleGender
 from model.interface.sample_donor_interface import SampleDonorInterface
-from model.sample_donor import SampleDonor
 from model.miabis.sample_donor_miabis import SampleDonorMiabis
+from model.sample_donor import SampleDonor
 from persistence.sample_donor_repository import SampleDonorRepository
 from persistence.xml_util import parse_xml_file, WrongXMLFormatError
 from util.custom_logger import setup_logger
-from dateutil import parser as date_parser
-
 from util.enums_util import get_gender_from_abbreviation
 
 setup_logger()

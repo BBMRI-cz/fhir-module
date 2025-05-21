@@ -1,23 +1,21 @@
-import csv
-import datetime
+import json
 import json
 import logging
 import os
 from json import JSONDecodeError
-from typing import List, Generator
+from typing import Generator
 
+from dateutil import parser as date_parser
 from dateutil.parser import ParserError
+from miabis_model import Gender as MiabisGender
+from miabis_model.gender import get_gender_from_abbreviation as miabis_get_gender_from_abbreviation
 
 from model.gender import Gender as ModuleGender
-from miabis_model import Gender as MiabisGender
 from model.interface.sample_donor_interface import SampleDonorInterface
-from util.enums_util import get_gender_from_abbreviation
-from model.sample_donor import SampleDonor
 from model.miabis.sample_donor_miabis import SampleDonorMiabis
-from miabis_model.gender import get_gender_from_abbreviation as miabis_get_gender_from_abbreviation
+from model.sample_donor import SampleDonor
 from persistence.sample_donor_repository import SampleDonorRepository
 from util.custom_logger import setup_logger
-from dateutil import parser as date_parser
 
 setup_logger()
 logger = logging.getLogger()
