@@ -33,37 +33,42 @@ class ConditionJsonRepository(ConditionRepository):
                 yield from self.__extract_condition_from_csv_file(dir_entry)
 
     def __extract_condition_from_csv_file(self, dir_entry: os.DirEntry) -> Condition:
-        with open(dir_entry, "r", encoding="utf-8-sig") as json_file:
-            try:
-                conditions_json = json.load(json_file)
-            except JSONDecodeError:
-                logger.error("Biobank file does not have a correct JSON format. Exiting...")
-                return
-
-            for condition_json in conditions_json:
+        try:
+            with open(dir_entry, "r", encoding="utf-8-sig") as json_file:
                 try:
-                    diagnosis_field = condition_json.get(self._sample_parsing_map.get("icd-10_code"))
-                    if diagnosis_field is None:
-                        logger.error("No ICD-10 code field found in the csv file. Skipping...")
+                    conditions_json = json.load(json_file)
+                except JSONDecodeError:
+                    logger.error("Biobank file does not have a correct JSON format. Exiting...")
+                    return
+
+                for condition_json in conditions_json:
+                    try:
+                        diagnosis_field = condition_json.get(self._sample_parsing_map.get("icd-10_code"))
+                        if diagnosis_field is None:
+                            logger.error("No ICD-10 code field found in the csv file. Skipping...")
+                            continue
+                        diagnoses = extract_all_diagnosis(diagnosis_field)
+                        patient_id = str(condition_json.get(self._sample_parsing_map.get("patient_id")))
+                        diagnosis_datetime = condition_json.get(self._sample_parsing_map.get("diagnosis_date"))
+                        if diagnosis_datetime is not None:
+                            try:
+                                diagnosis_datetime = date_parser.parse(diagnosis_datetime)
+                                diagnosis_datetime = diagnosis_datetime.replace(hour=0, minute=0, second=0)
+                            except ParserError:
+                                logger.info(
+                                    f"Error parsing date for condition for patient with id {patient_id} "
+                                    f"while parsing diagnosis datetime with value {diagnosis_datetime}. "
+                                    f"Please make sure the date is in a valid format."
+                                )
+                                return
+                        for diagnosis in diagnoses:
+                            condition = Condition(patient_id=patient_id, icd_10_code=diagnosis,
+                                                  diagnosis_datetime=diagnosis_datetime)
+                            yield condition
+                    except TypeError as err:
+                        logger.error(f"{err} Skipping...")
                         continue
-                    diagnoses = extract_all_diagnosis(diagnosis_field)
-                    patient_id = str(condition_json.get(self._sample_parsing_map.get("patient_id")))
-                    diagnosis_datetime = condition_json.get(self._sample_parsing_map.get("diagnosis_date"))
-                    if diagnosis_datetime is not None:
-                        try:
-                            diagnosis_datetime = date_parser.parse(diagnosis_datetime)
-                            diagnosis_datetime = diagnosis_datetime.replace(hour=0, minute=0, second=0)
-                        except ParserError:
-                            logger.info(
-                                f"Error parsing date for condition for patient with id {patient_id} "
-                                f"while parsing diagnosis datetime with value {diagnosis_datetime}. "
-                                f"Please make sure the date is in a valid format."
-                            )
-                            return
-                    for diagnosis in diagnoses:
-                        condition = Condition(patient_id=patient_id, icd_10_code=diagnosis,
-                                              diagnosis_datetime=diagnosis_datetime)
-                        yield condition
-                except TypeError as err:
-                    logger.error(f"{err} Skipping...")
-                    continue
+        except OSError as e:
+            logger.debug(f"Error while opening file {dir_entry.name}: {e}")
+            logger.info(f"Error while opening file {dir_entry.name} [Skipping...]")
+            return

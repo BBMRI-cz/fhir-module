@@ -47,7 +47,7 @@ class SampleDonorXMLFilesRepository(SampleDonorRepository):
         except ParserError as err:
             logger.warning(err)
         except WrongXMLFormatError:
-            logger.warning(f"Wrong format of xml file, please make sure the file {dir_entry} is correct")
+            logger.info(f"Wrong XLM format of file: {dir_entry.name} [Skipping...]")
             return
         except (ValueError, TypeError, KeyError) as err:
             logger.warning(err)

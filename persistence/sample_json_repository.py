@@ -49,35 +49,39 @@ class SampleJsonRepository(SampleRepository):
                 yield from self.__extract_sample_from_csv_file(dir_entry)
 
     def __extract_sample_from_csv_file(self, dir_entry: os.DirEntry) -> SampleInterface:
-        with open(dir_entry, "r", encoding="utf-8-sig") as json_file:
-            try:
-                check_sample_map_format(self._sample_parsing_map)
-                samples_json = json.load(json_file)
-            except WrongSampleMapException:
-                logger.info("Given Sample map has a bad format, cannot parse the file")
-                return
-            except JSONDecodeError:
-                logger.error("Biobank file does not have a correct JSON format. Exiting...")
-                return
-            for sample_json in samples_json:
+        try:
+            with open(dir_entry, "r", encoding="utf-8-sig") as json_file:
                 try:
-                    sample = self.__build_sample(sample_json)
-                    yield sample
-                except (ValueError, TypeError, KeyError, ParserError) as err:
-                    logger.info(f"{err} Skipping....")
-                    continue
+                    check_sample_map_format(self._sample_parsing_map)
+                    samples_json = json.load(json_file)
+                except WrongSampleMapException:
+                    logger.info("Given Sample map has a bad format, cannot parse the file")
+                    return
+                except JSONDecodeError:
+                    logger.error("Biobank file does not have a correct JSON format. Exiting...")
+                    return
+                for sample_json in samples_json:
+                    try:
+                        sample = self.__build_sample(sample_json)
+                        yield sample
+                    except (ValueError, TypeError, KeyError, ParserError) as err:
+                        logger.info(f"{err} Skipping....")
+                        continue
+        except OSError as e:
+            logger.debug(f"Error while opening file {dir_entry.name}: {e}")
+            logger.info(f"Error while opening file {dir_entry.name} [Skipping...]")
+            return
 
     def __build_sample(self, data: dict) -> SampleInterface:
         identifier = str(data.get(self._sample_parsing_map.get("sample_details").get("id")))
         donor_id = str(data.get(self._sample_parsing_map.get("donor_id")))
-        # TODO JSON FILE ARE ALREADY STANDARDIZED FOR MATERIAL TYPE AND STORAGE_TEMPERATURE
-        material_type = data.get(self._sample_parsing_map.get("sample_details").get("material_type"),None)
+        material_type = data.get(self._sample_parsing_map.get("sample_details").get("material_type"), None)
         if not self.standardized or self._miabis_on_fhir_model:
             if material_type is not None and self._material_type_map is not None:
                 material_type = self._material_type_map.get(material_type)
         diagnosis_string = data.get(self._sample_parsing_map.
-                                                get("sample_details")
-                                                .get("diagnosis"))
+                                    get("sample_details")
+                                    .get("diagnosis"))
         diagnoses = []
         if diagnosis_string is not None:
             diagnoses = extract_all_diagnosis(diagnosis_string)
@@ -85,8 +89,8 @@ class SampleJsonRepository(SampleRepository):
             raise ValueError(f"No correct diagnosis has been found for sample with id {identifier}.")
 
         storage_temperature = data.get(self._sample_parsing_map
-                                                   .get("sample_details")
-                                                   .get("storage_temperature"))
+                                       .get("sample_details")
+                                       .get("storage_temperature"))
         if storage_temperature is not None and self._storage_temp_map is not None:
             if self._miabis_on_fhir_model:
                 storage_temperature = miabis_parse_storage_temp_from_code(self._storage_temp_map,
@@ -96,8 +100,8 @@ class SampleJsonRepository(SampleRepository):
                                                                           storage_temperature)
 
         collection_datetime = data.get(self._sample_parsing_map
-                                                      .get("sample_details")
-                                                      .get("collection_date"),None)
+                                       .get("sample_details")
+                                       .get("collection_date"), None)
         if collection_datetime is not None:
             try:
                 collection_datetime = date_parser.parse(collection_datetime)
@@ -109,8 +113,8 @@ class SampleJsonRepository(SampleRepository):
                     f"Please make sure the date is in a valid format.")
 
         diagnosis_datetime = data.get(self._sample_parsing_map
-                                                         .get("sample_details")
-                                                         .get("diagnosis_date"),None)
+                                      .get("sample_details")
+                                      .get("diagnosis_date"), None)
         if diagnosis_datetime is not None:
             try:
                 diagnosis_datetime = date_parser.parse(diagnosis_datetime)
@@ -123,7 +127,6 @@ class SampleJsonRepository(SampleRepository):
                 )
 
         sample_collection_id = None
-        # TODO ADDED DEFAULT
         if self._type_to_collection_map is not None:
             attribute_to_collection = self._sample_parsing_map.get("sample_details").get("collection")
             if attribute_to_collection in data.keys():

@@ -32,7 +32,11 @@ class ConditionXMLRepository(ConditionRepository):
 
     def __extract_condition_from_xml_file(self, dir_entry: os.DirEntry) -> Condition:
         """Extracts Condition from an XML file"""
-        file_content = parse_xml_file(dir_entry)
+        try:
+            file_content = parse_xml_file(dir_entry)
+        except WrongXMLFormatError:
+            logger.info(f"Wrong XLM format of file: {dir_entry.name} [Skipping...]")
+            return
         try:
             for diagnosis in glom(file_content, self._sample_parsing_map.get("icd-10_code")):
                 patient_id = patient_id = glom(file_content, self._sample_parsing_map.get("patient_id"))

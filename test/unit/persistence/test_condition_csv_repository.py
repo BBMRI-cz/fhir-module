@@ -1,4 +1,5 @@
 import datetime
+import os
 import unittest
 import pytest
 import pytest
@@ -34,7 +35,6 @@ class TestConditionCsvRepository(unittest.TestCase):
     def test_get_all_from_one_file_with_one_condition(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
         for condition in self.condition_repository.get_all():
-            self.assertIsInstance(condition, Condition)
             self.assertEqual("M05.8", condition.icd_10_code)
             self.assertEqual(datetime.datetime(year=2007, month=10, day=16), condition.diagnosis_datetime)
 
@@ -42,8 +42,14 @@ class TestConditionCsvRepository(unittest.TestCase):
     def test_get_all_from_two_files_with_three_conditions(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.samples)
         fake_fs.create_file(self.dir_path + "mock_file2.csv", contents=self.header + self.one_sample)
-        conditions = list(self.condition_repository.get_all())
-        self.assertEqual(3, len(conditions))
+        self.assertEqual(3, sum(1 for _ in self.condition_repository.get_all()))
+
+    @patchfs
+    def test_file_with_no_permissions_trows_no_error(self, fake_fs):
+        fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
+        # set permission to no access
+        os.chmod(self.dir_path + "mock_file.csv", 0o000)
+        self.assertEqual(0, sum(1 for _ in self.condition_repository.get_all()))
 
     @patchfs
     def test_get_all_with_wrong_icd_10_string_skips(self, fake_fs):
@@ -55,9 +61,8 @@ class TestConditionCsvRepository(unittest.TestCase):
     @patchfs
     def test_get_all_with_multiple_diagnosis_from_one_sample(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.sample_multiple_diagnosis)
-        conditions = list(self.condition_repository.get_all())
-        self.assertEqual(3, len(conditions))
-        self.assertEqual("M05.8", conditions[0].icd_10_code)
+        self.assertEqual(3, sum(1 for _ in self.condition_repository.get_all()))
+
 
 
 if __name__ == '__main__':

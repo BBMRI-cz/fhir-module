@@ -12,8 +12,8 @@ from util.config import PARSING_MAP
 class TestConditionXMLRepository(unittest.TestCase):
     sample = '<STS>' \
              '<diagnosisMaterial number="136043" sampleId="&amp;:2032:136043" year="2032">' \
-             '<diagnosis>C509</diagnosis>'\
-             '<diagnosis_date>2007-10-16</diagnosis_date>'\
+             '<diagnosis>C509</diagnosis>' \
+             '<diagnosis_date>2007-10-16</diagnosis_date>' \
              '</diagnosisMaterial>' \
              '</STS>'
 
@@ -33,6 +33,8 @@ class TestConditionXMLRepository(unittest.TestCase):
               '</STS>'
 
     content = '<patient id="9999">{sample}</patient>'
+
+    wrong_content = "THis is not suitable content for an xml."
 
     dir_path = "/mock_dir/"
 
@@ -63,9 +65,16 @@ class TestConditionXMLRepository(unittest.TestCase):
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.samples))
         fake_fs.create_file(self.dir_path + "mock_file2.xml", contents=self.content
-                            .format(sample=self.sample))
+                            .format(sample=self.sample)
+                            )
         conditions = list(self.condition_repository.get_all())
         self.assertEqual(3, len(conditions))
+
+    @patchfs
+    def test_get_all_from_incorrect_xml_file_format_skips(self, fake_fs):
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.wrong_content)
+        conditions = list(self.condition_repository.get_all())
+        self.assertEqual(0, len(conditions))
 
     @patchfs
     def test_get_all_with_wrong_icd_10_string_skips(self, fake_fs):

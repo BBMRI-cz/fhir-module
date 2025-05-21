@@ -1,4 +1,5 @@
 import datetime
+import os
 import unittest
 from typing import cast
 
@@ -65,6 +66,14 @@ class TestSampleCsvRepository(unittest.TestCase):
                                                      miabis_on_fhir_model=True)
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
         self.assertEqual(1, sum(1 for _ in self.sample_repository.get_all()))
+
+
+    @patchfs
+    def test_file_with_no_permissions_trows_no_error(self, fake_fs):
+        fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
+        # set permission to no access
+        os.chmod(self.dir_path + "mock_file.csv", 0o000)
+        self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))
 
     @patchfs
     def test_get_all_two_samples_ok(self, fake_fs):

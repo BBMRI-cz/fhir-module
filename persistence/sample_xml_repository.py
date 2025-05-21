@@ -43,7 +43,11 @@ class SampleXMLRepository(SampleRepository):
 
     def __extract_sample_from_xml_file(self, dir_entry: os.DirEntry) -> SampleInterface:
         """Extracts Sample from an XML file"""
-        file_content = parse_xml_file(dir_entry)
+        try:
+            file_content = parse_xml_file(dir_entry)
+        except WrongXMLFormatError:
+            logger.info(f"Wrong XLM format of file: {dir_entry.name} [Skipping...]")
+            return
         for parsing_path in str(self._sample_parsing_map.get("sample")).split(" || "):
             try:
                 for xml_sample in flatten_list(glom(file_content, parsing_path)):
@@ -60,8 +64,6 @@ class SampleXMLRepository(SampleRepository):
                 return
 
     def __build_sample(self, file_content, xml_sample) -> SampleInterface:
-        # TODO add diagnosis observer datetime to parsing
-        # TODO material type will be mapped to a standardized value here, not in the Sample object
         identifier = glom(xml_sample,
                           self._sample_parsing_map.get("sample_details").get("id"))
         donor_id = glom(file_content,

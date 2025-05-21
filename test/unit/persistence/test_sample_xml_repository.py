@@ -108,6 +108,8 @@ class TestSampleXMLRepository(unittest.TestCase):
                        '</diagnosisMaterial>' \
                        '</LTS>'
 
+    wrong_format_content = "This is a wrong format for an xml file."
+
     content = '<patient id="9999">{sample}</patient>'
 
     dir_path = "/mock_dir/"
@@ -148,6 +150,11 @@ class TestSampleXMLRepository(unittest.TestCase):
         self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))
         wrong_map = {}
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path, sample_parsing_map=wrong_map)
+        self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))
+
+    @patchfs
+    def test_wrong_file_format_throws_no_error(self, fake_fs):
+        fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.wrong_format_content)
         self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))
 
     @patchfs

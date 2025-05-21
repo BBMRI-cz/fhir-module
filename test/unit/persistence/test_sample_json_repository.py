@@ -1,5 +1,6 @@
 import datetime
 import json
+import os
 import unittest
 from typing import cast
 
@@ -201,6 +202,15 @@ class TestSampleJsonRepository(unittest.TestCase):
         fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
         self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))
 
+
+    @patchfs
+    def test_file_with_no_permissions_trows_no_error(self, fake_fs):
+        content = json.dumps(self.one_sample_correct)
+        fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
+        # set permission to no access
+        os.chmod(self.dir_path + "mock_file.json", 0o000)
+        self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))
+
     @patchfs
     def test_get_all_three_samples_from_two_collections_ok(self, fake_fs):
         content1 = json.dumps(self.one_sample_correct)
@@ -302,7 +312,8 @@ class TestSampleJsonRepository(unittest.TestCase):
                                                       storage_temp_map=STORAGE_TEMP_MAP)
         content = json.dumps(self.one_sample_correct)
         fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
-        self.assertEqual(StorageTemperature.TEMPERATURE_ROOM, next(self.sample_repository.get_all()).storage_temperature)
+        self.assertEqual(StorageTemperature.TEMPERATURE_ROOM,
+                         next(self.sample_repository.get_all()).storage_temperature)
 
     @patchfs
     def test_storage_temp_map_code_not_found(self, fake_fs):
