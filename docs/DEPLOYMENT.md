@@ -47,7 +47,6 @@ simply specify them in `compose.yaml` in the environment section.
 | MIABIS_BLAZE_URL              | http://localhost:5432/fhir                             | Base url of the FHIR server for syncing specifically the MIABIS on FHIR profile. No trailing slash.                                                                |
 | BLAZE_USER                    | _empty_                                                | Basic auth username for accessing the blaze store via HTTP.                                                                                                        |
 | MIABIS_ON_FHIR                | False                                                  | Flag allowing users to start the FHIR-module with/without newest MIABIS on FHIR profile.(pilot implementation of the new profile, False for production)            |
-| STANDARDISED                  | False                                                  | Flag specifying if the material types are already standardized into MIABIS values or not.                                                                          |
 | BLAZE_PASS                    | _empty_                                                | Basic auth password for accessing the blaze store via HTTP.                                                                                                        |
 | PARSING_MAP_PATH              | /opt/fhir-module/default_map.json                      | Path to a JSON file containing object parsing mappings. Example [here](../util/default_map.json).                                                                  |
 | MATERIAL_TYPE_MAP_PATH        | /opt/fhir-module/default_material_type_map.json        | Path to a JSON file containing mappings between organizational and FHIR material types. Example [here](../util/default_material_type_map.json).                    |
@@ -69,4 +68,4 @@ simply specify them in `compose.yaml` in the environment section.
 ## Object mapping
 
 The FHIR module uses dynamically configurable maps currently stored as json files
-to parse XML or CSV into Python objects. 
+to parse XML,CSV or JSON into Python objects. 

@@ -15,9 +15,16 @@ part of BBMRI-ERIC. This tool should support ETL processes by providing the foll
 - Data quality validation - validates the provided files and mappings - see [Deployment](docs/DEPLOYMENT.md)
 - Reporting and monitoring (coming soon)
 
+
+## Glossary
+- [Deployment](/docs/DEPLOYMENT.md) 
+- [Data model](/docs/DATA_MODEL.md)
+- [Maps](/docs/MAPS.md)
+- [Contributing](/docs/CONTRIBUTING.md)
+
 ## State
 
-Supports syncing of patients and their samples between a [Blaze FHIR store](https://github.com/samply/blaze) and a repository of XML or CSV files
+Supports syncing of patients and their samples between a [Blaze FHIR store](https://github.com/samply/blaze) and a repository of XML,CSV or JSON files
 stored on a regular filesystem.
 
 This application supports transformation from 3 file types. XML,CSV, and JSON.
@@ -40,8 +47,11 @@ In order to successfully transform data about patients and samples, the users ne
   - - diagnosis_datetime - date that the diagnosis was first observed (optional but recommended for better findability in Locator)
   - storage temperature - (optional but recommended for better findability in Locator)
   - ICD10 diagnosis code
-  - new (or already provided) attribute, which specifies to which collection this sample belongs to
+  - collection ID which specifies to which collection this sample belongs to (this ID comes from  [BBMRI-ERIC Directory](https://directory.bbmri-eric.eu/ERIC/directory/#/catalogue))
 
+**IMPORTANT**: Collection ID does not need to be a new attribute. It can also be already present attribute from which the collection ID can be derived. For more information see [MAPS](docs/MAPS.md)
+
+**DISCLAIMER**: Samples without specified Collection to which they belong to will not be correctly visible in the BBMRI-ERIC Locator
 ## Quick Start
 
 ### Docker
@@ -60,10 +70,11 @@ docker compose --profile dev up -d
 For additional information about deployment, refer to the [Deployment documentation](docs/DEPLOYMENT.md).
 
 ### Workflow
-At the start, the FHIR module syncs the provided records - Transforms the provided records into BBMRI.de and MIABIS on FHIR representations and uploads them to the Blaze FHIR store respectively.
+At the start, the FHIR module syncs the provided records - Transforms the provided records into BBMRI.de representation ( and into MIABIS on FHIR representation, if the MIABIS_On_FHIR enviromental variable is set to True - see [Deployment documentation](docs/DEPLOYMENT.md) ) and uploads them to the Blaze FHIR store respectively.
 
-The FHIR module periodically - every week - syncs the Blaze store with the records currently present. Only new patients/samples are uploaded.
+The FHIR module periodically - every week - syncs the Blaze store with the records currently present. Only new patients/samples are uploaded. FHIR module checks if patient/sample is present based on its respctive ID, so please, keep the IDs unique!
 
+### Manual upload
 Additionally, after initial upload, users can manually start the sync of BBMRI.de or MIABIS on FHIR profile representation using the commands:
 ```shell
 docker exec fhir-module curl -X POST http://127.0.0.1:5000/sync
@@ -73,7 +84,7 @@ for syncing the BBMRI.de representation.
 docker exec fhir-module curl -X POST http://127.0.0.1:5000/miabis-sync
 ```
 for syncing the MIABIS on FHIR representation.
-
+### Manual deletion
 Users can also delete all of the records currently present in the FHIR store, again either BBMRI.de or MIABIS on FHIR representation using the commands:
 ```shell
 docker exec fhir-module curl -X POST http://127.0.0.1:5000/delete
