@@ -13,3 +13,5 @@ simple-icd-10
 glom
 flask
 miabis-on-fhir
+prometheus-flask-exporter
+prometheus-client

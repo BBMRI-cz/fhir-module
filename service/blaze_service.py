@@ -19,9 +19,12 @@ from service.sample_service import SampleService
 from util.config import MATERIAL_TYPE_MAP, BLAZE_AUTH
 from util.custom_logger import setup_logger
 from util.sample_util import build_sample_from_json
+from util.metrics import get_metrics_for_service
+import json
 
 setup_logger()
 logger = logging.getLogger()
+sync_logger = logging.getLogger("sync_logger")
 
 
 class BlazeService:
@@ -44,6 +47,7 @@ class BlazeService:
         self._blaze_url = blaze_url
         self._sample_collection_repository = sample_collection_repository
         self._credentials = BLAZE_AUTH
+        self.metrics = get_metrics_for_service('blaze')
         retries = Retry(total=5,
                         backoff_factor=0.1,
                         status_forcelist=[500, 502, 503, 504])
@@ -55,10 +59,45 @@ class BlazeService:
     def sync(self):
         """Starts the sync between the repositories and the Blaze store."""
         logger.info("Starting sync with Blaze 🔥!")
-        self.upload_sample_collections()
-        self.sync_patients()
-        self.sync_conditions()
-        self.sync_samples()
+
+        org_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
+        pat_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
+        cond_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
+        samp_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
+
+        try:
+            org_summary = self.upload_sample_collections()
+            pat_summary = self.sync_patients()
+            cond_summary = self.sync_conditions()
+            samp_summary = self.sync_samples()
+
+            if self.metrics:
+                self.metrics.set_metric('last_sync_timestamp', time.time())
+
+            sync_summary_obj = {
+                'patients': pat_summary,
+                'conditions': cond_summary,
+                'specimens': samp_summary,
+                'organizations': org_summary,
+                'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                'success': True
+            }
+            sync_logger.info(json.dumps({'sync_summary': sync_summary_obj}))
+
+            logger.info("Sync completed successfully!")
+        except Exception as e:
+            logger.error(f"Sync failed: {e}")
+            
+            sync_summary_obj = {
+                'patients': pat_summary,
+                'conditions': cond_summary,
+                'specimens': samp_summary,
+                'organizations': org_summary,
+                'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                'success': False,
+                'error_message': str(e)
+            }
+            sync_logger.info(json.dumps({'sync_summary': sync_summary_obj}))
 
     def __initialize_scheduler(self):
         logger.info("Initializing scheduler...")
@@ -103,19 +142,37 @@ class BlazeService:
     def sync_patients(self):
         """
         Syncs SampleDonors present in the repository and uploads them to the blaze store
-        :return:
+        Returns summary dict.
         """
+        processed = 0
+        failed = 0
+        skipped = 0
         for donor in self._patient_service.get_all():
             if not isinstance(donor, SampleDonor):
                 logger.error(f"Donor is not as instance of SampleDonor, but rather {type(donor)}. Skipping")
+                skipped += 1
+                continue
             donor = cast(SampleDonor, donor)
-            if not self.is_resource_present_in_blaze(resource_type="patient",
+            if self.is_resource_present_in_blaze(resource_type="patient",
                                                      identifier=donor.identifier):
-                try:
-                    self.__upload_donor(donor)
-                except requests.exceptions.ConnectionError:
-                    logger.error("Cannot connect to blaze!")
-                    return
+                skipped += 1
+                continue
+            
+            try:
+                status = self.__upload_donor(donor)
+                if status == 201:
+                    processed += 1
+                else:
+                    failed += 1
+            except requests.exceptions.ConnectionError:
+                logger.error("Cannot connect to blaze!")
+                failed += 1
+                continue
+            except Exception as e:
+                logger.error(f"Error uploading patient {donor.identifier}: {e}")
+                failed += 1
+
+        return {'processed': processed, 'failed': failed, 'skipped': skipped}
 
     def __upload_donor(self, donor: SampleDonor) -> int:
         logger.debug("Uploading patient: " + donor.to_fhir().as_json().__str__())
@@ -128,10 +185,15 @@ class BlazeService:
     def sync_conditions(self):
         """
         Syncs Conditions present in the Condition Repository
+        Returns summary dict.
         """
         logger.info("Starting upload of conditions...")
         num_of_conditions_before_upload = self.get_number_of_resources("condition")
         logger.debug(f"Current number of conditions: {num_of_conditions_before_upload}")
+
+        processed = 0
+        failed = 0
+        skipped = 0
         for condition in self._condition_service.get_all():
             try:
                 patient_has_condition = self.patient_has_condition(patient_identifier=condition.patient_id,
@@ -139,21 +201,35 @@ class BlazeService:
             except PatientNotFoundError:
                 logger.info(f"Patient with identifier: {condition.patient_id} not present in the FHIR store."
                             f" Skipping...")
+                skipped += 1
                 continue
             if not patient_has_condition:
-                self.__upload_condition(condition)
+                try:
+                    status = self.__upload_condition(condition)
+                    if status == 201:
+                        processed += 1
+                    else:
+                        failed += 1
+                except Exception as e:
+                    logger.error(f"Error uploading condition: {e}")
+                    failed += 1
+            else:
+                skipped += 1
+
         logger.info("Upload of conditions ended.")
         logger.debug(
-            f"Successfully uploaded {self.get_number_of_resources('Condition') - num_of_conditions_before_upload}"
-            f" new conditions.")
+            f"Successfully uploaded {self.get_number_of_resources('Condition') - num_of_conditions_before_upload} new conditions.")
+
+        return {'processed': processed, 'failed': failed, 'skipped': skipped}
 
     def __upload_condition(self, condition):
         patient_fhir_id = self.__get_fhir_id_of_donor(condition.patient_id)
-        self._session.post(url=self._blaze_url + "/Condition",
+        res = self._session.post(url=self._blaze_url + "/Condition",
                            json=condition.to_fhir(subject_id=patient_fhir_id).as_json(),
                            verify=False)
         logger.info(f"Condition {condition.icd_10_code} successfully uploaded for patient"
                     f"with FHIR id: {patient_fhir_id} and org. id: {condition.patient_id}.")
+        return res.status_code
 
     def __get_fhir_id_of_donor(self, patient_id: str) -> str:
         """
@@ -176,37 +252,55 @@ class BlazeService:
         return self._session.get(search_url, verify=False).json().get("total") > 0
 
     def sync_samples(self):
-        """Syncs Samples present in the repository with the Blaze store."""
+        """Syncs Samples present in the repository with the Blaze store. Returns summary dict."""
         logger.info("Starting upload of samples...")
+
         num_of_samples_before_sync = self.get_number_of_resources("Specimen")
         logger.debug(f"Current number of Specimens: {num_of_samples_before_sync}.")
+
+        processed = 0
+        failed = 0
+        skipped = 0
         for sample in self._sample_service.get_all():
             logger.debug(f"Checking if Specimen with ID: {sample.identifier} is present."
                          f"Checking if Patient with ID: {sample.donor_id} is present")
-
             specimen_present = self.is_resource_present_in_blaze(resource_type="Specimen", identifier=sample.identifier)
             patient_present = self.is_resource_present_in_blaze(resource_type="Patient", identifier=sample.donor_id)
-
             if not specimen_present and patient_present:
                 logger.debug(f"Specimen with org. ID: {sample.identifier} is not present in Blaze but the Donor is "
                              f"present. Uploading...")
-                self.__upload_sample(sample)
-                logger.info(f"Succesfully uploaded Specimen with org ID: {sample.identifier}")
+                try:
+                    status = self.__upload_sample(sample)
+                    if status == 201:
+                        processed += 1
+                        logger.info(f"Succesfully uploaded Specimen with org ID: {sample.identifier}")
+                    else:
+                        failed += 1
+                except Exception as e:
+                    logger.error(f"Error uploading sample {sample.identifier}: {e}")
+                    failed += 1
             elif specimen_present and patient_present:
                 logger.debug(f"Specimen with org. ID: {sample.identifier} is already present in Blaze."
                              f"Checking if the sample is up to date.")
                 old_sample = self.__build_existing_sample(sample)
                 if sample == old_sample:
                     logger.info(f"Sample is up to date. Skipping....")
+                    skipped += 1
                     continue
                 else:
-                    old_sample_id = self.__get_fhir_sample_id(sample.identifier)
-                    sample.update_diagnoses(old_sample.diagnoses)
-                    self.__update_sample(sample, old_sample_id)
-        logger.info(f"Successfully uploaded"
-                    f" {self.get_number_of_resources('Specimen') - num_of_samples_before_sync}"
-                    f"new samples.")
+                    try:
+                        old_sample_id = self.__get_fhir_sample_id(sample.identifier)
+                        sample.update_diagnoses(old_sample.diagnoses)
+                        self.__update_sample(sample, old_sample_id)
+                        processed += 1
+                    except Exception as e:
+                        logger.error(f"Error updating sample {sample.identifier}: {e}")
+                        failed += 1
+
+        logger.info(f"Successfully uploaded {self.get_number_of_resources('Specimen') - num_of_samples_before_sync} new samples.")
         logger.info("Upload of samples ended.")
+
+        return {'processed': processed, 'failed': failed, 'skipped': skipped}
 
     def __upload_sample(self, sample: Sample):
         custodian_fhir_id: str = None
@@ -222,6 +316,7 @@ class BlazeService:
                                       )
         if response.status_code != 201:
             logger.error(f"Failed to upload sample with ID: {sample.identifier}. Reason: {response.text}")
+        return response.status_code
 
     def __update_sample(self, updated_sample: Sample, sample_fhir_id: str):
         """
@@ -411,19 +506,31 @@ class BlazeService:
         return False
 
     def upload_sample_collections(self):
-        """Uploads SampleCollections as FHIR organizations."""
+        """Uploads SampleCollections as FHIR organizations and returns summary."""
+        processed = 0
+        failed = 0
+        skipped = 0
         for sample_collection in self._sample_collection_repository.get_all():
             if not isinstance(sample_collection, SampleCollection):
                 logger.error(
                     f"Sample collection is not type of SampleColletion, but rather {type(sample_collection)} Skipping... ")
+                skipped += 1
                 continue
             if not self.is_resource_present_in_blaze(resource_type="Organization",
                                                      identifier=sample_collection.identifier):
-                self._session.post(url=self._blaze_url + "/Organization",
-                                   json=sample_collection.to_fhir().as_json(),
-                                   verify=False)
-                logger.debug(
-                    f"Successfully uploaded {self.get_number_of_resources('Organization')} Sample collections.")
+                try:
+                    response = self._session.post(url=self._blaze_url + "/Organization",
+                                       json=sample_collection.to_fhir().as_json(),
+                                       verify=False)
+                    if response.status_code == 201:
+                        processed += 1
+                    else:
+                        failed += 1
+                except Exception:
+                    failed += 1
+
+        logger.debug(f"Successfully uploaded {self.get_number_of_resources('Organization')} Sample collections.")
+        return {'processed': processed, 'failed': failed, 'skipped': skipped}
 
     def get_sample_collection_id(self, sample_identifier: str) -> str | None:
         """Get the identifier of the Sample Collection to which a sample belongs.

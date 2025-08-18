@@ -1,4 +1,16 @@
 services:
+  config-generator:
+    image: alpine:latest
+    entrypoint: /bin/sh
+    command: -c "apk add --no-cache gettext && envsubst < /templates/prometheus.template.yml > /prometheus-config/prometheus.yml && envsubst < /templates/promtail-config.template.yaml > /promtail-config/promtail-config.yaml"
+    volumes:
+      - ./logging/prometheus.template.yml:/templates/prometheus.template.yml:ro
+      - ./logging/promtail-config.template.yaml:/templates/promtail-config.template.yaml:ro
+      - prometheus-config:/prometheus-config
+      - promtail-config:/promtail-config
+    env_file:
+      - .env
+
   fhir-module:
     image: ghcr.io/bbmri-cz/fhir-module:latest
     container_name: fhir-module
@@ -7,7 +19,10 @@ services:
       - prod
     networks:
       - fhir-integration
+      - monitoring
     restart: no
+    ports:
+      - "5000:5000"
     environment:
       BLAZE_URL: "http://test-blaze:8080/fhir"
       MIABIS_BLAZE_URL: "http://miabis-blaze:8080/fhir"
@@ -18,14 +33,35 @@ services:
       - type: bind
         source: "test/xml_data"
         target: "/opt/records"
+      - fhir-logs:/var/log/fhir-module
 
-
+  prometheus:
+    image: prom/prometheus:latest
+    profiles:
+      - monitoring
+    depends_on:
+      config-generator:
+        condition: service_completed_successfully
+        required: false
+    networks:
+      - monitoring
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus-config:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
 
   miabis-blaze:
     container_name: miabis-blaze
     image: "samply/blaze:latest"
     networks:
       - fhir-integration
+      - monitoring
     profiles:
       - dev
       - prod
@@ -45,6 +81,7 @@ services:
     image: "samply/blaze:latest"
     networks:
       - fhir-integration
+      - monitoring
     profiles:
       - dev
     environment:
@@ -58,5 +95,31 @@ services:
         source: "util/searchParamBundle.json"
         target: "/app/searchParamBundle.json"
 
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    profiles:
+      - monitoring
+    depends_on:
+      config-generator:
+        condition: service_completed_successfully
+        required: false
+    networks:
+      - monitoring
+    volumes:
+      - fhir-logs:/var/log/fhir-module:ro
+      - promtail-config:/etc/promtail
+      - promtail-positions:/etc/promtail/positions
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    restart: unless-stopped
+
 networks:
   fhir-integration:
+  monitoring:
+
+volumes:
+  prometheus_data:
+  prometheus-config:
+  fhir-logs:
+  promtail-config:
+  promtail-positions:
