@@ -3,6 +3,7 @@ import logging
 import sys
 import threading
 
+from prometheus_flask_exporter import PrometheusMetrics
 from persistence.factories.factory_util import get_repository_factory
 from service.blaze_service import BlazeService
 from service.condition_service import ConditionService
@@ -15,6 +16,7 @@ from util.config import BLAZE_URL, MIABIS_BLAZE_URL, RECORDS_DIR_PATH, NEW_FILE_
     EMAIL_RECEIVER, MIABIS_ON_FHIR
 from util.custom_logger import setup_logger
 from util.http_util import is_endpoint_available
+from util.metrics import get_metrics_for_service
 
 setup_logger()
 logger = logging.getLogger(__name__)
@@ -41,6 +43,9 @@ if MIABIS_ON_FHIR:
 mail_service = MailService(records_path=RECORDS_DIR_PATH, new_file_period=NEW_FILE_PERIOD_DAYS,
                            smtp_host=SMTP_HOST, smtp_port=SMTP_PORT, email_receiver=EMAIL_RECEIVER)
 app = create_api(blaze_service, miabis_blaze_service)
+
+metrics = PrometheusMetrics(app)
+metrics.info('app_info', 'Application info', version='1.0.0')
 
 if is_endpoint_available(endpoint_url=BLAZE_URL, wait_time=10, max_attempts=5):
     if MIABIS_ON_FHIR:

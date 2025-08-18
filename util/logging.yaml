@@ -1,8 +1,22 @@
 version: 1
 formatters:
   simple:
-    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 handlers:
+  sync_file:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: simple
+    filename: /var/log/fhir-module/sync.log
+    maxBytes: 10485760
+    backupCount: 5
+  miabis_sync_file:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: simple
+    filename: /var/log/fhir-module/miabis_sync.log
+    maxBytes: 10485760
+    backupCount: 5
   console:
     class: logging.StreamHandler
     level: DEBUG
@@ -10,8 +24,18 @@ handlers:
     stream: ext://sys.stdout
 root:
   level: DEBUG
-  handlers: [ console ]
+  handlers: [console]
 
 default:
   level: DEBUG
-  handlers: [ console ]
+  handlers: [console]
+
+loggers:
+  sync_logger:
+    level: INFO
+    handlers: [sync_file]
+    propagate: no
+  miabis_sync_logger:
+    level: INFO
+    handlers: [miabis_sync_file]
+    propagate: no

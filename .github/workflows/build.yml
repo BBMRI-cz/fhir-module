@@ -46,6 +46,11 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
+      - name: Create log directories
+        run: |
+          sudo mkdir -p /var/log/fhir-module
+          sudo chmod 777 /var/log/fhir-module
+
       - name: Run unit tests
         run: make test
 
@@ -68,6 +73,11 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
+
+      - name: Create log directories
+        run: |
+          sudo mkdir -p /var/log/fhir-module
+          sudo chmod 777 /var/log/fhir-module
 
       - name: Run integration tests
         run: make validate
@@ -131,6 +141,9 @@ jobs:
       - name: Create docker network
         run: docker network create system-test
 
+      - name: Create .env file
+        run: touch .env
+
       - name: Run sandbox in dev env
         run: docker compose --profile dev up -d
 
@@ -179,6 +192,9 @@ jobs:
       - name: Create docker network
         run: docker network create system-test
 
+      - name: Create .env file
+        run: touch .env
+
       - name: Run sandbox in dev env (use compose.override.yaml  to work with csv files)
         run: docker compose -f compose.yaml -f .github/comp_override/compose.override.yaml --profile dev up -d
 
@@ -226,6 +242,9 @@ jobs:
 
       - name: Create docker network
         run: docker network create system-test
+
+      - name: Create .env file
+        run: touch .env
 
       - name: Run sandbox in dev env (use compose.override.yaml  to work with csv files)
         run: docker compose -f compose.yaml -f .github/comp_override/compose.override2.yaml --profile dev up -d

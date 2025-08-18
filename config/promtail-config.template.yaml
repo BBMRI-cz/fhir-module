@@ -1,0 +1,41 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /etc/promtail/positions.yaml
+
+clients:
+  - url: "${GRAFANA_LOGS_URL}"
+    basic_auth:
+      username: "${GRAFANA_LOGS_USERNAME}"
+      password: "${GRAFANA_LOGS_PASSWORD}"
+
+scrape_configs:
+  - job_name: fhir-module-sync
+    static_configs:
+      - targets: ["localhost"]
+        labels:
+          job: fhir-module-sync
+          environment: "${ENVIRONMENT}"
+          __path__: /var/log/fhir-module/sync.log
+    pipeline_stages:
+      - regex:
+          expression: "({.*})$"
+      - json:
+          expressions:
+            sync_summary: sync_summary
+
+  - job_name: fhir-module-miabis-sync
+    static_configs:
+      - targets: ["localhost"]
+        labels:
+          job: fhir-module-miabis-sync
+          environment: "${ENVIRONMENT}"
+          __path__: /var/log/fhir-module/miabis_sync.log
+    pipeline_stages:
+      - regex:
+          expression: "({.*})$"
+      - json:
+          expressions:
+            sync_summary: sync_summary

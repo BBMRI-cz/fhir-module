@@ -36,13 +36,14 @@ docker logs fhir-module -f
 if connection to the Blaze was successful, you should see the following line:
 
 ` Starting sync with Blaze 🔥!`
+
 ### Environment variables
 
 The FHIR module is configured via environment variables, all of which can be found below. To override the default value,
 simply specify them in `compose.yaml` in the environment section.
 
 | Variable name                 | Default value                                          | Description                                                                                                                                                        |
-|-------------------------------|--------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ----------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | BLAZE_URL                     | http://localhost:8080/fhir                             | Base url of the FHIR server for sync. No trailing slash.                                                                                                           |
 | MIABIS_BLAZE_URL              | http://localhost:5432/fhir                             | Base url of the FHIR server for syncing specifically the MIABIS on FHIR profile. No trailing slash.                                                                |
 | BLAZE_USER                    | _empty_                                                | Basic auth username for accessing the blaze store via HTTP.                                                                                                        |
@@ -55,7 +56,7 @@ simply specify them in `compose.yaml` in the environment section.
 | BIOBANK_PATH                  | /opt/fhir-module/default_biobank.json                  | Path to a JSON file containing information about Biobank. Example [here](..util/default_biobank.json)                                                              |
 | STORAGE_TEMP_MAP_PATH         | /opt/fhir-module/default_storage_temp_map.json         | Path to a JSON file containing mapping between organizational and FHIR storage temperature. Example [here](../util/default_storage_temp_map.json).                 |
 | MIABIS_STORAGE_TEMP_MAP_PATH  | /opt/fhir-module/default_miabis_storage_temp_map.json  | Path to a JSON file containing mapping between organizational and MIABIS on FHIR storage temperature. Example [here](../util/default_miabis_storage_temp_map.json) |
-| TYPE_TO_COLLECTION_MAP_PATH   | /opt/fhir-module/default_type_to_collection_map.json   | Path to a JSON file containig mapping of attribute (provided in the PARSING_MAP) to a collection.  Example [here](../util/default_type_to_collection_map.json).    |
+| TYPE_TO_COLLECTION_MAP_PATH   | /opt/fhir-module/default_type_to_collection_map.json   | Path to a JSON file containig mapping of attribute (provided in the PARSING_MAP) to a collection. Example [here](../util/default_type_to_collection_map.json).     |
 | DIR_PATH                      | /mock_dir/                                             | Path to a folder containing file(s) with records.                                                                                                                  |
 | RECORDS_FILE_TYPE             | xml                                                    | Type of files containing the records.                                                                                                                              |
 | CSV_SEPARATOR                 | ;                                                      | Separator used inside csv file, if the records are in a csv format.                                                                                                |
@@ -65,7 +66,20 @@ simply specify them in `compose.yaml` in the environment section.
 | EMAIL_RECEIVER                | test@example.com                                       | Mail address that the notification emails will be send to.                                                                                                         |
 | LOG_LEVEL                     | INFO                                                   | minimum severity of logs to be recorded. values are : INFO, DEBUG,ERROR                                                                                            |
 
+### Monitoring and Logging Environment Variables
+
+The following environment variables are used for configuring monitoring and logging capabilities:
+
+| Variable name         | Default value | Description                                                                                                                                                                                 |
+| --------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ENVIRONMENT           | _empty_       | Specifies the deployment environment (e.g., LOCAL, PRODUCTION, STAGING). Used for environment-specific configuration. This value is used to distinguish logs from different envs in Grafana |
+| PROM_REMOTE_URL       | _empty_       | URL endpoint for pushing Prometheus metrics to a remote Prometheus server or Grafana Cloud.                                                                                                 |
+| PROM_REMOTE_USER      | _empty_       | Username for authentication with the remote Prometheus metrics endpoint.                                                                                                                    |
+| PROM_REMOTE_PASS      | _empty_       | Password or API key for authentication with the remote Prometheus metrics endpoint.                                                                                                         |
+| GRAFANA_LOGS_USERNAME | _empty_       | Username for authentication with Grafana Cloud logs service for centralized log aggregation.                                                                                                |
+| GRAFANA_LOGS_PASSWORD | _empty_       | Password or API key for authentication with Grafana Cloud logs service for centralized log aggregation.                                                                                     |
+
 ## Object mapping
 
 The FHIR module uses dynamically configurable maps currently stored as json files
-to parse XML,CSV or JSON into Python objects. 
+to parse XML,CSV or JSON into Python objects.
