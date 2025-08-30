@@ -251,6 +251,47 @@ class BlazeService:
                      f"&code={icd_10_code}"
         return self._session.get(search_url, verify=False).json().get("total") > 0
 
+    def __check_sample_and_patient_presence(self, sample) -> tuple[bool, bool]:
+        """Check if sample and patient are present in Blaze store."""
+        logger.debug(f"Checking if Specimen with ID: {sample.identifier} is present."
+                     f"Checking if Patient with ID: {sample.donor_id} is present")
+        specimen_present = self.is_resource_present_in_blaze(resource_type="Specimen", identifier=sample.identifier)
+        patient_present = self.is_resource_present_in_blaze(resource_type="Patient", identifier=sample.donor_id)
+        return specimen_present, patient_present
+
+    def __process_new_sample_upload(self, sample) -> tuple[int, int]:
+        """Process upload of a new sample. Returns (processed_count, failed_count)."""
+        logger.debug(f"Specimen with org. ID: {sample.identifier} is not present in Blaze but the Donor is "
+                     f"present. Uploading...")
+        try:
+            status = self.__upload_sample(sample)
+            if status == 201:
+                logger.info(f"Succesfully uploaded Specimen with org ID: {sample.identifier}")
+                return 1, 0
+            else:
+                return 0, 1
+        except Exception as e:
+            logger.error(f"Error uploading sample {sample.identifier}: {e}")
+            return 0, 1
+
+    def __process_existing_sample_update(self, sample) -> tuple[int, int, int]:
+        """Process update of an existing sample. Returns (processed_count, failed_count, skipped_count)."""
+        logger.debug(f"Specimen with org. ID: {sample.identifier} is already present in Blaze."
+                     f"Checking if the sample is up to date.")
+        old_sample = self.__build_existing_sample(sample)
+        if sample == old_sample:
+            logger.info(f"Sample is up to date. Skipping....")
+            return 0, 0, 1
+        
+        try:
+            old_sample_id = self.__get_fhir_sample_id(sample.identifier)
+            sample.update_diagnoses(old_sample.diagnoses)
+            self.__update_sample(sample, old_sample_id)
+            return 1, 0, 0
+        except Exception as e:
+            logger.error(f"Error updating sample {sample.identifier}: {e}")
+            return 0, 1, 0
+
     def sync_samples(self):
         """Syncs Samples present in the repository with the Blaze store. Returns summary dict."""
         logger.info("Starting upload of samples...")
@@ -261,41 +302,23 @@ class BlazeService:
         processed = 0
         failed = 0
         skipped = 0
+        
         for sample in self._sample_service.get_all():
-            logger.debug(f"Checking if Specimen with ID: {sample.identifier} is present."
-                         f"Checking if Patient with ID: {sample.donor_id} is present")
-            specimen_present = self.is_resource_present_in_blaze(resource_type="Specimen", identifier=sample.identifier)
-            patient_present = self.is_resource_present_in_blaze(resource_type="Patient", identifier=sample.donor_id)
+            specimen_present, patient_present = self.__check_sample_and_patient_presence(sample)
+            
             if not specimen_present and patient_present:
-                logger.debug(f"Specimen with org. ID: {sample.identifier} is not present in Blaze but the Donor is "
-                             f"present. Uploading...")
-                try:
-                    status = self.__upload_sample(sample)
-                    if status == 201:
-                        processed += 1
-                        logger.info(f"Succesfully uploaded Specimen with org ID: {sample.identifier}")
-                    else:
-                        failed += 1
-                except Exception as e:
-                    logger.error(f"Error uploading sample {sample.identifier}: {e}")
-                    failed += 1
+                new_processed, new_failed = self.__process_new_sample_upload(sample)
+                processed += new_processed
+                failed += new_failed
             elif specimen_present and patient_present:
-                logger.debug(f"Specimen with org. ID: {sample.identifier} is already present in Blaze."
-                             f"Checking if the sample is up to date.")
-                old_sample = self.__build_existing_sample(sample)
-                if sample == old_sample:
-                    logger.info(f"Sample is up to date. Skipping....")
-                    skipped += 1
-                    continue
-                else:
-                    try:
-                        old_sample_id = self.__get_fhir_sample_id(sample.identifier)
-                        sample.update_diagnoses(old_sample.diagnoses)
-                        self.__update_sample(sample, old_sample_id)
-                        processed += 1
-                    except Exception as e:
-                        logger.error(f"Error updating sample {sample.identifier}: {e}")
-                        failed += 1
+                new_processed, new_failed, new_skipped = self.__process_existing_sample_update(sample)
+                processed += new_processed
+                failed += new_failed
+                skipped += new_skipped
+            else:
+                # Skip if patient is not present - cannot upload sample without patient
+                logger.debug(f"Patient with ID: {sample.donor_id} is not present. Skipping sample {sample.identifier}.")
+                skipped += 1
 
         logger.info(f"Successfully uploaded {self.get_number_of_resources('Specimen') - num_of_samples_before_sync} new samples.")
         logger.info("Upload of samples ended.")

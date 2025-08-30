@@ -146,46 +146,68 @@ class MiabisBlazeService(BlazeServiceInterface):
             'collections': {'processed': collection_processed, 'failed': collection_failed, 'skipped': collection_skipped}
         }
 
+    def __validate_donor_type(self, donor) -> SampleDonorMiabis | None:
+        """Validate that donor is of correct type and return cast donor or None if invalid."""
+        if not isinstance(donor, SampleDonorMiabis):
+            logger.error(
+                f"donor is not instance of MIABIS on FHIR model, but rather its type is {type(donor)}. Skipping....")
+            return None
+        return cast(SampleDonorMiabis, donor)
+
+    def __process_new_donor_upload(self, donor: SampleDonorMiabis) -> tuple[int, int]:
+        """Process upload of a new donor. Returns (processed_count, failed_count)."""
+        try:
+            self.blaze_client.upload_donor(donor)
+            logger.debug(f"MIABIS ON FHIR: successfully uploaded patient with identifier {donor.identifier}")
+            return 1, 0
+        except HTTPError as e:
+            logger.error(f"Error uploading the patient: {e}")
+            return 0, 1
+
+    def __process_existing_donor_update(self, donor: SampleDonorMiabis) -> tuple[int, int, int]:
+        """Process update of an existing donor. Returns (processed_count, failed_count, skipped_count)."""
+        logger.debug(f"MIABIS on FHIR: donor with id {donor.identifier} already present. Checking if all the data about the patient are same")
+        
+        donor_fhir_id = self.blaze_client.get_fhir_id("Patient", donor.identifier)
+        donor_from_blaze = self.blaze_client.build_donor_from_json(donor_fhir_id)
+        
+        if donor != donor_from_blaze:
+            logger.debug(f"MIABIS on FHIR: donor resource is different from donor that is already in blaze. Updating....")
+            try:
+                self.blaze_client.update_donor(donor)
+                return 1, 0, 0
+            except Exception as e:
+                logger.error(f"MIABIS on FHIR: Error updating donor {donor.identifier}: {e}")
+                return 0, 1, 0
+        else:
+            return 0, 0, 1
+
     def upload_patients(self):
         """
         This method posts all patients from the repository to the Blaze store. WARNING: can result in duplication of
         patients. This method should be called only once, specifically if there are no patients in the FHIR server.
-                """
+        """
         logger.info(f"MIABIS on FHIR: Starting upload of donors")
         processed = 0
         failed = 0
         skipped = 0
         
         for donor in self.patient_service.get_all():
-            if not isinstance(donor, SampleDonorMiabis):
-                logger.error(
-                    f"donor is not instance of MIABIS on FHIR model, but rather its type is {type(donor)}. Skipping....")
+            validated_donor = self.__validate_donor_type(donor)
+            if validated_donor is None:
                 skipped += 1
                 continue
-            donor = cast(SampleDonorMiabis, donor)
-            if not self.blaze_client.is_resource_present_in_blaze("Patient", donor.identifier, "identifier"):
-                try:
-                 self.blaze_client.upload_donor(donor)
-                 processed += 1
-                except HTTPError as e:
-                    logger.error(f"Error uploading the patient: {e}")
-                    failed += 1
-                    continue
-                logger.debug(f"MIABIS ON FHIR: successfully uploaded patient with identifier {donor.identifier}")
+                
+            if not self.blaze_client.is_resource_present_in_blaze("Patient", validated_donor.identifier, "identifier"):
+                new_processed, new_failed = self.__process_new_donor_upload(validated_donor)
+                processed += new_processed
+                failed += new_failed
             else:
-                logger.debug(f"MIABIS on FHIR: donor with id {donor.identifier} already present. Checking if all the data about the patient are same")
-                donor_fhir_id = self.blaze_client.get_fhir_id("Patient",donor.identifier)
-                donor_from_blaze = self.blaze_client.build_donor_from_json(donor_fhir_id)
-                if donor != donor_from_blaze:
-                    logger.debug(f"MIABIS on FHIR: donor resource is different from donor that is already in blaze. Updating....")
-                    try:
-                        self.blaze_client.update_donor(donor)
-                        processed += 1
-                    except Exception as e:
-                        logger.error(f"MIABIS on FHIR: Error updating donor {donor.identifier}: {e}")
-                        failed += 1
-                else:
-                    skipped += 1
+                new_processed, new_failed, new_skipped = self.__process_existing_donor_update(validated_donor)
+                processed += new_processed
+                failed += new_failed
+                skipped += new_skipped
+                
         logger.info(f"MIABIS on FHIR: Upload of donor resources is done.")
         return {'processed': processed, 'failed': failed, 'skipped': skipped}
 
