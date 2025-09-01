@@ -1,16 +1,4 @@
 services:
-  config-generator:
-    image: alpine:latest
-    entrypoint: /bin/sh
-    command: -c "apk add --no-cache gettext && envsubst < /templates/prometheus.template.yml > /prometheus-config/prometheus.yml && envsubst < /templates/promtail-config.template.yaml > /promtail-config/promtail-config.yaml"
-    volumes:
-      - ./logging/prometheus.template.yml:/templates/prometheus.template.yml:ro
-      - ./logging/promtail-config.template.yaml:/templates/promtail-config.template.yaml:ro
-      - prometheus-config:/prometheus-config
-      - promtail-config:/promtail-config
-    env_file:
-      - .env
-
   fhir-module:
     image: ghcr.io/bbmri-cz/fhir-module:latest
     container_name: fhir-module

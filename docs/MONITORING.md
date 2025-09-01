@@ -1,6 +1,6 @@
 # Monitoring Setup
 
-This project uses **Prometheus** for uptime metrics collection and **Promtail** to push logs regarding the app status to the Grafana cloud. The monitoring stack is integrated with the FHIR module to provide observability mainly for the synchronization processes, since that is the main purpose of the module.
+This project uses **Prometheus** for uptime metrics collection and **Promtail** to push logs regarding the app status to Grafana Cloud. The monitoring stack is integrated with the FHIR module to provide observability mainly for the synchronization processes, since that is the main purpose of the module.
 
 ## Overview
 
@@ -10,7 +10,6 @@ The monitoring setup consists of:
 - **Promtail**: Aggregates and forwards logs to Grafana Cloud (Loki)
 - **Configuration Templates**: Template files with environment variable substitution
 - **Automatic config creation (optional)**: There is a container responsible for filling out the templates from the environment variables, in case this process is not preformed manually
--
 
 ## Enabling monitoring
 
@@ -18,32 +17,13 @@ To enable monitoring containers use the `monitoring` profile for docker compose 
 
 ```bash
 # Run the prod profile with the monitoring included
-docker compose --profile monitoring prod
+docker compose --profile monitoring --profile prod up
 
 ```
 
 ### Monitoring Setup Methods
 
-There are two ways to configure the monitoring components, when they are included for the data to be sent to Grafana cloud:
-
-#### Method 1: Automatic Setup
-
-Use the `config-generator` container to automatically generate configuration files from templates. To do so use the `setup` profile
-
-```bash
-# Run the prod profile with the monitoring included
-docker compose --profile setup monitoring prod
-
-```
-
-The `config-generator` service:
-
-- Uses Alpine Linux with `gettext` for environment variable substitution
-- Processes template files from the `config/` directory
-- Generates final configuration files in Docker volumes
-- Runs as a one-time setup service
-
-**It is imperative the following environment variables are present in the environment [(also described here)](/docs/DEPLOYMENT.md)**
+**The following variables need to be manually substituted to the config files [(also described here)](/docs/DEPLOYMENT.md)**
 
 | Variable name         | Default value | Description                                                                                                                                                                                 |
 | --------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -55,7 +35,7 @@ The `config-generator` service:
 | GRAFANA_LOGS_USERNAME | _empty_       | Username for authentication with Grafana Cloud logs service for centralized log aggregation.                                                                                                |
 | GRAFANA_LOGS_PASSWORD | _empty_       | Password or API key for authentication with Grafana Cloud logs service for centralized log aggregation.                                                                                     |
 
-#### Method 2: Manual Setup
+#### Manual Setup
 
 Manually copy and configure the template files:
 

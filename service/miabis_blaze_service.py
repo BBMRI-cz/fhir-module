@@ -127,7 +127,7 @@ class MiabisBlazeService(BlazeServiceInterface):
                     self.blaze_client.upload_collection(collection)
                     collection_processed += 1
                     logger.debug(
-                        f"MIABIS on FHIR: Sucessfully uploaded collection with identifier {collection.identifier}")
+                        f"MIABIS on FHIR: Successfully uploaded collection with identifier {collection.identifier}")
                 except Exception as e:
                     logger.error(f"MIABIS on FHIR: Error uploading collection {collection.identifier}: {e}")
                     collection_failed += 1
@@ -138,8 +138,8 @@ class MiabisBlazeService(BlazeServiceInterface):
         except (ValueError, KeyError, TypeError, HTTPError) as err:
             logger.error(f"{err}")
             biobank_failed += 1
-        else:
-            logger.info(f"MIABIS on FHIR: Sync of biobank and collection resources is done.")
+
+        logger.info(f"MIABIS on FHIR: Sync of biobank and collection resources is done.")
 
         return {
             'biobank': {'processed': biobank_processed, 'failed': biobank_failed, 'skipped': biobank_skipped},
@@ -229,7 +229,6 @@ class MiabisBlazeService(BlazeServiceInterface):
                 if not self.blaze_client.is_resource_present_in_blaze("Specimen", sample.identifier, "identifier"):
 
                         sample_fhir_id = self.blaze_client.upload_sample(sample)
-                        processed += 1
 
                         logger.debug(f"MIABIS on FHIR: Successfully uploaded sample with id {sample.identifier}")
                         patient_fhir_id = self.blaze_client.get_fhir_id("Patient", sample.donor_identifier)
@@ -242,14 +241,12 @@ class MiabisBlazeService(BlazeServiceInterface):
                             logger.debug(f"MIABIS on FHIR: Succesfully uploaded new Condition")
                         else:
                             condition_fhir_id = self.blaze_client.get_condition_by_patient_fhir_id(patient_fhir_id)
-                            try:
-                                self.blaze_client.add_diagnoses_to_condition(condition_fhir_id, sample_fhir_id)
-                            except Exception as e:
-                                logger.debug(f"MIABIS on FHIR: Error adding diagnoses to condition: {e}")
-                                failed += 1
+                            self.blaze_client.add_diagnoses_to_condition(condition_fhir_id, sample_fhir_id)
                         if sample.sample_collection_id is not None:
                             collection_with_new_samples_map.setdefault(sample.sample_collection_id, []).append(
                                 sample_fhir_id)
+
+                        processed += 1
                 else:
                     logger.debug(f"MIABIS on FHIR: sample with id {sample.identifier}  is already present in the blaze store. Checking if the data of sample are same.")
                     sample_fhir_id = self.blaze_client.get_fhir_id("Specimen",sample.identifier)
@@ -257,20 +254,18 @@ class MiabisBlazeService(BlazeServiceInterface):
                     if sample != sample_from_blaze:
                         logger.debug(f"MIABIS on FHIR: sample is different than the sample already present in the blaze. Updating.")
                         sample_fhir_id = self.blaze_client.update_sample(sample)
-                        processed += 1
                         patient_fhir_id = self.blaze_client.get_fhir_id("Patient", sample.donor_identifier)
                         condition_fhir_id = self.blaze_client.get_condition_by_patient_fhir_id(patient_fhir_id)
-                        try:
-                            self.blaze_client.add_diagnoses_to_condition(condition_fhir_id, sample_fhir_id)
-                        except Exception as e:
-                            logger.debug(f"MIABIS on FHIR: Error adding diagnoses to condition: {e}")
-                            failed += 1
+                        self.blaze_client.add_diagnoses_to_condition(condition_fhir_id, sample_fhir_id)
+
                         if sample.sample_collection_id is not None:
                             collection_with_new_samples_map.setdefault(sample.sample_collection_id, []).append(
                                 sample_fhir_id)
+
+                        processed += 1
                     else:
                         skipped += 1
-            except (NonExistentResourceException,HTTPError) as err:
+            except (NonExistentResourceException, HTTPError) as err:
                 logger.error(f"MIABIS on FHIR: {err}")
                 failed += 1
 

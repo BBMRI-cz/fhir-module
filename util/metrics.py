@@ -18,7 +18,10 @@ class MetricsService:
     def __init__(self, service_name: str):
         self.service_name = service_name
     
-    def set_metric(self, metric_name: str, value: float, labels: dict = {}) -> None:
+    def set_metric(self, metric_name: str, value: float, labels: dict = None) -> None:
+        if labels is None:
+            labels = {}
+        
         if not self.__check_metric_exists(metric_name):
             return
         
