@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  fhir-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      # Mount a volume for the SQLite database to persist data
+      - ./data:/app/data
+    restart: unless-stopped
