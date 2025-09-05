@@ -19,7 +19,7 @@ export async function registerAction(
   formData: z.infer<typeof RegisterFormSchema>
 ): Promise<RegisterResult> {
   try {
-    const validatedData = RegisterFormSchema.safeParse(formData);
+    const validatedData = await RegisterFormSchema.safeParseAsync(formData);
 
     if (!validatedData.success) {
       const errorMessage = validatedData.error.errors
