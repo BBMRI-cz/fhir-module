@@ -49,7 +49,7 @@ To deploy both the FHIR module and the UI:
 # Production deployment with UI
 docker compose --profile prod up -d
 
-# Development deployment with UI  
+# Development deployment with UI
 docker compose --profile dev up -d
 ```
 
@@ -58,10 +58,9 @@ docker compose --profile dev up -d
 Building the container:
 
 ```shell
-# Build the docker container with the 
+# Build the docker container with the
 docker build ./ui/fhir-place -t ghcr.io/bbmri-cz/fhir-ui:latest
 ```
-
 
 The UI will be available at [http://localhost:3000](http://localhost:3000).
 
@@ -76,6 +75,7 @@ docker logs fhir-ui -f
 #### First-time Setup
 
 On first deployment, the UI will automatically:
+
 1. Initialize the SQLite database
 2. Create default user accounts
 3. Set up authentication system
@@ -128,21 +128,21 @@ The following environment variables are used for configuring monitoring and logg
 
 The following environment variables are used to configure the Next.js UI application:
 
-| Variable name | Default value | Description |
-| ------------- | ------------- | ----------- |
-| NODE_ENV | development | Node.js environment mode (development/production) |
-| PORT | 3000 | Port on which the UI application runs |
-| NEXTAUTH_SECRET | _required_ | Secret key for NextAuth.js session encryption. **Must be set in production** |
-| AUTH_TRUST_HOST | false | Set to `true` for Docker deployment to trust proxy headers |
-| BACKEND_API_URL | http://localhost:5000 | URL of the FHIR module backend API |
-| PROMETHEUS_URL | http://prometheus:9090 | URL of the Prometheus metrics server |
-| NEXT_PUBLIC_PASSWORD_MIN_LENGTH | 8 | Minimum password length requirement |
-| NEXT_PUBLIC_PASSWORD_MAX_LENGTH | 128 | Maximum password length requirement |
-| NEXT_PUBLIC_PASSWORD_REQUIRE_UPPERCASE | false | Require uppercase letters in passwords |
-| NEXT_PUBLIC_PASSWORD_REQUIRE_LOWERCASE | false | Require lowercase letters in passwords |
-| NEXT_PUBLIC_PASSWORD_REQUIRE_NUMBERS | false | Require numbers in passwords |
-| NEXT_PUBLIC_PASSWORD_REQUIRE_SPECIAL_CHARS | false | Require special characters in passwords |
-| NEXT_PUBLIC_PASSWORD_SPECIAL_CHARS | !@#$%^&*()_+-=[]{}&#124;;:,.<>? | Allowed special characters for passwords |
+| Variable name                  | Default value                     | Description                                                                  |
+| ------------------------------ | --------------------------------- | ---------------------------------------------------------------------------- |
+| NODE_ENV                       | development                       | Node.js environment mode (development/production)                            |
+| PORT                           | 3000                              | Port on which the UI application runs                                        |
+| NEXTAUTH_SECRET                | _required_                        | Secret key for NextAuth.js session encryption. **Must be set in production** |
+| AUTH_TRUST_HOST                | false                             | Set to `true` for Docker deployment to trust proxy headers                   |
+| BACKEND_API_URL                | http://localhost:5000             | URL of the FHIR module backend API                                           |
+| PROMETHEUS_URL                 | http://prometheus:9090            | URL of the Prometheus metrics server                                         |
+| PASSWORD_MIN_LENGTH            | 8                                 | Minimum password length requirement                                          |
+| PASSWORD_MAX_LENGTH            | 128                               | Maximum password length requirement                                          |
+| PASSWORD_REQUIRE_UPPERCASE     | false                             | Require uppercase letters in passwords                                       |
+| PASSWORD_REQUIRE_LOWERCASE     | false                             | Require lowercase letters in passwords                                       |
+| PASSWORD_REQUIRE_NUMBERS       | false                             | Require numbers in passwords                                                 |
+| PASSWORD_REQUIRE_SPECIAL_CHARS | false                             | Require special characters in passwords                                      |
+| PASSWORD_SPECIAL_CHARS         | !@#$%^&\*()\_+-=[]{}&#124;;:,.<>? | Allowed special characters for passwords                                     |
 
 ## Object mapping
 
