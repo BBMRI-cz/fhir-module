@@ -39,8 +39,7 @@ services:
     image: ghcr.io/bbmri-cz/fhir-ui:latest
     container_name: fhir-ui
     profiles:
-      - dev
-      - prod
+      - ui
     networks:
       - fhir-integration
       - monitoring
