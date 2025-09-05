@@ -9,7 +9,7 @@ import { z } from "zod";
 jest.mock("@/lib/auth");
 jest.mock("@/app/login/form/schema", () => ({
   RegisterFormSchema: {
-    safeParse: jest.fn(),
+    safeParseAsync: jest.fn(),
   },
 }));
 
@@ -48,11 +48,12 @@ describe("registerAction", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (mockRegisterFormSchema.safeParse as jest.Mock).mockImplementation(
-      (data) => ({
-        success: true,
-        data,
-      })
+    (mockRegisterFormSchema.safeParseAsync as jest.Mock).mockImplementation(
+      (data) =>
+        Promise.resolve({
+          success: true,
+          data,
+        })
     );
     mockSignIn.mockRejectedValue(new Error("Auto sign-in failed"));
     jest.spyOn(console, "error").mockImplementation(() => {});
@@ -72,7 +73,7 @@ describe("registerAction", () => {
         id: "user-123",
         username: "testuser",
       });
-      expect(mockRegisterFormSchema.safeParse).toHaveBeenCalledWith(
+      expect(mockRegisterFormSchema.safeParseAsync).toHaveBeenCalledWith(
         validFormData
       );
       expect(mockCreateUser).toHaveBeenCalledWith({
@@ -96,11 +97,12 @@ describe("registerAction", () => {
           message: "Username is required",
         },
       ]);
-      (mockRegisterFormSchema.safeParse as jest.Mock).mockImplementation(
-        () => ({
-          success: false,
-          error: zodError,
-        })
+      (mockRegisterFormSchema.safeParseAsync as jest.Mock).mockImplementation(
+        () =>
+          Promise.resolve({
+            success: false,
+            error: zodError,
+          })
       );
 
       const result: RegisterResult = await registerAction(validFormData);
@@ -128,11 +130,12 @@ describe("registerAction", () => {
           message: "Email is required",
         },
       ]);
-      (mockRegisterFormSchema.safeParse as jest.Mock).mockImplementation(
-        () => ({
-          success: false,
-          error: zodError,
-        })
+      (mockRegisterFormSchema.safeParseAsync as jest.Mock).mockImplementation(
+        () =>
+          Promise.resolve({
+            success: false,
+            error: zodError,
+          })
       );
 
       const result: RegisterResult = await registerAction(validFormData);
@@ -201,11 +204,12 @@ describe("registerAction", () => {
           message: "Username is required",
         },
       ]);
-      (mockRegisterFormSchema.safeParse as jest.Mock).mockImplementation(
-        () => ({
-          success: false,
-          error: zodError,
-        })
+      (mockRegisterFormSchema.safeParseAsync as jest.Mock).mockImplementation(
+        () =>
+          Promise.resolve({
+            success: false,
+            error: zodError,
+          })
       );
 
       const result: RegisterResult = await registerAction(emptyFormData);

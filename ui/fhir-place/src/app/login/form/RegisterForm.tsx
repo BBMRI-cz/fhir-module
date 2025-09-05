@@ -12,6 +12,8 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 
+import { registerAction } from "@/actions/auth-management/register";
+
 const RegisterForm = () => {
   const router = useRouter();
   const { update } = useSession();
@@ -38,10 +40,6 @@ const RegisterForm = () => {
   }, [password, confirmPassword, form]);
 
   async function onSubmit(data: z.infer<typeof RegisterFormSchema>) {
-    const { registerAction } = await import(
-      "../../../actions/auth-management/register"
-    );
-
     try {
       const result = await registerAction(data);
 
@@ -49,7 +47,7 @@ const RegisterForm = () => {
         toast.success("Registration Successful", {
           description: result.message,
         });
-        
+
         await update();
         router.refresh();
         router.push("/dashboard");
