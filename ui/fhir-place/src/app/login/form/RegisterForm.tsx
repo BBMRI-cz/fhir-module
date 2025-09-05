@@ -10,9 +10,11 @@ import { Button } from "@/components/ui/button";
 import { CheckedFormInput } from "@/components/custom/form/CheckedFormInput";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 const RegisterForm = () => {
   const router = useRouter();
+  const { update } = useSession();
 
   const form = useForm<z.infer<typeof RegisterFormSchema>>({
     resolver: zodResolver(RegisterFormSchema),
@@ -47,6 +49,8 @@ const RegisterForm = () => {
         toast.success("Registration Successful", {
           description: result.message,
         });
+        
+        await update();
         router.refresh();
         router.push("/dashboard");
       } else {

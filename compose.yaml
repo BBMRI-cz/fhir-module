@@ -4,8 +4,8 @@ services:
     entrypoint: /bin/sh
     command: -c "apk add --no-cache gettext && envsubst < /templates/prometheus.template.yml > /prometheus-config/prometheus.yml && envsubst < /templates/promtail-config.template.yaml > /promtail-config/promtail-config.yaml"
     volumes:
-      - ./logging/prometheus.template.yml:/templates/prometheus.template.yml:ro
-      - ./logging/promtail-config.template.yaml:/templates/promtail-config.template.yaml:ro
+      - ./config/prometheus.template.yml:/templates/prometheus.template.yml:ro
+      - ./config/promtail-config.template.yaml:/templates/promtail-config.template.yaml:ro
       - prometheus-config:/prometheus-config
       - promtail-config:/promtail-config
     env_file:
@@ -22,7 +22,7 @@ services:
       - monitoring
     restart: no
     ports:
-      - "5000:5000"
+      - "5001:5000"
     environment:
       BLAZE_URL: "http://test-blaze:8080/fhir"
       MIABIS_BLAZE_URL: "http://miabis-blaze:8080/fhir"
@@ -128,9 +128,7 @@ services:
     volumes:
       - fhir-logs:/var/log/fhir-module:ro
       - promtail-config:/etc/promtail
-      - promtail-positions:/etc/promtail/positions
     command: -config.file=/etc/promtail/promtail-config.yaml
-    restart: unless-stopped
 
 networks:
   fhir-integration:
@@ -141,5 +139,4 @@ volumes:
   prometheus-config:
   fhir-logs:
   promtail-config:
-  promtail-positions:
   ui-data:

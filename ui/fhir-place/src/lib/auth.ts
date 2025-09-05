@@ -29,7 +29,7 @@ export async function createUser(userData: CreateUserData): Promise<User> {
   const { username, password, firstName, lastName, email } = userData;
 
   try {
-    const passwordValidation = validatePassword(password);
+    const passwordValidation = await validatePassword(password);
     if (!passwordValidation.isValid) {
       throw new UserCreationError(
         username,
