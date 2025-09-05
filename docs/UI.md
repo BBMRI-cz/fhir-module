@@ -15,24 +15,28 @@ The UI application (`fhir-place`) is a Next.js application that offers:
 ## Features
 
 ### Authentication System
+
 - Secure user registration and login
 - Session management with NextAuth.js
 - Password validation with configurable requirements
 - User profile management
 
 ### Dashboard
+
 - Real-time system health monitoring
 - Synchronization status indicators
 - Prometheus metrics integration
 - System uptime and performance metrics
 
 ### Backend Control
+
 - Start/stop FHIR module operations
 - Monitor synchronization processes
 - View operation logs and status
 - Manual trigger for data synchronization
 
 ### Settings
+
 - User profile management
 - Password change functionality
 - Theme switching (light/dark mode)
@@ -52,27 +56,32 @@ The UI is built using:
 ## Development Setup
 
 ### Prerequisites
+
 - Node.js 18+
 - npm or yarn
 
 ### Local Development
 
 1. Navigate to the UI directory:
+
    ```bash
    cd ui/fhir-place
    ```
 
 2. Install dependencies:
+
    ```bash
    npm install
    ```
 
 3. Initialize the database:
+
    ```bash
    npm run db:init
    ```
 
 4. Start the development server:
+
    ```bash
    npm run dev
    ```
@@ -99,11 +108,14 @@ The UI is containerized and deployed alongside the main FHIR module using Docker
 From the project root directory:
 
 ```bash
-# Development environment
-docker compose --profile dev up fhir-ui
+docker compose --profile ui up
+```
 
-# Production environment  
-docker compose --profile prod up fhir-ui
+Note that the UI container is **heavily** dependant on the prod / dev ones and monitoring
+
+```bash
+# Best to the whole stack
+docker compose --profile dev -- profile monitoring --profile ui up
 ```
 
 The UI will be available at [http://localhost:3000](http://localhost:3000).
@@ -118,31 +130,31 @@ The UI application uses the following environment variables:
 
 ### Core Configuration
 
-| Variable name | Default value | Description |
-|---------------|---------------|-------------|
-| `NODE_ENV` | `development` | Node.js environment mode (development/production) |
-| `PORT` | `3000` | Port on which the application runs |
-| `NEXTAUTH_SECRET` | _required_ | Secret key for NextAuth.js session encryption |
-| `AUTH_TRUST_HOST` | `false` | Set to `true` for Docker deployment to trust proxy headers |
+| Variable name     | Default value | Description                                                |
+| ----------------- | ------------- | ---------------------------------------------------------- |
+| `NODE_ENV`        | `development` | Node.js environment mode (development/production)          |
+| `PORT`            | `3000`        | Port on which the application runs                         |
+| `NEXTAUTH_SECRET` | _required_    | Secret key for NextAuth.js session encryption              |
+| `AUTH_TRUST_HOST` | `false`       | Set to `true` for Docker deployment to trust proxy headers |
 
 ### Backend Integration
 
-| Variable name | Default value | Description |
-|---------------|---------------|-------------|
-| `BACKEND_API_URL` | `http://localhost:5000` | URL of the FHIR module backend API |
-| `PROMETHEUS_URL` | `http://prometheus:9090` | URL of the Prometheus metrics server |
+| Variable name     | Default value            | Description                          |
+| ----------------- | ------------------------ | ------------------------------------ |
+| `BACKEND_API_URL` | `http://localhost:5000`  | URL of the FHIR module backend API   |
+| `PROMETHEUS_URL`  | `http://prometheus:9090` | URL of the Prometheus metrics server |
 
 ### Password Validation Configuration
 
-| Variable name | Default value | Description |
-|---------------|---------------|-------------|
-| `NEXT_PUBLIC_PASSWORD_MIN_LENGTH` | `8` | Minimum password length requirement |
-| `NEXT_PUBLIC_PASSWORD_MAX_LENGTH` | `128` | Maximum password length requirement |
-| `NEXT_PUBLIC_PASSWORD_REQUIRE_UPPERCASE` | `false` | Require uppercase letters in passwords |
-| `NEXT_PUBLIC_PASSWORD_REQUIRE_LOWERCASE` | `false` | Require lowercase letters in passwords |
-| `NEXT_PUBLIC_PASSWORD_REQUIRE_NUMBERS` | `false` | Require numbers in passwords |
-| `NEXT_PUBLIC_PASSWORD_REQUIRE_SPECIAL_CHARS` | `false` | Require special characters in passwords |
-| `NEXT_PUBLIC_PASSWORD_SPECIAL_CHARS` | `!@#$%^&*()_+-=[]{}|;:,.<>?` | Allowed special characters for passwords |
+| Variable name                    | Default value         | Description                             |
+| -------------------------------- | --------------------- | --------------------------------------- | ---------------------------------------- |
+| `PASSWORD_MIN_LENGTH`            | `8`                   | Minimum password length requirement     |
+| `PASSWORD_MAX_LENGTH`            | `128`                 | Maximum password length requirement     |
+| `PASSWORD_REQUIRE_UPPERCASE`     | `false`               | Require uppercase letters in passwords  |
+| `PASSWORD_REQUIRE_LOWERCASE`     | `false`               | Require lowercase letters in passwords  |
+| `PASSWORD_REQUIRE_NUMBERS`       | `false`               | Require numbers in passwords            |
+| `PASSWORD_REQUIRE_SPECIAL_CHARS` | `false`               | Require special characters in passwords |
+| `PASSWORD_SPECIAL_CHARS`         | `!@#$%^&\*()\_+-=[]{} | ;:,.<>?`                                | Allowed special characters for passwords |
 
 ### Example .env Configuration
 
@@ -158,16 +170,17 @@ BACKEND_API_URL=http://fhir-module:5000
 PROMETHEUS_URL=http://prometheus:9090
 
 # Password Requirements (optional)
-NEXT_PUBLIC_PASSWORD_MIN_LENGTH=12
-NEXT_PUBLIC_PASSWORD_REQUIRE_UPPERCASE=true
-NEXT_PUBLIC_PASSWORD_REQUIRE_LOWERCASE=true
-NEXT_PUBLIC_PASSWORD_REQUIRE_NUMBERS=true
-NEXT_PUBLIC_PASSWORD_REQUIRE_SPECIAL_CHARS=true
+PASSWORD_MIN_LENGTH=12
+PASSWORD_REQUIRE_UPPERCASE=true
+PASSWORD_REQUIRE_LOWERCASE=true
+PASSWORD_REQUIRE_NUMBERS=true
+PASSWORD_REQUIRE_SPECIAL_CHARS=true
 ```
 
 ## Security Considerations
 
 ### Environment Variables
+
 - Sensitive variables like `NEXTAUTH_SECRET` should be kept secure
 - Use strong, randomly generated secrets in production
 - Never commit sensitive environment variables to version control
@@ -186,14 +199,17 @@ The UI integrates with the monitoring stack:
 ### Common Issues
 
 1. **Database Connection Issues**
+
    - Ensure the database is properly initialized: `npm run db:init`
    - Check that the data directory has proper permissions
 
 2. **Authentication Problems**
+
    - Verify `NEXTAUTH_SECRET` is set and consistent
    - Check that `AUTH_TRUST_HOST` is set to `true` in Docker environments
 
 3. **Backend Connection Issues**
+
    - Verify `BACKEND_API_URL` points to the correct FHIR module endpoint
    - Ensure the backend service is running and accessible
 
