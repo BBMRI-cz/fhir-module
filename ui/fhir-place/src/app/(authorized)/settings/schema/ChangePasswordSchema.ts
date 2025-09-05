@@ -6,8 +6,8 @@ export const ChangePasswordSchema = z
     currentPassword: z.string().min(1, {
       message: "Current password is required",
     }),
-    newPassword: z.string().superRefine((password, ctx) => {
-      const validation = validatePassword(password);
+    newPassword: z.string().superRefine(async (password, ctx) => {
+      const validation = await validatePassword(password);
       if (!validation.isValid) {
         validation.errors.forEach((error) => {
           ctx.addIssue({

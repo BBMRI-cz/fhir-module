@@ -22,8 +22,8 @@ export const RegisterFormSchema = z
     username: z.string().min(3, {
       message: "Username must be at least 3 characters long",
     }),
-    password: z.string().superRefine((password, ctx) => {
-      const validation = validatePassword(password);
+    password: z.string().superRefine(async (password, ctx) => {
+      const validation = await validatePassword(password);
       if (!validation.isValid) {
         validation.errors.forEach((error) => {
           ctx.addIssue({

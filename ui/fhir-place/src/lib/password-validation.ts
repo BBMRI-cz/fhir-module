@@ -14,25 +14,39 @@ export interface PasswordValidationResult {
   requirements: PasswordRequirements;
 }
 
-function getPasswordRequirements(): PasswordRequirements {
-  return {
-    minLength: parseInt(process.env.NEXT_PUBLIC_PASSWORD_MIN_LENGTH || "8"),
-    maxLength: parseInt(process.env.NEXT_PUBLIC_PASSWORD_MAX_LENGTH || "128"),
-    requireUppercase:
-      process.env.NEXT_PUBLIC_PASSWORD_REQUIRE_UPPERCASE === "true",
-    requireLowercase:
-      process.env.NEXT_PUBLIC_PASSWORD_REQUIRE_LOWERCASE === "true",
-    requireNumbers: process.env.NEXT_PUBLIC_PASSWORD_REQUIRE_NUMBERS === "true",
-    requireSpecialChars:
-      process.env.NEXT_PUBLIC_PASSWORD_REQUIRE_SPECIAL_CHARS === "true",
-    specialChars:
-      process.env.NEXT_PUBLIC_PASSWORD_SPECIAL_CHARS ||
-      "!@#$%^&*()_+-=[]{}|;:,.<>?",
-  };
+let clientCache: PasswordRequirements | null = null;
+let clientCacheTime = 0;
+const CLIENT_CACHE_DURATION = 300000;
+
+async function getPasswordRequirements(): Promise<PasswordRequirements> {
+  // Server-side: read from env directly
+  if (typeof window === "undefined") {
+    return {
+      minLength: parseInt(process.env.PASSWORD_MIN_LENGTH || "8"),
+      maxLength: parseInt(process.env.PASSWORD_MAX_LENGTH || "128"),
+      requireUppercase: process.env.PASSWORD_REQUIRE_UPPERCASE === "true",
+      requireLowercase: process.env.PASSWORD_REQUIRE_LOWERCASE === "true",
+      requireNumbers: process.env.PASSWORD_REQUIRE_NUMBERS === "true",
+      requireSpecialChars:
+        process.env.PASSWORD_REQUIRE_SPECIAL_CHARS === "true",
+      specialChars:
+        process.env.PASSWORD_SPECIAL_CHARS || "!@#$%^&*()_+-=[]{}|;:,.<>?",
+    };
+  }
+
+  // Client-side: fetch from API with cache
+  const now = Date.now();
+  if (!clientCache || now - clientCacheTime > CLIENT_CACHE_DURATION) {
+    const response = await fetch("/api/password-config");
+    clientCache = await response.json();
+    clientCacheTime = now;
+  }
+
+  return clientCache!;
 }
 
-export function validatePassword(password: string): PasswordValidationResult {
-  const requirements = getPasswordRequirements();
+export async function validatePassword(password: string): Promise<PasswordValidationResult> {
+  const requirements = await getPasswordRequirements();
   const errors: string[] = [];
 
   if (password.length < requirements.minLength) {
@@ -75,8 +89,8 @@ export function validatePassword(password: string): PasswordValidationResult {
   };
 }
 
-export function getPasswordRequirementsDescription(): string {
-  const requirements = getPasswordRequirements();
+export async function getPasswordRequirementsDescription(): Promise<string> {
+  const requirements = await getPasswordRequirements();
   const descriptions: string[] = [];
 
   descriptions.push(
