@@ -16,7 +16,13 @@ export interface PasswordValidationResult {
 
 let clientCache: PasswordRequirements | null = null;
 let clientCacheTime = 0;
-const CLIENT_CACHE_DURATION = 300000;
+const CLIENT_CACHE_DURATION = 60000;
+
+// Function to reset cache for testing purposes
+export function resetClientCache(): void {
+  clientCache = null;
+  clientCacheTime = 0;
+}
 
 async function getPasswordRequirements(): Promise<PasswordRequirements> {
   // Server-side: read from env directly
@@ -45,7 +51,9 @@ async function getPasswordRequirements(): Promise<PasswordRequirements> {
   return clientCache!;
 }
 
-export async function validatePassword(password: string): Promise<PasswordValidationResult> {
+export async function validatePassword(
+  password: string
+): Promise<PasswordValidationResult> {
   const requirements = await getPasswordRequirements();
   const errors: string[] = [];
 
