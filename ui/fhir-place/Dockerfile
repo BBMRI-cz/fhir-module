@@ -9,7 +9,7 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install all dependencies (including devDependencies for build)
+# Install all dependencies (including devDependencies for build), no --ignore-scripts because of the packages used (sqlite3)
 RUN npm ci && npm cache clean --force
 
 # Copy source code
@@ -27,11 +27,9 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install tsx for TypeScript execution
-RUN npm install -g tsx
-
-# Create a non-root user
-RUN addgroup -g 1001 -S nodejs && \
+# Install tsx for TypeScript execution and create a non-root user
+RUN npm install -g tsx && \
+    addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001
 
 # Copy necessary files from builder stage
@@ -47,13 +45,10 @@ COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/src/scripts ./src/scripts
 COPY --from=builder /app/src/lib ./src/lib
 
-# Copy startup script
-COPY start.sh /app/start.sh
 
 # Create data directory and set permissions
 RUN mkdir -p /app/data && \
-    chown -R nextjs:nodejs /app && \
-    chmod +x /app/start.sh
+    chown -R nextjs:nodejs /app
 USER nextjs
 
 # Expose port
