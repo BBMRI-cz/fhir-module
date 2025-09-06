@@ -37,6 +37,51 @@ if connection to the Blaze was successful, you should see the following line:
 
 ` Starting sync with Blaze 🔥!`
 
+### UI Deployment
+
+The FHIR module includes a web-based user interface that provides monitoring and control capabilities. The UI is deployed alongside the main application.
+
+#### Running the UI
+
+To deploy both the FHIR module and the UI:
+
+```shell
+# Production deployment with UI
+docker compose --profile prod up -d
+
+# Development deployment with UI
+docker compose --profile dev up -d
+```
+
+#### Running the UI
+
+Building the container:
+
+```shell
+# Build the docker container with the
+docker build ./ui/fhir-place -t ghcr.io/bbmri-cz/fhir-ui:latest
+```
+
+The UI will be available at [http://localhost:3000](http://localhost:3000).
+
+#### UI-specific logs
+
+To check the UI application logs:
+
+```shell
+docker logs fhir-ui -f
+```
+
+#### First-time Setup
+
+On first deployment, the UI will automatically:
+
+1. Initialize the SQLite database
+2. Create default user accounts
+3. Set up authentication system
+
+**Important**: Make sure to set the `NEXTAUTH_SECRET` environment variable to a secure random string in production environments.
+
 ### Environment variables
 
 The FHIR module is configured via environment variables, all of which can be found below. To override the default value,
@@ -78,6 +123,26 @@ The following environment variables are used for configuring monitoring and logg
 | PROM_REMOTE_PASS      | _empty_       | Password or API key for authentication with the remote Prometheus metrics endpoint.                                                                                                         |
 | GRAFANA_LOGS_USERNAME | _empty_       | Username for authentication with Grafana Cloud logs service for centralized log aggregation.                                                                                                |
 | GRAFANA_LOGS_PASSWORD | _empty_       | Password or API key for authentication with Grafana Cloud logs service for centralized log aggregation.                                                                                     |
+
+#### UI Application Variables
+
+The following environment variables are used to configure the Next.js UI application:
+
+| Variable name                  | Default value                     | Description                                                                  |
+| ------------------------------ | --------------------------------- | ---------------------------------------------------------------------------- |
+| NODE_ENV                       | development                       | Node.js environment mode (development/production)                            |
+| PORT                           | 3000                              | Port on which the UI application runs                                        |
+| NEXTAUTH_SECRET                | _required_                        | Secret key for NextAuth.js session encryption. **Must be set in production** |
+| AUTH_TRUST_HOST                | false                             | Set to `true` for Docker deployment to trust proxy headers                   |
+| BACKEND_API_URL                | http://localhost:5000             | URL of the FHIR module backend API                                           |
+| PROMETHEUS_URL                 | http://prometheus:9090            | URL of the Prometheus metrics server                                         |
+| PASSWORD_MIN_LENGTH            | 8                                 | Minimum password length requirement                                          |
+| PASSWORD_MAX_LENGTH            | 128                               | Maximum password length requirement                                          |
+| PASSWORD_REQUIRE_UPPERCASE     | false                             | Require uppercase letters in passwords                                       |
+| PASSWORD_REQUIRE_LOWERCASE     | false                             | Require lowercase letters in passwords                                       |
+| PASSWORD_REQUIRE_NUMBERS       | false                             | Require numbers in passwords                                                 |
+| PASSWORD_REQUIRE_SPECIAL_CHARS | false                             | Require special characters in passwords                                      |
+| PASSWORD_SPECIAL_CHARS         | !@#$%^&\*()\_+-=[]{}&#124;;:,.<>? | Allowed special characters for passwords                                     |
 
 ## Object mapping
 
