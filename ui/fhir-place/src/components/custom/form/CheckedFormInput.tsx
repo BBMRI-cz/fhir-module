@@ -40,8 +40,8 @@ export function CheckedFormInput<T extends FieldValues>({
   const messagesWithIds = useMemo(() => {
     if (!allMessages) return [];
 
-    return allMessages.map((message) => ({
-      id: crypto.randomUUID(),
+    return allMessages.map((message, idx) => ({
+      id: `${String(message)}-${idx}`,
       text: message,
     }));
   }, [allMessages]);
@@ -86,6 +86,12 @@ export function CheckedFormInput<T extends FieldValues>({
                   hasError &&
                     "border-red-400 focus:border-red-400 focus:ring-red-400/20"
                 )}
+                {...(isPassword && {
+                  autoComplete: "new-password",
+                  autoCorrect: "off",
+                  autoCapitalize: "off",
+                  spellCheck: false,
+                })}
               />
 
               {/* Password toggle button */}
