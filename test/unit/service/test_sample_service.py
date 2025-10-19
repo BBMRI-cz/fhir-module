@@ -1,5 +1,5 @@
 import unittest
-from typing import List
+from typing import List, Callable
 
 from model.sample import Sample
 from persistence.sample_repository import SampleRepository
@@ -13,9 +13,12 @@ class SampleRepoStub(SampleRepository):
     def get_all(self) -> List[Sample]:
         yield from self.samples
 
+    def _get_supported_extensions(self) -> tuple[str, Callable]:
+        return ".csv", self.__validate_samples_from_csv_file
+
 
 class TestSampleService(unittest.TestCase):
 
     def test_get_all(self):
-        sample_service = SampleService(SampleRepoStub())
+        sample_service = SampleService(SampleRepoStub("XX"))
         self.assertEqual(2, sum(1 for _ in sample_service.get_all()))

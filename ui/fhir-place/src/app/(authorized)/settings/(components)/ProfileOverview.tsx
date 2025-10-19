@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
-import { UserDetails } from "@/lib/auth-utils";
+import { UserDetails } from "@/lib/auth/auth-utils";
 
 export const ProfileOverview = () => {
   const { data: session, status } = useSession();

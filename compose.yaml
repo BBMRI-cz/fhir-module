@@ -12,16 +12,22 @@ services:
     ports:
       - "5000:5000"
     environment:
-      BLAZE_URL: "http://test-blaze:8080/fhir"
-      MIABIS_BLAZE_URL: "http://miabis-blaze:8080/fhir"
-      MIABIS_ON_FHIR: "True"
-      DIR_PATH: "/opt/records"
+      BLAZE_URL: "${BLAZE_URL:-http://test-blaze:8080/fhir}"
+      MIABIS_BLAZE_URL: "${MIABIS_BLAZE_URL:-http://miabis-blaze:8080/fhir}"
+      MIABIS_ON_FHIR: "${MIABIS_ON_FHIR:-True}"
+      DIR_PATH: "${DIR_PATH:-/opt/records}"
       PYTHONWARNINGS: "ignore:Unverified HTTPS request"
+    env_file:
+      - .env
     volumes:
       - type: bind
         source: "test/xml_data"
         target: "/opt/records"
+      - type: bind
+        source: "test"
+        target: "/opt/test"
       - fhir-logs:/var/log/fhir-module
+      - config-snapshots:/opt/config-snapshots
 
   fhir-ui:
     image: ghcr.io/bbmri-cz/fhir-ui:latest
@@ -40,6 +46,51 @@ services:
     depends_on:
       - fhir-module
     restart: unless-stopped
+
+  fhir-combined:
+    image: ghcr.io/bbmri-cz/fhir-combined:latest
+    container_name: fhir-combined
+    profiles:
+      - combined
+    networks:
+      - monitoring
+    restart: unless-stopped
+    ports:
+      - "5000:5000" # FHIR module port
+      - "3000:3000" # UI port
+    environment:
+      BLAZE_URL: "${BLAZE_URL:-http://localhost:8080/fhir}"
+      MIABIS_BLAZE_URL: "${MIABIS_BLAZE_URL:-http://localhost:5432/fhir}"
+      MIABIS_ON_FHIR: "${MIABIS_ON_FHIR:-True}"
+      DIR_PATH: "${DIR_PATH:-/opt/records}"
+      PYTHONWARNINGS: "ignore:Unverified HTTPS request"
+    env_file:
+      - .env
+    volumes:
+      - type: bind
+        source: "test/xml_data"
+        target: "/opt/records"
+      - type: bind
+        source: "test"
+        target: "/opt/test"
+      - fhir-logs:/var/log/fhir-module
+      - ui-data:/app/data
+      - config-snapshots:/opt/config-snapshots
+    depends_on:
+      - miabis-blaze
+      - test-blaze
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "sh",
+          "-c",
+          "curl -f http://localhost:3000 && curl -f http://localhost:5000/metrics",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   prometheus:
     image: prom/prometheus:latest
@@ -67,6 +118,7 @@ services:
     profiles:
       - dev
       - prod
+      - combined
     environment:
       JAVA_TOOL_OPTIONS: "-Xmx2g"
       DB_SEARCH_PARAM_BUNDLE: "/app/searchParamBundle.json"
@@ -86,6 +138,7 @@ services:
       - monitoring
     profiles:
       - dev
+      - combined
     environment:
       JAVA_TOOL_OPTIONS: "-Xmx2g"
       DB_SEARCH_PARAM_BUNDLE: "/app/searchParamBundle.json"
@@ -119,3 +172,4 @@ volumes:
   fhir-logs:
   promtail-config:
   ui-data:
+  config-snapshots:

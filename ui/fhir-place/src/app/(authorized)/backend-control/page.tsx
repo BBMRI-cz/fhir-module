@@ -7,8 +7,21 @@ import { ActionButton } from "@/components/custom/ActionButton";
 import { ConfirmationDialog } from "@/components/custom/ConfirmationDialog";
 import { useBackendControl } from "@/hooks/useBackendControl";
 import { useConfirmationDialog } from "@/hooks/useConfirmationDialog";
+import { useRef, useEffect, useState } from "react";
+import SyncProgressDisplay, {
+  type SyncProgressDisplayHandle,
+} from "@/components/setup-wizard/SyncProgressDisplay";
+import DeleteProgressDisplay, {
+  type DeleteProgressDisplayHandle,
+} from "@/components/setup-wizard/DeleteProgressDisplay";
+import { getDeleteProgress } from "@/actions/backend/delete-progress";
+import { getViableSyncTargets } from "@/actions/setup-wizard/getSystemSetup";
+import { SyncTarget } from "@/types/setup-wizard/types";
 
 export default function BackendControlPage() {
+  const [syncTargets, setSyncTargets] = useState<SyncTarget[]>([]);
+  const [isLoadingMode, setIsLoadingMode] = useState<boolean>(true);
+
   const {
     isLoading,
     lastResults,
@@ -19,25 +32,93 @@ export default function BackendControlPage() {
     handleMiabisDelete,
   } = useBackendControl();
 
-  const {
-    isDialogOpen: isDeleteAllDialogOpen,
-    form: deleteAllForm,
-    confirmationMessage: deleteAllConfirmMessage,
-    handleConfirm: handleDeleteAllConfirm,
-    handleDialogChange: handleDeleteAllDialogChange,
-  } = useConfirmationDialog("DELETE ALL", handleDeleteAll);
+  const syncProgressRef = useRef<SyncProgressDisplayHandle>(null);
+  const deleteProgressRef = useRef<DeleteProgressDisplayHandle>(null);
+
+  useEffect(() => {
+    const fetchSyncTargets = async () => {
+      const targets = await getViableSyncTargets();
+      setSyncTargets(targets);
+      setIsLoadingMode(false);
+    };
+    fetchSyncTargets();
+  }, []);
+
+  const handleSyncWithProgress = async () => {
+    syncProgressRef.current?.start(false);
+
+    await handleSync();
+  };
+
+  const handleMiabisSyncWithProgress = async () => {
+    syncProgressRef.current?.start(true);
+
+    await handleMiabisSync();
+  };
+
+  const handleDeleteBlazeWithProgress = async () => {
+    const initialProgress = await getDeleteProgress("blaze");
+
+    if (initialProgress.success && initialProgress.resources) {
+      const initialCounts: Record<string, number> = {};
+      for (const resource of initialProgress.resources) {
+        initialCounts[resource.resourceType] = resource.count;
+      }
+
+      deleteProgressRef.current?.start("blaze", initialCounts);
+    } else {
+      deleteProgressRef.current?.start("blaze");
+    }
+
+    await handleDeleteAll();
+  };
+
+  const handleDeleteMiabisWithProgress = async () => {
+    const initialProgress = await getDeleteProgress("miabis");
+
+    if (initialProgress.success && initialProgress.resources) {
+      const initialCounts: Record<string, number> = {};
+      for (const resource of initialProgress.resources) {
+        initialCounts[resource.resourceType] = resource.count;
+      }
+
+      deleteProgressRef.current?.start("miabis", initialCounts);
+    } else {
+      deleteProgressRef.current?.start("miabis");
+    }
+
+    await handleMiabisDelete();
+  };
 
   const {
-    isDialogOpen: isMiabisDeleteDialogOpen,
-    form: miabisDeleteForm,
-    confirmationMessage: miabisDeleteConfirmMessage,
-    handleConfirm: handleMiabisDeleteConfirm,
-    handleDialogChange: handleMiabisDeleteDialogChange,
-  } = useConfirmationDialog("DELETE ALL", handleMiabisDelete);
+    isDialogOpen: isDeleteBlazeDialogOpen,
+    form: deleteBlazeForm,
+    confirmationMessage: deleteBlazeConfirmMessage,
+    handleConfirm: handleDeleteBlazeConfirm,
+    handleDialogChange: handleDeleteBlazeDialogChange,
+  } = useConfirmationDialog("DELETE ALL", handleDeleteBlazeWithProgress);
+
+  const {
+    isDialogOpen: isDeleteMiabisDialogOpen,
+    form: deleteMiabisForm,
+    confirmationMessage: deleteMiabisConfirmMessage,
+    handleConfirm: handleDeleteMiabisConfirm,
+    handleDialogChange: handleDeleteMiabisDialogChange,
+  } = useConfirmationDialog("DELETE ALL", handleDeleteMiabisWithProgress);
+
+  if (isLoadingMode) {
+    return (
+      <main className="flex-1 h-full flex flex-col p-6">
+        <div className="flex items-center justify-center h-full">
+          <p className="text-muted-foreground">Loading configuration...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="flex-1 p-6">
-      <div className="space-y-6">
+    <main className="flex-1 h-full flex flex-col p-6">
+      <div className="flex-shrink-0 space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">
@@ -55,29 +136,35 @@ export default function BackendControlPage() {
             description="Sync data from repositories to the FHIR server"
             icon={RotateCcw}
           >
-            <ActionItem
-              title="Standard Sync"
-              description="Sync patients, conditions, and samples"
-              buttonText="Sync"
-              onAction={handleSync}
-              isLoading={isLoading === "Sync"}
-              result={lastResults["Sync"]}
-              isFading={fadingBadges["Sync"]}
-              icon={RefreshCw}
-              disabled={isLoading !== null}
-            />
+            {(syncTargets.includes("blaze") ||
+              syncTargets.includes("both")) && (
+              <ActionItem
+                title="Sync BLAZE"
+                description="Sync patients, conditions, and samples"
+                buttonText="Sync"
+                onAction={handleSyncWithProgress}
+                isLoading={isLoading === "Sync"}
+                result={lastResults["Sync"]}
+                isFading={fadingBadges["Sync"]}
+                icon={RefreshCw}
+                disabled={isLoading !== null}
+              />
+            )}
 
-            <ActionItem
-              title="MIABIS Sync"
-              description="Sync data using MIABIS on FHIR format"
-              buttonText="MIABIS Sync"
-              onAction={handleMiabisSync}
-              isLoading={isLoading === "MIABIS Sync"}
-              result={lastResults["MIABIS Sync"]}
-              isFading={fadingBadges["MIABIS Sync"]}
-              icon={RefreshCw}
-              disabled={isLoading !== null}
-            />
+            {(syncTargets.includes("miabis") ||
+              syncTargets.includes("both")) && (
+              <ActionItem
+                title="MIABIS Sync"
+                description="Sync data using MIABIS on FHIR format"
+                buttonText="MIABIS Sync"
+                onAction={handleMiabisSyncWithProgress}
+                isLoading={isLoading === "MIABIS Sync"}
+                result={lastResults["MIABIS Sync"]}
+                isFading={fadingBadges["MIABIS Sync"]}
+                icon={RefreshCw}
+                disabled={isLoading !== null}
+              />
+            )}
           </OperationCard>
 
           {/* Delete Operations */}
@@ -86,73 +173,85 @@ export default function BackendControlPage() {
             description="Delete operations for data cleanup"
             icon={Trash2}
           >
-            <ActionItem
-              title="Delete All Data"
-              description="Remove all patients, conditions, and samples"
-              buttonText="Delete All"
-              onAction={() => {}}
-              isLoading={isLoading === "Delete All"}
-              result={lastResults["Delete All"]}
-              isFading={fadingBadges["Delete All"]}
-              disabled={isLoading !== null}
-            >
-              <ConfirmationDialog
-                isOpen={isDeleteAllDialogOpen}
-                onOpenChange={handleDeleteAllDialogChange}
-                title="Are you sure?"
-                description="This action will delete all data from the FHIR server. This action cannot be undone."
-                confirmationMessage={deleteAllConfirmMessage}
-                confirmButtonText="Delete All"
-                form={deleteAllForm}
-                onConfirm={handleDeleteAllConfirm}
-                isLoading={isLoading !== null}
+            {(syncTargets.includes("blaze") ||
+              syncTargets.includes("both")) && (
+              <ActionItem
+                title="Delete Blaze Data"
+                description="Remove all patients, conditions, and samples from Blaze"
+                buttonText="Delete All"
+                onAction={() => {}}
+                isLoading={isLoading === "Delete All"}
+                result={lastResults["Delete All"]}
+                isFading={fadingBadges["Delete All"]}
+                disabled={isLoading !== null}
               >
-                <ActionButton
-                  onClick={() => {}}
-                  disabled={isLoading !== null}
-                  loading={isLoading === "Delete All"}
-                  icon={Trash2}
-                  variant="destructive"
+                <ConfirmationDialog
+                  isOpen={isDeleteBlazeDialogOpen}
+                  onOpenChange={handleDeleteBlazeDialogChange}
+                  title="Are you sure?"
+                  description="This action will delete all data from the Blaze FHIR server. This action cannot be undone."
+                  confirmationMessage={deleteBlazeConfirmMessage}
+                  confirmButtonText="Delete All"
+                  form={deleteBlazeForm}
+                  onConfirm={handleDeleteBlazeConfirm}
+                  isLoading={isLoading !== null}
                 >
-                  Delete All
-                </ActionButton>
-              </ConfirmationDialog>
-            </ActionItem>
+                  <ActionButton
+                    onClick={() => {}}
+                    disabled={isLoading !== null}
+                    loading={isLoading === "Delete All"}
+                    icon={Trash2}
+                    variant="destructive"
+                  >
+                    Delete All
+                  </ActionButton>
+                </ConfirmationDialog>
+              </ActionItem>
+            )}
 
-            <ActionItem
-              title="Delete MIABIS Data"
-              description="Remove all MIABIS on FHIR resources"
-              buttonText="Delete MIABIS"
-              onAction={() => {}}
-              isLoading={isLoading === "MIABIS Delete"}
-              result={lastResults["MIABIS Delete"]}
-              isFading={fadingBadges["MIABIS Delete"]}
-              disabled={isLoading !== null}
-            >
-              <ConfirmationDialog
-                isOpen={isMiabisDeleteDialogOpen}
-                onOpenChange={handleMiabisDeleteDialogChange}
-                title="Are you sure?"
-                description="This action will delete all MIABIS data from the FHIR server. This action cannot be undone."
-                confirmationMessage={miabisDeleteConfirmMessage}
-                confirmButtonText="Delete MIABIS"
-                form={miabisDeleteForm}
-                onConfirm={handleMiabisDeleteConfirm}
-                isLoading={isLoading !== null}
+            {(syncTargets.includes("miabis") ||
+              syncTargets.includes("both")) && (
+              <ActionItem
+                title="Delete MIABIS Data"
+                description="Remove all MIABIS data from MIABIS Blaze server"
+                buttonText="Delete MIABIS"
+                onAction={() => {}}
+                isLoading={isLoading === "Delete MIABIS"}
+                result={lastResults["Delete MIABIS"]}
+                isFading={fadingBadges["Delete MIABIS"]}
+                disabled={isLoading !== null}
               >
-                <ActionButton
-                  onClick={() => {}}
-                  disabled={isLoading !== null}
-                  loading={isLoading === "MIABIS Delete"}
-                  icon={Trash2}
-                  variant="destructive"
+                <ConfirmationDialog
+                  isOpen={isDeleteMiabisDialogOpen}
+                  onOpenChange={handleDeleteMiabisDialogChange}
+                  title="Are you sure?"
+                  description="This action will delete all MIABIS data from the MIABIS FHIR server. This action cannot be undone."
+                  confirmationMessage={deleteMiabisConfirmMessage}
+                  confirmButtonText="Delete MIABIS"
+                  form={deleteMiabisForm}
+                  onConfirm={handleDeleteMiabisConfirm}
+                  isLoading={isLoading !== null}
                 >
-                  Delete MIABIS
-                </ActionButton>
-              </ConfirmationDialog>
-            </ActionItem>
+                  <ActionButton
+                    onClick={() => {}}
+                    disabled={isLoading !== null}
+                    loading={isLoading === "Delete MIABIS"}
+                    icon={Trash2}
+                    variant="destructive"
+                  >
+                    Delete MIABIS
+                  </ActionButton>
+                </ConfirmationDialog>
+              </ActionItem>
+            )}
           </OperationCard>
         </div>
+      </div>
+
+      {/* Progress Displays */}
+      <div className="mt-6 flex-1 min-h-0 overflow-y-auto space-y-6 pr-2">
+        <SyncProgressDisplay ref={syncProgressRef} />
+        <DeleteProgressDisplay ref={deleteProgressRef} />
       </div>
     </main>
   );

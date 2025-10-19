@@ -8,6 +8,7 @@ declare module "next-auth" {
     lastName: string;
     email: string;
     isActive: boolean;
+    mustChangePassword: boolean;
   }
 
   interface Session {
@@ -17,6 +18,7 @@ declare module "next-auth" {
       firstName: string;
       lastName: string;
       isActive: boolean;
+      mustChangePassword: boolean;
     } & DefaultSession["user"];
   }
 }
@@ -24,5 +26,6 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
+    mustChangePassword?: boolean;
   }
 }

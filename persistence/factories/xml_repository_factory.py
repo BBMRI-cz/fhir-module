@@ -9,38 +9,38 @@ from persistence.sample_donor_repository import SampleDonorRepository
 from persistence.sample_donor_xml_files_repository import SampleDonorXMLFilesRepository
 from persistence.sample_repository import SampleRepository
 from persistence.sample_xml_repository import SampleXMLRepository
-from util.config import RECORDS_DIR_PATH, PARSING_MAP, SAMPLE_COLLECTIONS_PATH, TYPE_TO_COLLECTION_MAP, \
-    STORAGE_TEMP_MAP, BIOBANK_PATH, MATERIAL_TYPE_MAP, MIABIS_MATERIAL_TYPE_MAP, MIABIS_STORAGE_TEMP_MAP
+from util.config import get_records_dir_path, get_parsing_map, get_sample_collections_path, get_type_to_collection_map, \
+    get_storage_temp_map, get_biobank_path, get_material_type_map, get_miabis_material_type_map, get_miabis_storage_temp_map
 
 
 class XMLRepositoryFactory(RepositoryFactory):
     """This class instantiates repositories that work with XML files"""
 
     def create_condition_repository(self) -> ConditionRepository:
-        return ConditionXMLRepository(records_path=RECORDS_DIR_PATH,
-                                      condition_parsing_map=PARSING_MAP['condition_map'])
+        return ConditionXMLRepository(records_path=get_records_dir_path(),
+                                      condition_parsing_map=get_parsing_map()['condition_map'])
 
     def create_sample_collection_repository(self, miabis_on_fhir_model: bool = False) -> SampleCollectionRepository:
-        return SampleCollectionJSONRepository(SAMPLE_COLLECTIONS_PATH, miabis_on_fhir_model=miabis_on_fhir_model)
+        return SampleCollectionJSONRepository(get_sample_collections_path(), miabis_on_fhir_model=miabis_on_fhir_model)
 
     def create_sample_repository(self, miabis_on_fhir_model: bool = False) -> SampleRepository:
         if miabis_on_fhir_model:
-            material_type_map = MIABIS_MATERIAL_TYPE_MAP
-            storage_temp_map = MIABIS_STORAGE_TEMP_MAP
+            material_type_map = get_miabis_material_type_map()
+            storage_temp_map = get_miabis_storage_temp_map()
         else:
-            material_type_map = MATERIAL_TYPE_MAP
-            storage_temp_map = STORAGE_TEMP_MAP
-        return SampleXMLRepository(records_path=RECORDS_DIR_PATH,
-                                   sample_parsing_map=PARSING_MAP['sample_map'],
-                                   type_to_collection_map=TYPE_TO_COLLECTION_MAP,
+            material_type_map = get_material_type_map()
+            storage_temp_map = get_storage_temp_map()
+        return SampleXMLRepository(records_path=get_records_dir_path(),
+                                   sample_parsing_map=get_parsing_map()['sample_map'],
+                                   type_to_collection_map=get_type_to_collection_map(),
                                    storage_temp_map=storage_temp_map,
                                    material_type_map=material_type_map,
                                    miabis_on_fhir_model=miabis_on_fhir_model)
 
     def create_sample_donor_repository(self, miabis_on_fhir_model: bool = False) -> SampleDonorRepository:
-        return SampleDonorXMLFilesRepository(records_path=RECORDS_DIR_PATH,
-                                             donor_parsing_map=PARSING_MAP['donor_map'],
+        return SampleDonorXMLFilesRepository(records_path=get_records_dir_path(),
+                                             donor_parsing_map=get_parsing_map()['donor_map'],
                                              miabis_on_fhir_model=miabis_on_fhir_model)
 
     def create_biobank_repository(self) -> BiobankRepository:
-        return BiobankJSONRepository(biobank_json_file_path=BIOBANK_PATH)
+        return BiobankJSONRepository(biobank_json_file_path=get_biobank_path())

@@ -6,10 +6,9 @@ import { Form } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useSession } from "next-auth/react";
-
-import z from "zod";
-import { UserDetails } from "@/lib/auth-utils";
-import { ChangeUserDetailsSchema } from "../schema/ChangeUserDetailsSchema";
+import { z } from "zod";
+import { UserDetails } from "@/lib/auth/auth-utils";
+import { ChangeUserDetailsSchema } from "@/app/(authorized)/settings/schema/ChangeUserDetailsSchema";
 import { changeUserDetails } from "@/actions/settings/changeUserDetails";
 import { toast } from "sonner";
 

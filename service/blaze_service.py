@@ -16,10 +16,11 @@ from persistence.sample_collection_repository import SampleCollectionRepository
 from service.condition_service import ConditionService
 from service.patient_service import PatientService
 from service.sample_service import SampleService
-from util.config import MATERIAL_TYPE_MAP, BLAZE_AUTH
+from util.config import get_blaze_auth
 from util.custom_logger import setup_logger
 from util.sample_util import build_sample_from_json
 from util.metrics import get_metrics_for_service
+from util.service_preparation_utils import prepare_services
 import json
 
 setup_logger()
@@ -46,19 +47,36 @@ class BlazeService:
         self._sample_service = sample_service
         self._blaze_url = blaze_url
         self._sample_collection_repository = sample_collection_repository
-        self._credentials = BLAZE_AUTH
+        self._credentials = get_blaze_auth()
         self.metrics = get_metrics_for_service('blaze')
         retries = Retry(total=5,
                         backoff_factor=0.1,
                         status_forcelist=[500, 502, 503, 504])
         session = requests.session()
         session.mount('http://', HTTPAdapter(max_retries=retries))
-        session.auth = BLAZE_AUTH
+        session.auth = get_blaze_auth()
         self._session = session
+
+    def _refresh_services(self):
+        """
+        Refresh services and repositories to handle file format changes.
+        This allows the sync to adapt to changes in data source format (CSV, JSON, XML).
+        """
+        services = prepare_services()
+        self._patient_service = services.patient_service
+        self._condition_service = services.condition_service
+        self._sample_service = services.sample_service
+        self._sample_collection_repository = services.sample_collection_repository
+        logger.debug("Services refreshed successfully.")
 
     def sync(self):
         """Starts the sync between the repositories and the Blaze store."""
         logger.info("Starting sync with Blaze 🔥!")
+
+        if self.metrics:
+            self.metrics.start_sync()
+
+        self._refresh_services()
 
         org_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
         pat_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
@@ -66,13 +84,25 @@ class BlazeService:
         samp_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
 
         try:
+            if self.metrics:
+                self.metrics.set_sync_phase(1)
             org_summary = self.upload_sample_collections()
+            
+            if self.metrics:
+                self.metrics.set_sync_phase(2)
             pat_summary = self.sync_patients()
+            
+            if self.metrics:
+                self.metrics.set_sync_phase(3)
             cond_summary = self.sync_conditions()
+            
+            if self.metrics:
+                self.metrics.set_sync_phase(4)
             samp_summary = self.sync_samples()
 
             if self.metrics:
                 self.metrics.set_metric('last_sync_timestamp', time.time())
+                self.metrics.end_sync()
 
             sync_summary_obj = {
                 'patients': pat_summary,
@@ -87,6 +117,9 @@ class BlazeService:
             logger.info("Sync completed successfully!")
         except Exception as e:
             logger.error(f"Sync failed: {e}")
+            
+            if self.metrics:
+                self.metrics.end_sync()
             
             sync_summary_obj = {
                 'patients': pat_summary,
@@ -139,6 +172,40 @@ class BlazeService:
             return 404
         return response.status_code
 
+    def __update_sync_progress(self, resource_type: str, current: int, total: int):
+        """Update sync progress metrics if metrics are enabled."""
+        if self.metrics:
+            self.metrics.set_sync_progress(resource_type, current, total)
+
+    def __validate_donor_type(self, donor) -> bool:
+        """Validate that the donor is an instance of SampleDonor."""
+        if not isinstance(donor, SampleDonor):
+            logger.error(f"Donor is not as instance of SampleDonor, but rather {type(donor)}. Skipping")
+            return False
+        return True
+
+    def __should_skip_donor(self, donor: SampleDonor) -> bool:
+        """Check if donor should be skipped (already present in Blaze)."""
+        return self.is_resource_present_in_blaze(resource_type="patient", identifier=donor.identifier)
+
+    def __process_donor_upload(self, donor: SampleDonor) -> tuple[int, int]:
+        """
+        Process uploading a single donor. 
+        Returns (processed_count, failed_count).
+        """
+        try:
+            status = self.__upload_donor(donor)
+            if status == 201:
+                return 1, 0
+            else:
+                return 0, 1
+        except requests.exceptions.ConnectionError:
+            logger.error("Cannot connect to blaze!")
+            return 0, 1
+        except Exception as e:
+            logger.error(f"Error uploading patient {donor.identifier}: {e}")
+            return 0, 1
+
     def sync_patients(self):
         """
         Syncs SampleDonors present in the repository and uploads them to the blaze store
@@ -147,30 +214,34 @@ class BlazeService:
         processed = 0
         failed = 0
         skipped = 0
-        for donor in self._patient_service.get_all():
-            if not isinstance(donor, SampleDonor):
-                logger.error(f"Donor is not as instance of SampleDonor, but rather {type(donor)}. Skipping")
+
+        self._patient_service.update_mappings()
+        all_donors = list(self._patient_service.get_all())
+        total = len(all_donors)
+        
+        self.__update_sync_progress('patients', 0, total)
+        
+        for idx, donor in enumerate(all_donors):
+            # Validate donor type
+            if not self.__validate_donor_type(donor):
                 skipped += 1
-                continue
-            donor = cast(SampleDonor, donor)
-            if self.is_resource_present_in_blaze(resource_type="patient",
-                                                     identifier=donor.identifier):
-                skipped += 1
+                self.__update_sync_progress('patients', idx + 1, total)
                 continue
             
-            try:
-                status = self.__upload_donor(donor)
-                if status == 201:
-                    processed += 1
-                else:
-                    failed += 1
-            except requests.exceptions.ConnectionError:
-                logger.error("Cannot connect to blaze!")
-                failed += 1
+            donor = cast(SampleDonor, donor)
+            
+            # Skip if donor already exists
+            if self.__should_skip_donor(donor):
+                skipped += 1
+                self.__update_sync_progress('patients', idx + 1, total)
                 continue
-            except Exception as e:
-                logger.error(f"Error uploading patient {donor.identifier}: {e}")
-                failed += 1
+            
+            # Process donor upload
+            new_processed, new_failed = self.__process_donor_upload(donor)
+            processed += new_processed
+            failed += new_failed
+            
+            self.__update_sync_progress('patients', idx + 1, total)
 
         return {'processed': processed, 'failed': failed, 'skipped': skipped}
 
@@ -181,6 +252,38 @@ class BlazeService:
                                  verify=False)
         logger.info("Patient " + donor.identifier + " uploaded.")
         return res.status_code
+
+    def __check_patient_for_condition(self, condition) -> tuple[bool, bool]:
+        """
+        Check if patient exists and if they already have the condition.
+        Returns (patient_exists, patient_has_condition).
+        """
+        try:
+            patient_has_condition = self.patient_has_condition(
+                patient_identifier=condition.patient_id,
+                icd_10_code=condition.icd_10_code
+            )
+            return True, patient_has_condition
+        except PatientNotFoundError:
+            logger.info(
+                f"Patient with identifier: {condition.patient_id} not present in the FHIR store. Skipping..."
+            )
+            return False, False
+
+    def __process_condition_upload(self, condition) -> tuple[int, int]:
+        """
+        Process uploading a single condition.
+        Returns (processed_count, failed_count).
+        """
+        try:
+            status = self.__upload_condition(condition)
+            if status == 201:
+                return 1, 0
+            else:
+                return 0, 1
+        except Exception as e:
+            logger.error(f"Error uploading condition: {e}")
+            return 0, 1
 
     def sync_conditions(self):
         """
@@ -194,27 +297,31 @@ class BlazeService:
         processed = 0
         failed = 0
         skipped = 0
-        for condition in self._condition_service.get_all():
-            try:
-                patient_has_condition = self.patient_has_condition(patient_identifier=condition.patient_id,
-                                                                   icd_10_code=condition.icd_10_code)
-            except PatientNotFoundError:
-                logger.info(f"Patient with identifier: {condition.patient_id} not present in the FHIR store."
-                            f" Skipping...")
+
+        self._condition_service.update_mappings()
+        all_conditions = list(self._condition_service.get_all())
+        total = len(all_conditions)
+        
+        self.__update_sync_progress('conditions', 0, total)
+        
+        for idx, condition in enumerate(all_conditions):
+            # Check if patient exists and already has this condition
+            patient_exists, patient_has_condition = self.__check_patient_for_condition(condition)
+            
+            if not patient_exists:
                 skipped += 1
+                self.__update_sync_progress('conditions', idx + 1, total)
                 continue
+            
+            # Upload condition if patient doesn't have it yet
             if not patient_has_condition:
-                try:
-                    status = self.__upload_condition(condition)
-                    if status == 201:
-                        processed += 1
-                    else:
-                        failed += 1
-                except Exception as e:
-                    logger.error(f"Error uploading condition: {e}")
-                    failed += 1
+                new_processed, new_failed = self.__process_condition_upload(condition)
+                processed += new_processed
+                failed += new_failed
             else:
                 skipped += 1
+            
+            self.__update_sync_progress('conditions', idx + 1, total)
 
         logger.info("Upload of conditions ended.")
         logger.debug(
@@ -303,7 +410,14 @@ class BlazeService:
         failed = 0
         skipped = 0
         
-        for sample in self._sample_service.get_all():
+        self._sample_service.update_mappings()
+        all_samples = list(self._sample_service.get_all())
+        total = len(all_samples)
+        
+        if self.metrics:
+            self.metrics.set_sync_progress('specimens', 0, total)
+        
+        for idx, sample in enumerate(all_samples):
             specimen_present, patient_present = self.__check_sample_and_patient_presence(sample)
             
             if not specimen_present and patient_present:
@@ -319,6 +433,9 @@ class BlazeService:
                 # Skip if patient is not present - cannot upload sample without patient
                 logger.debug(f"Patient with ID: {sample.donor_id} is not present. Skipping sample {sample.identifier}.")
                 skipped += 1
+            
+            if self.metrics:
+                self.metrics.set_sync_progress('specimens', idx + 1, total)
 
         logger.info(f"Successfully uploaded {self.get_number_of_resources('Specimen') - num_of_samples_before_sync} new samples.")
         logger.info("Upload of samples ended.")
@@ -528,29 +645,55 @@ class BlazeService:
             return True
         return False
 
+    def _upload_single_collection(self, sample_collection) -> str:
+        """
+        Uploads a single sample collection to Blaze.
+        Returns 'processed', 'failed', or 'skipped' based on the outcome.
+        """
+        if not isinstance(sample_collection, SampleCollection):
+            logger.error(
+                f"Sample collection is not type of SampleColletion, but rather {type(sample_collection)} Skipping... ")
+            return 'skipped'
+        
+        if self.is_resource_present_in_blaze(resource_type="Organization",
+                                              identifier=sample_collection.identifier):
+            return 'skipped'
+        
+        try:
+            response = self._session.post(url=self._blaze_url + "/Organization",
+                               json=sample_collection.to_fhir().as_json(),
+                               verify=False)
+            return 'processed' if response.status_code == 201 else 'failed'
+        except Exception:
+            return 'failed'
+    
+    def _update_metrics_progress(self, resource_type: str, current: int, total: int):
+        """Updates metrics progress if metrics are enabled."""
+        if self.metrics:
+            self.metrics.set_sync_progress(resource_type, current, total)
+    
     def upload_sample_collections(self):
         """Uploads SampleCollections as FHIR organizations and returns summary."""
         processed = 0
         failed = 0
         skipped = 0
-        for sample_collection in self._sample_collection_repository.get_all():
-            if not isinstance(sample_collection, SampleCollection):
-                logger.error(
-                    f"Sample collection is not type of SampleColletion, but rather {type(sample_collection)} Skipping... ")
+        
+        all_collections = list(self._sample_collection_repository.get_all())
+        total = len(all_collections)
+        
+        self._update_metrics_progress('organizations', 0, total)
+        
+        for idx, sample_collection in enumerate(all_collections):
+            result = self._upload_single_collection(sample_collection)
+            
+            if result == 'processed':
+                processed += 1
+            elif result == 'failed':
+                failed += 1
+            else:
                 skipped += 1
-                continue
-            if not self.is_resource_present_in_blaze(resource_type="Organization",
-                                                     identifier=sample_collection.identifier):
-                try:
-                    response = self._session.post(url=self._blaze_url + "/Organization",
-                                       json=sample_collection.to_fhir().as_json(),
-                                       verify=False)
-                    if response.status_code == 201:
-                        processed += 1
-                    else:
-                        failed += 1
-                except Exception:
-                    failed += 1
+            
+            self._update_metrics_progress('organizations', idx + 1, total)
 
         logger.debug(f"Successfully uploaded {self.get_number_of_resources('Organization')} Sample collections.")
         return {'processed': processed, 'failed': failed, 'skipped': skipped}

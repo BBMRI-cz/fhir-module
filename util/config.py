@@ -2,94 +2,275 @@
 import json
 import logging
 import os
+import shutil
 import sys
 from json import JSONDecodeError
 from distutils.util import strtobool
+from typing import Any, Dict, Optional
 
 from util.custom_logger import setup_logger
 
 setup_logger()
 logger = logging.getLogger()
 
-BLAZE_URL = os.getenv("BLAZE_URL", "http://localhost:8080/fhir")
-MIABIS_BLAZE_URL = os.getenv("MIABIS_BLAZE_URL", "http://localhost:5432/fhir")
-RECORDS_DIR_PATH = os.getenv("DIR_PATH", "/mock_dir/")
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+class ConfigLoader:
+    """Dynamic configuration loader that reads from JSON file and allows runtime updates"""
+    
+    def __init__(self, config_file_path: Optional[str] = None):
+        self.root_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        persistent_config_path = '/opt/config-snapshots/shared_config.json'
+        local_config_path = os.path.join(self.root_dir, 'shared_config.json')
+        
+        if config_file_path:
+            self.config_file_path = config_file_path
+        elif os.path.exists(persistent_config_path):
+            self.config_file_path = persistent_config_path
+        else:
+            if os.path.exists(local_config_path) and os.path.exists('/opt/config-snapshots'):
+                try:
+                    shutil.copy2(local_config_path, persistent_config_path)
+                    self.config_file_path = persistent_config_path
+                    logger.info(f"Initialized persistent config at {persistent_config_path}")
+                except Exception as e:
+                    logger.warning(f"Could not initialize persistent config: {e}. Using local config.")
+                    self.config_file_path = local_config_path
+            else:
+                self.config_file_path = local_config_path
+        
+        self._config_cache = None
+        self._loaded_maps = {}
+        
+    def _load_config(self, force_reload: bool = False) -> Dict[str, Any]:
+        """Load configuration from JSON file with caching"""
+        if self._config_cache is None or force_reload:
+            try:
+                with open(self.config_file_path, 'r') as f:
+                    self._config_cache = json.load(f)
+                logger.debug(f"Loaded configuration from {self.config_file_path}")
+            except FileNotFoundError:
+                logger.error(f"Configuration file not found: {self.config_file_path}")
+                sys.exit(1)
+            except JSONDecodeError as e:
+                logger.error(f"Invalid JSON in configuration file: {e}")
+                sys.exit(1)
+        return self._config_cache
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        config = self._load_config()
+        
+        value = config.get(key, default)
+        
+        if key.endswith('_PATH') and value and not os.path.isabs(value):
+            return os.path.join(self.root_dir, value)
+            
+        return value
 
-PARSING_MAP_PATH = os.getenv("PARSING_MAP_PATH", os.path.join(ROOT_DIR, 'default_map.json'))
-PARSING_MAP_CSV_PATH = os.getenv("PARSING_MAP_PATH", os.path.join(ROOT_DIR, 'default_csv_map.json'))
-MATERIAL_TYPE_MAP_PATH = os.getenv("MATERIAL_TYPE_MAP_PATH", os.path.join(ROOT_DIR, 'default_material_type_map.json'))
-MIABIS_MATERIAL_TYPE_MAP_PATH = os.getenv("MIABIS_MATERIAL_TYPE_MAP_PATH",
-                                          os.path.join(ROOT_DIR, 'default_miabis_material_type_map.json'))
+    def set(self, key: str, value: Any) -> bool:
+        try:
+            config = self._load_config()
+            config[key] = value
+            
+            with open(self.config_file_path, 'w') as f:
+                json.dump(config, f, indent=2)
+            
+            self._config_cache = config
+            self._loaded_maps.clear()
+            
+            logger.info(f"Updated configuration: {key} = {value}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update configuration: {e}")
+            return False
+    
+    def get_all(self) -> Dict[str, Any]:
+        return self._load_config().copy()
+    
+    def get_map(self, map_type: str, force_reload: bool = False) -> Dict[str, Any]:
+        if not force_reload and map_type in self._loaded_maps:
+            return self._loaded_maps[map_type]
+        
+        map_path_key = f"{map_type.upper()}_MAP_PATH"
+        if map_type.upper() == 'PARSING_MAP':
+            map_path_key = f"{map_type.upper()}_PATH"
+        
+        map_path = self.get(map_path_key)
+        if not map_path:
+            logger.error(f"No path configured for map type: {map_type}")
+            return {}
+        
+        try:
+            with open(map_path) as json_file:
+                map_data = json.load(json_file)
+                self._loaded_maps[map_type] = map_data
+                if force_reload:
+                    logger.debug(f"Force reloaded map: {map_type} from {map_path}")
+                return map_data
+        except FileNotFoundError:
+            logger.error(f"Map file not found: {map_path}")
+            return {}
+        except JSONDecodeError:
+            logger.error(f"Map file does not have correct JSON format: {map_path}")
+            return {}
+    
+    def reload_all_maps(self) -> None:
+        """Clear the map cache and force reload all maps on next access"""
+        self._loaded_maps.clear()
+        logger.info("Cleared all cached maps")
+    
+    def reload_map(self, map_type: str) -> Dict[str, Any]:
+        """Force reload a specific map"""
+        if map_type in self._loaded_maps:
+            del self._loaded_maps[map_type]
+        return self.get_map(map_type, force_reload=True)
 
-SAMPLE_COLLECTIONS_PATH = os.getenv("SAMPLE_COLLECTIONS_PATH", os.path.join(ROOT_DIR, 'default_sample_collection.json'))
-BIOBANK_PATH = os.getenv("BIOBANK_PATH", os.path.join(ROOT_DIR, 'default_biobank.json'))
-TYPE_TO_COLLECTION_MAP_PATH = os.getenv("TYPE_TO_COLLECTION_MAP_PATH",
-                                        os.path.join(ROOT_DIR, 'default_type_to_collection_map.json'))
 
-STORAGE_TEMP_MAP_PATH = os.getenv("STORAGE_TEMP_MAP_PATH", os.path.join(ROOT_DIR, 'default_storage_temp_map.json'))
-MIABIS_STORAGE_TEMP_MAP_PATH = os.getenv("MIABIS_STORAGE_TEMP_MAP_PATH",
-                                         os.path.join(ROOT_DIR, 'default_miabis_storage_temp_map.json'))
+_config = ConfigLoader()
 
-STANDARDISED = bool(strtobool(os.getenv("STANDARDISED","False")))
-MIABIS_ON_FHIR = bool(strtobool(os.getenv("MIABIS_ON_FHIR","False")))
-CSV_SEPARATOR = os.getenv("CSV_SEPARATOR", ";")
-RECORDS_FILE_TYPE = os.getenv("RECORDS_FILE_TYPE", "xml")
-NEW_FILE_PERIOD_DAYS = os.getenv("NEW_FILE_PERIOD_DAYS", 30)
-BLAZE_AUTH: tuple = (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))
-MIABIS_BLAZE_AUTH: tuple = (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))
+def get_config_value(key: str, default: Any = None) -> Any:
+    return _config.get(key, default)
 
-SMTP_HOST = os.getenv("SMTP_HOST", "localhost")
-SMTP_PORT = os.getenv("SMTP_PORT", 1025)
+def set_config_value(key: str, value: Any) -> bool:
+    return _config.set(key, value)
 
-EMAIL_RECEIVER = os.getenv("EMAIL_RECEIVER", "test@example.com")
-with open(PARSING_MAP_PATH) as json_file:
+def get_blaze_url(): 
+    return os.getenv("BLAZE_URL", "http://localhost:8080/fhir")
+
+def get_miabis_blaze_url(): 
+    return os.getenv("MIABIS_BLAZE_URL", "http://localhost:5432/fhir")
+
+def get_records_dir_path(): 
+    return _config.get('RECORDS_DIR_PATH')
+
+def get_log_level(): 
+    return os.getenv("LOG_LEVEL", "INFO")
+
+def get_parsing_map_path(): 
+    return _config.get('PARSING_MAP_PATH')
+
+def get_material_type_map_path(): 
+    return _config.get('MATERIAL_TYPE_MAP_PATH')
+
+def get_miabis_material_type_map_path(): 
+    return _config.get('MIABIS_MATERIAL_TYPE_MAP_PATH')
+
+def get_sample_collections_path(): 
+    return _config.get('SAMPLE_COLLECTIONS_PATH')
+
+def get_biobank_path(): 
+    return _config.get('BIOBANK_PATH')
+
+def get_type_to_collection_map_path(): 
+    return _config.get('TYPE_TO_COLLECTION_MAP_PATH')
+
+def get_storage_temp_map_path(): 
+    return _config.get('STORAGE_TEMP_MAP_PATH')
+
+def get_miabis_storage_temp_map_path(): 
+    return _config.get('MIABIS_STORAGE_TEMP_MAP_PATH')
+
+def get_standardised(): 
+    return bool(strtobool(os.getenv("STANDARDISED", "False")))
+
+def get_miabis_on_fhir(): 
+    return bool(strtobool(os.getenv("MIABIS_ON_FHIR", "False")))
+
+def get_csv_separator(): 
+    return _config.get('CSV_SEPARATOR')
+
+def get_records_file_type(): 
+    return _config.get('RECORDS_FILE_TYPE')
+
+def get_new_file_period_days(): 
+    return os.getenv("NEW_FILE_PERIOD_DAYS", "30")
+
+def get_blaze_auth(): 
+    return (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))
+
+def get_miabis_blaze_auth(): 
+    return (os.getenv("BLAZE_USER", ""), os.getenv("BLAZE_PASS", ""))
+
+def get_smtp_host(): 
+    return os.getenv("SMTP_HOST", "localhost")
+
+def get_smtp_port(): 
+    return os.getenv("SMTP_PORT", "1025")
+
+def get_email_receiver(): 
+    return os.getenv("EMAIL_RECEIVER", "test@example.com")
+
+# Map getter functions
+def get_parsing_map(force_reload: bool = False): 
+    return _config.get_map('parsing_map', force_reload=force_reload)
+
+def get_material_type_map(force_reload: bool = False): 
+    return _config.get_map('material_type', force_reload=force_reload)
+
+def get_type_to_collection_map(force_reload: bool = False): 
+    return _config.get_map('type_to_collection', force_reload=force_reload)
+
+def get_storage_temp_map(force_reload: bool = False): 
+    return _config.get_map('storage_temp', force_reload=force_reload)
+
+def get_miabis_storage_temp_map(force_reload: bool = False): 
+    return _config.get_map('miabis_storage_temp', force_reload=force_reload)
+
+def get_miabis_material_type_map(force_reload: bool = False): 
+    return _config.get_map('miabis_material_type', force_reload=force_reload)
+
+def reload_all_maps() -> None:
+    _config.reload_all_maps()
+
+def reload_map(map_type: str) -> Dict[str, Any]:
+    return _config.reload_map(map_type)
+
+ROOT_DIR = _config.root_dir
+
+
+def write_to_file(content, map_type, mode='w', encoding='utf-8'):    
+    path_mapping = {
+        'parsing_map': _config.get('PARSING_MAP_PATH'),
+        'blaze_material_mapping': _config.get('MATERIAL_TYPE_MAP_PATH'),
+        'blaze_temperature_mapping': _config.get('STORAGE_TEMP_MAP_PATH'),
+        'type_to_collection_map': _config.get('TYPE_TO_COLLECTION_MAP_PATH'),
+        'miabis_material_mapping': _config.get('MIABIS_MATERIAL_TYPE_MAP_PATH'),
+        'miabis_temperature_mapping': _config.get('MIABIS_STORAGE_TEMP_MAP_PATH'),
+    }
+    
+    if map_type not in path_mapping:
+        return {
+            'success': False,
+            'message': f"Invalid map_type '{map_type}'. Valid types are: {list(path_mapping.keys())}"
+        }
+    
+    file_path = path_mapping[map_type]
+    
+    if not file_path:
+        return {
+            'success': False,
+            'message': f"No path configured for map_type '{map_type}'"
+        }
+    
     try:
-        PARSING_MAP = json.load(json_file)
-    except JSONDecodeError:
-        logger.error("Parsing map does not have correct JSON format. Exiting.")
-        sys.exit()
-
-with open(PARSING_MAP_CSV_PATH) as json_file:
-    try:
-        PARSING_MAP_CSV = json.load(json_file)
-    except JSONDecodeError:
-        logger.error("Parsing map does not have correct JSON format. Exiting.")
-        sys.exit()
-
-with open(MATERIAL_TYPE_MAP_PATH) as json_file:
-    try:
-        MATERIAL_TYPE_MAP = json.load(json_file)
-    except JSONDecodeError:
-        logger.error("Material type map does not have correct JSON format. Exiting.")
-        sys.exit()
-
-with open(TYPE_TO_COLLECTION_MAP_PATH) as json_file:
-    try:
-        TYPE_TO_COLLECTION_MAP = json.load(json_file)
-    except JSONDecodeError:
-        logger.error("Type to collection map does not have correct JSON format. Exiting.")
-        sys.exit()
-
-with open(STORAGE_TEMP_MAP_PATH) as json_file:
-    try:
-        STORAGE_TEMP_MAP = json.load(json_file)
-    except JSONDecodeError:
-        logger.error("Storage temperature map does not have correct JSON format. Exiting.")
-        sys.exit()
-
-with open(MIABIS_STORAGE_TEMP_MAP_PATH) as json_file:
-    try:
-        MIABIS_STORAGE_TEMP_MAP = json.load(json_file)
-    except JSONDecodeError:
-        logger.error("MIABIS Storage temperature map does not have correct JSON format. Exiting.")
-        sys.exit()
-
-with open(MIABIS_MATERIAL_TYPE_MAP_PATH) as json_file:
-    try:
-        MIABIS_MATERIAL_TYPE_MAP = json.load(json_file)
-    except JSONDecodeError:
-        logger.error("MIABIS Material type map does not have correct JSON format. Exiting.")
-        sys.exit()
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        
+        with open(file_path, mode, encoding=encoding) as file:
+            file.write(content)
+        
+        logger.info(f"Successfully wrote content to {file_path} (map_type: {map_type})")
+        return {
+            'success': True,
+            'message': f"Successfully wrote content to {file_path}"
+        }
+        
+    except (OSError) as e:
+        return {
+            'success': False,
+            'message': f"Failed to write to file {file_path}: {e}"
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'message': f"Unexpected error writing to file {file_path}: {e}"
+        }

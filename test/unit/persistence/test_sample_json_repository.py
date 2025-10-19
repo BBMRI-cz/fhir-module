@@ -12,7 +12,6 @@ from model.sample import Sample
 from model.storage_temperature import StorageTemperature
 from miabis_model.storage_temperature import StorageTemperature as MiabisStorageTemperature
 from persistence.sample_json_repository import SampleJsonRepository
-from util.config import STORAGE_TEMP_MAP
 
 
 class TestSampleJsonRepository(unittest.TestCase):
@@ -123,6 +122,14 @@ class TestSampleJsonRepository(unittest.TestCase):
         }
     }
 
+    storage_temp_map = {
+        "temperatureRoom": "TEMPERATURE_ROOM",
+    }
+
+    miabis_storage_temp_map = {
+        "temperatureRoom": "TEMPERATURE_ROOM"
+    }
+
     dir_path = "/mock/dir/"
 
     @pytest.fixture(autouse=True)
@@ -145,7 +152,7 @@ class TestSampleJsonRepository(unittest.TestCase):
         self.sample_repository = SampleJsonRepository(records_path=self.dir_path,
                                                       sample_parsing_map=self.parsing_map['sample_map'],
                                                       material_type_map={"tumor-tissue-ffpe": "TissueFixed"},
-                                                      storage_temp_map=STORAGE_TEMP_MAP,
+                                                      storage_temp_map=self.miabis_storage_temp_map,
                                                       miabis_on_fhir_model=True,
                                                       standardized=False)
         content = json.dumps(self.one_sample_correct)
@@ -167,7 +174,7 @@ class TestSampleJsonRepository(unittest.TestCase):
                                                       sample_parsing_map=self.parsing_map['sample_map'],
                                                       material_type_map={"tumor-tissue-ffpe": "TissueFixed"},
                                                       miabis_on_fhir_model=True,
-                                                      storage_temp_map=STORAGE_TEMP_MAP,
+                                                      storage_temp_map=self.miabis_storage_temp_map,
                                                       standardized=False)
         content = json.dumps(self.multiple_samples)
         fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
@@ -196,13 +203,14 @@ class TestSampleJsonRepository(unittest.TestCase):
         self.sample_repository = SampleJsonRepository(records_path=self.dir_path, sample_parsing_map=wrong_map,
                                                       material_type_map={"tumor-tissue-ffpe": "TissueFixed"},
                                                       miabis_on_fhir_model=True,
-                                                      storage_temp_map=STORAGE_TEMP_MAP,
+                                                      storage_temp_map=self.miabis_storage_temp_map,
                                                       standardized=False)
         content = json.dumps(self.one_sample_correct)
         fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
         self.assertEqual(0, sum(1 for _ in self.sample_repository.get_all()))
 
 
+    @unittest.skipIf(os.name == 'nt', "chmod doesn't work properly on Windows")
     @patchfs
     def test_file_with_no_permissions_trows_no_error(self, fake_fs):
         content = json.dumps(self.one_sample_correct)
@@ -228,7 +236,7 @@ class TestSampleJsonRepository(unittest.TestCase):
         self.sample_repository = SampleJsonRepository(records_path=self.dir_path,
                                                       sample_parsing_map=self.parsing_map['sample_map'],
                                                       material_type_map={"tumor-tissue-ffpe": "TissueFixed"},
-                                                      storage_temp_map=STORAGE_TEMP_MAP,
+                                                      storage_temp_map=self.miabis_storage_temp_map,
                                                       miabis_on_fhir_model=True,
                                                       standardized=False)
         self.assertEqual(3, sum(1 for _ in self.sample_repository.get_all()))
@@ -309,7 +317,7 @@ class TestSampleJsonRepository(unittest.TestCase):
     def test_storage_temp_map_ok(self, fake_fs):
         self.sample_repository = SampleJsonRepository(records_path=self.dir_path,
                                                       sample_parsing_map=self.parsing_map['sample_map'],
-                                                      storage_temp_map=STORAGE_TEMP_MAP)
+                                                      storage_temp_map=self.storage_temp_map)
         content = json.dumps(self.one_sample_correct)
         fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
         self.assertEqual(StorageTemperature.TEMPERATURE_ROOM,
@@ -328,7 +336,7 @@ class TestSampleJsonRepository(unittest.TestCase):
     def test_missing_storage_temp_field(self, fake_fs):
         self.sample_repository = SampleJsonRepository(records_path=self.dir_path,
                                                       sample_parsing_map=self.parsing_map['sample_map'],
-                                                      storage_temp_map=STORAGE_TEMP_MAP)
+                                                      storage_temp_map=self.storage_temp_map)
         content = json.dumps(self.one_sample_missing_storage_temperature)
         fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
         for sample in self.sample_repository.get_all():
@@ -342,7 +350,7 @@ class TestSampleJsonRepository(unittest.TestCase):
     def test_missing_material_type_field(self, fake_fs):
         self.sample_repository = SampleJsonRepository(records_path=self.dir_path,
                                                       sample_parsing_map=self.parsing_map['sample_map'],
-                                                      storage_temp_map=STORAGE_TEMP_MAP)
+                                                      storage_temp_map=self.storage_temp_map)
         content = json.dumps(self.one_sample_missing_material_type)
         fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
         for sample in self.sample_repository.get_all():
@@ -356,7 +364,7 @@ class TestSampleJsonRepository(unittest.TestCase):
     def test_missing_diagnosis_field(self, fake_fs):
         self.sample_repository = SampleJsonRepository(records_path=self.dir_path,
                                                       sample_parsing_map=self.parsing_map['sample_map'],
-                                                      storage_temp_map=STORAGE_TEMP_MAP)
+                                                      storage_temp_map=self.storage_temp_map)
         content = json.dumps(self.one_sample_missing_diagnosis)
         fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
         for sample in self.sample_repository.get_all():
@@ -370,7 +378,7 @@ class TestSampleJsonRepository(unittest.TestCase):
     def test_missing_collection_date_field(self, fake_fs):
         self.sample_repository = SampleJsonRepository(records_path=self.dir_path,
                                                       sample_parsing_map=self.parsing_map['sample_map'],
-                                                      storage_temp_map=STORAGE_TEMP_MAP)
+                                                      storage_temp_map=self.storage_temp_map)
         content = json.dumps(self.one_sample_missing_collection_date)
         fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
         for sample in self.sample_repository.get_all():
@@ -384,7 +392,7 @@ class TestSampleJsonRepository(unittest.TestCase):
     def test_multiple_diagnosis_one_sample(self, fake_fs):
         self.sample_repository = SampleJsonRepository(records_path=self.dir_path,
                                                       sample_parsing_map=self.parsing_map['sample_map'],
-                                                      storage_temp_map=STORAGE_TEMP_MAP)
+                                                      storage_temp_map=self.storage_temp_map)
         content = json.dumps(self.multiple_diagnosis)
         fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
         for sample in self.sample_repository.get_all():
@@ -399,7 +407,7 @@ class TestSampleJsonRepository(unittest.TestCase):
     def test_diagnosis_observed_miabis_repo(self, fake_fs):
         self.sample_repository = SampleJsonRepository(records_path=self.dir_path,
                                                       sample_parsing_map=self.parsing_map['sample_map'],
-                                                      storage_temp_map=STORAGE_TEMP_MAP,
+                                                      storage_temp_map=self.miabis_storage_temp_map,
                                                       material_type_map={"tumor-tissue-ffpe": "TissueFixed"},
                                                       miabis_on_fhir_model=True,
                                                       standardized=False)
