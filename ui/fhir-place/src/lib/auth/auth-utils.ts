@@ -1,5 +1,5 @@
-import { auth } from "../../auth";
-import { getUserById } from "./auth";
+import { auth } from "../../../auth";
+import { getUserById } from "@/lib/auth/auth";
 
 export async function getCurrentUser() {
   const session = await auth();
@@ -56,6 +56,7 @@ export interface UserDetails {
   lastName: string;
   email: string;
   isActive: boolean;
+  mustChangePassword: boolean;
   createdAt: string;
   updatedAt: string;
 }

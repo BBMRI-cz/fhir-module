@@ -1,16 +1,16 @@
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
-import { db } from "./db";
-import { users, type User, type NewUser } from "./schema";
+import { db } from "@/lib/db/db";
+import { users, type User, type NewUser } from "@/lib/db/schema";
 import {
   UserNotFoundError,
   UserCreationError,
   InvalidCredentialsError,
   AuthenticationError,
   DatabaseError,
-} from "./errors";
-import { validatePassword } from "./password-validation";
-import crypto from "crypto";
+} from "@/lib/errors";
+import { validatePassword } from "@/lib/auth/password-validation";
+import crypto from "node:crypto";
 
 export interface CreateUserData {
   username: string;
@@ -18,6 +18,7 @@ export interface CreateUserData {
   firstName: string;
   lastName: string;
   email: string;
+  mustChangePassword?: boolean;
 }
 
 export interface LoginCredentials {
@@ -25,16 +26,25 @@ export interface LoginCredentials {
   password: string;
 }
 
-export async function createUser(userData: CreateUserData): Promise<User> {
-  const { username, password, firstName, lastName, email } = userData;
+export async function createUser(userData: CreateUserData, isSeed: boolean = false): Promise<User> {
+  const {
+    username,
+    password,
+    firstName,
+    lastName,
+    email,
+    mustChangePassword = false,
+  } = userData;
 
   try {
-    const passwordValidation = await validatePassword(password);
-    if (!passwordValidation.isValid) {
-      throw new UserCreationError(
-        username,
-        new Error(passwordValidation.errors.join(", "))
-      );
+    if (!isSeed) {
+      const passwordValidation = await validatePassword(password);
+      if (!passwordValidation.isValid) {
+        throw new UserCreationError(
+          username,
+          new Error(passwordValidation.errors.join(", "))
+        );
+      }
     }
 
     const saltRounds = 12;
@@ -47,6 +57,7 @@ export async function createUser(userData: CreateUserData): Promise<User> {
       firstName,
       lastName,
       email,
+      mustChangePassword: mustChangePassword ? 1 : 0,
     };
 
     const result = await db.insert(users).values(newUser).returning();

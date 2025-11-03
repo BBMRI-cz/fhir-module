@@ -3,14 +3,14 @@ import {
   miabisSyncAction,
   deleteAllAction,
   miabisDeleteAction,
-} from "../backend-control";
+} from "@/actions/backend/backend-control";
 
 // Mock fetch globally
-global.fetch = jest.fn() as jest.MockedFunction<typeof fetch>;
+globalThis.fetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 
 describe("Backend Control Actions", () => {
   let consoleSpy: jest.SpyInstance;
-  const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>;
+  const mockFetch = globalThis.fetch as jest.MockedFunction<typeof fetch>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -317,9 +317,9 @@ describe("Backend Control Actions", () => {
       ]);
 
       expect(mockFetch).toHaveBeenCalledTimes(4);
-      mockFetch.mock.calls.forEach((call) => {
+      for (const call of mockFetch.mock.calls) {
         expect(call[1]).toMatchObject({ method: "POST" });
-      });
+      }
     });
   });
 
@@ -335,9 +335,9 @@ describe("Backend Control Actions", () => {
       const results = await Promise.all(promises);
 
       expect(results).toHaveLength(3);
-      results.forEach((result) => {
+      for (const result of results) {
         expect(result.success).toBe(true);
-      });
+      }
       expect(mockFetch).toHaveBeenCalledTimes(3);
     });
 

@@ -5,26 +5,26 @@ import {
   authenticateUser,
   type CreateUserData,
   type LoginCredentials,
-} from "../auth";
+} from "@/lib/auth/auth";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
-import { db } from "../db";
-import { users, type User } from "../schema";
+import { db } from "@/lib/db/db";
+import { users, type User } from "@/lib/db/schema";
 import {
   UserNotFoundError,
   UserCreationError,
   InvalidCredentialsError,
   DatabaseError,
-} from "../errors";
-import { validatePassword } from "../password-validation";
-import crypto from "crypto";
+} from "@/lib/errors";
+import { validatePassword } from "@/lib/auth/password-validation";
+import crypto from "node:crypto";
 
 // Mock all dependencies
 jest.mock("bcryptjs");
 jest.mock("drizzle-orm");
-jest.mock("../db");
-jest.mock("../schema");
-jest.mock("../password-validation");
+jest.mock("@/lib/db/db");
+jest.mock("@/lib/db/schema");
+jest.mock("@/lib/auth/password-validation");
 jest.mock("crypto");
 
 const mockBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
@@ -51,12 +51,14 @@ const createValidationResult = (isValid: boolean, errors: string[] = []) => ({
 });
 
 const setupSuccessfulPasswordValidation = () => {
-  mockValidatePassword.mockReturnValueOnce(createValidationResult(true));
+  mockValidatePassword.mockReturnValueOnce(
+    Promise.resolve(createValidationResult(true))
+  );
 };
 
 const setupFailedPasswordValidation = (errors: string[]) => {
   mockValidatePassword.mockReturnValueOnce(
-    createValidationResult(false, errors)
+    Promise.resolve(createValidationResult(false, errors))
   );
 };
 
@@ -125,6 +127,7 @@ describe("auth library", () => {
     isActive: 1, // Changed from boolean to number to match schema
     createdAt: "2024-01-01T00:00:00.000Z",
     updatedAt: "2024-01-01T00:00:00.000Z",
+    mustChangePassword: 0,
   };
 
   beforeEach(() => {
