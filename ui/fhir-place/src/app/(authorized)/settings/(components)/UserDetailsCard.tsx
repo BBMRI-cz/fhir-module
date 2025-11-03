@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { UserDetailsForm } from "./UserDetailsForm";
+import { UserDetailsForm } from "@/app/(authorized)/settings/(components)/UserDetailsForm";
 
 export const UserDetailsCard = () => {
   return (

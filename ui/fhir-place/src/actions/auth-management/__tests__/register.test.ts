@@ -1,12 +1,15 @@
-import { registerAction, type RegisterResult } from "../register";
-import { createUser } from "@/lib/auth";
+import { createUser } from "@/lib/auth/auth";
 import { UserCreationError } from "@/lib/errors";
 import { RegisterFormSchema } from "@/app/login/form/schema";
 import { signIn } from "../../../../auth";
 import { z } from "zod";
+import {
+  RegisterResult,
+  registerAction,
+} from "@/actions/auth-management/register";
 
 // Mock the dependencies
-jest.mock("@/lib/auth");
+jest.mock("@/lib/auth/auth");
 jest.mock("@/app/login/form/schema", () => ({
   RegisterFormSchema: {
     safeParseAsync: jest.fn(),
@@ -44,9 +47,11 @@ describe("registerAction", () => {
     isActive: 1,
     createdAt: "2024-01-01T00:00:00.000Z",
     updatedAt: "2024-01-01T00:00:00.000Z",
+    mustChangePassword: 0,
   };
 
   beforeEach(() => {
+    process.env.REGISTER_ALLOWED = "true";
     jest.clearAllMocks();
     (mockRegisterFormSchema.safeParseAsync as jest.Mock).mockImplementation(
       (data) =>

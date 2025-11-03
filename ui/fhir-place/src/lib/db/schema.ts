@@ -11,6 +11,7 @@ export const users = sqliteTable("users", {
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
   isActive: integer("is_active").default(1),
+  mustChangePassword: integer("must_reset_password").default(0),
 });
 
 export const sessions = sqliteTable("sessions", {

@@ -1,6 +1,6 @@
 "use client";
 
-import LoginForm from "./form/LoginForm";
+import LoginForm from "@/app/login/form/LoginForm";
 import Link from "next/link";
 
 export default function Login() {
@@ -11,14 +11,16 @@ export default function Login() {
           Login
         </h1>
         <LoginForm />
-        <div className="mt-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-primary hover:underline">
-              Register
-            </Link>
-          </p>
-        </div>
+        {process.env.REGISTER_ALLOWED === "true" && (
+          <div className="mt-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              Don&apos;t have an account?{" "}
+              <Link href="/register" className="text-primary hover:underline">
+                Register
+              </Link>
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
