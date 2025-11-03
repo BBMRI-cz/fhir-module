@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PasswordChangeForm } from "./PasswordChangeForm";
+import { PasswordChangeForm } from "@/app/(authorized)/settings/(components)/PasswordChangeForm";
 
 export const PasswordChangeCard = () => {
   return (
