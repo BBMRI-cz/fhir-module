@@ -3,13 +3,13 @@ from persistence.factories.csv_repository_factory import CSVRepositoryFactory
 from persistence.factories.json_repository_factory import JsonRepositoryFactory
 from persistence.factories.repository_factory import RepositoryFactory
 from persistence.factories.xml_repository_factory import XMLRepositoryFactory
-from util.config import RECORDS_FILE_TYPE
+from util.config import get_records_file_type
 
 
 def get_repository_factory() -> RepositoryFactory:
     """This function provides corresponding factory for repositories
     based on the ENV variable which specifies records file type"""
-    match RECORDS_FILE_TYPE:
+    match get_records_file_type().lower():
         case "csv":
             return CSVRepositoryFactory()
         case "xml":

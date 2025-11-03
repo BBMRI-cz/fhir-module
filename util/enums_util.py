@@ -10,7 +10,7 @@ logger = logging.getLogger()
 
 def parse_storage_temp_from_code(storage_temp_map: dict, code: str) -> StorageTemperature | None:
     if code not in storage_temp_map:
-        logger.info(f"COULD NOT FING A MATCHING STORAGE TEMPERATURE CODE FOR: {code}!"
+        logger.info(f"COULD NOT FIND A MATCHING STORAGE TEMPERATURE CODE FOR: {code}!"
                     f" PLEASE UPDATE STORAGE_TEMP_MAP. Using None instead.")
         return None
     storage_temp = storage_temp_map.get(code)

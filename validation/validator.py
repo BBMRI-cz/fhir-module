@@ -39,7 +39,7 @@ class Validator(abc.ABC):
     @abc.abstractmethod
     def _validate_files_present(self, file_type: str) -> bool:
         """Validates the presence of the files and their type (RECORDS_FILE_TYPE env var) in the
-        directory (DIR_PATH env var)."""
+        directory (ROOT_DIR env var)."""
         pass
 
     @abc.abstractmethod
@@ -48,7 +48,7 @@ class Validator(abc.ABC):
         pass
 
     def _validate_files_structure(self, file_type: str) -> bool:
-        """this method validates the files provided by DIR_PATH env variable"""
+        """this method validates the files provided by ROOT_DIR env variable"""
         self._validate_files_present(file_type)
         dir_entry: os.DirEntry
         for dir_entry in os.scandir(self._dir_path):
@@ -60,57 +60,85 @@ class Validator(abc.ABC):
     def _validate_donor_map(self) -> bool:
         """Validates the presence of the donor_map, and all its necessary attributes"""
         if self._map_donor is None:
-            logger.error("Provided parsing map does not contain key \"donor_map\"")
-            raise WrongParsingMapException
+            error_message = "Provided parsing map does not contain key \"donor_map\""
+            logger.error(error_message)
+            raise WrongParsingMapException({
+                "concept": "donor",
+                "error_message": error_message
+            })
 
         self._donor_id = self._map_donor.get("id")
         self._donor_gender = self._map_donor.get("gender")
         self._donor_birthDate = self._map_donor.get("birthDate")
 
         if self._donor_id is None or self._donor_gender is None or self._donor_birthDate is None:
-            logger.error(f"Provided parsing map does not contain the necessary name/value pairs for donor_map. "
-                         f"donor_map needs to contain the following names(attributes): "
-                         f" \"id\" \"gender\" \"birthDate\".")
-            raise WrongParsingMapException
+            error_message = "Provided parsing map does not contain the necessary name/value pairs for donor_map. "
+            error_message += "donor_map needs to contain the following names(attributes): "
+            error_message += " \"id\" \"gender\" \"birthDate\"."
+            logger.error(error_message)
+            raise WrongParsingMapException({
+                "concept": "donor",
+                "error_message": error_message
+            })
         logger.info("donor_map and all its name/value pairs are provided.")
         return True
 
     def _validate_sample_map(self) -> bool:
         """Validates the presence of the sample_map, and all its necessary attributes"""
         if self._map_sample is None:
-            logger.error("Provided parsing map does not contain key \"sample_map\"")
-            raise WrongParsingMapException
+            error_message = "Provided parsing map does not contain key \"sample_map\""
+            logger.error(error_message)
+            raise WrongParsingMapException({
+                "concept": "sample",
+                "error_message": error_message
+            })
 
         if self._map_sample.get("sample_details") is None:
-            logger.error("Provided parsing map does not contain needed name/value pair of \"sample_details\".")
-            raise WrongParsingMapException
+            error_message = "Provided parsing map does not contain needed name/value pair of \"sample_details\"."
+            logger.error(error_message)
+            raise WrongParsingMapException({
+                "concept": "sample",
+                "error_message": error_message
+            })
 
         self._sample_id = self._map_sample["sample_details"].get("id")
         self._sample_diagnosis = self._map_sample["sample_details"].get("diagnosis")
         self._sample_material_type = self._map_sample["sample_details"].get("material_type")
 
         if self._sample_id is None or self._sample_diagnosis is None or self._sample_material_type is None:
-            logger.error(f"Provided parsing map does not contain the necessary name/value pairs for sample map. "
-                         f"sample_map needs to contain the following names(attributes): "
-                         f" \"id\", \"diagnosis\", \"material_type\" ")
-            raise WrongParsingMapException
+            error_message = "Provided parsing map does not contain the necessary name/value pairs for sample map. "
+            error_message += "sample_map needs to contain the following names(attributes): "
+            error_message += " \"id\", \"diagnosis\", \"material_type\" "
+            logger.error(error_message)
+            raise WrongParsingMapException({
+                "concept": "sample",
+                "error_message": error_message
+            })
         logger.info("sample_map and all its name/value pairs are provided.")
         return True
 
     def _validate_condition_map(self) -> bool:
         """Validates the presence of the condition_map, and all its necessary attributes"""
         if self._map_condition is None:
-            logger.error("Provided parsing map does not contain key \"condition_map\"")
-            raise WrongParsingMapException
+            error_message = "Provided parsing map does not contain key \"condition_map\""
+            logger.error(error_message)
+            raise WrongParsingMapException({
+                "concept": "condition",
+                "error_message": error_message
+            })
 
         self._condition_icd10 = self._map_condition.get("icd-10_code")
         self._condition_patient_id = self._map_condition.get("patient_id")
 
         if self._condition_icd10 is None or self._condition_patient_id is None:
-            logger.error(f"Provided parsing map does not contain the necessary name/value pairs for the condition map. "
-                         f"condition_map needs to contain the following names(attributes): "
-                         f" \"icd-10_code\", \"patient_id\"")
-            raise WrongParsingMapException
+            error_message = "Provided parsing map does not contain the necessary name/value pairs for the condition map. "
+            error_message += "condition_map needs to contain the following names(attributes): "
+            error_message += " \"icd-10_code\", \"patient_id\" "
+            logger.error(error_message)
+            raise WrongParsingMapException({
+                "concept": "condition",
+                "error_message": error_message
+            })
         logger.info("condition_map and all its name/value pairs are provided.")
         return True
 
