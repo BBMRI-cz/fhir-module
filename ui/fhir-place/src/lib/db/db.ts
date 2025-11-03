@@ -1,8 +1,8 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import * as schema from "./schema";
-import path from "path";
-import fs from "fs";
+import * as schema from "@/lib/db/schema";
+import path from "node:path";
+import fs from "node:fs";
 
 const dbPath = path.join(process.cwd(), "data", "database.sqlite");
 const dbDir = path.dirname(dbPath);

@@ -27,7 +27,7 @@ const parseTimestamp = (timestamp: number): string => {
 };
 
 const parseLastSyncTimestamp = (timestampStr: string): string => {
-  return new Date(parseInt(timestampStr)).toLocaleString();
+  return new Date(Number.parseInt(timestampStr)).toLocaleString();
 };
 
 export function useSystemStatus(): UseSystemStatusReturn {

@@ -2,11 +2,11 @@ import {
   validatePassword,
   getPasswordRequirementsDescription,
   resetClientCache,
-} from "../password-validation";
+} from "@/lib/auth/password-validation";
 
 // Mock fetch for client-side tests
 const mockFetch = jest.fn();
-global.fetch = mockFetch;
+globalThis.fetch = mockFetch;
 
 // Mock environment variables for consistent testing
 const originalEnv = process.env;
