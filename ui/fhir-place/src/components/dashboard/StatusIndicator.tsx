@@ -36,7 +36,7 @@ const getStatusBadge = (
 ) => {
   if (fetchState === "loading") {
     return {
-      text: isOnline !== undefined ? "Checking..." : "Syncing...",
+      text: isOnline === undefined ? "Syncing..." : "Checking...",
       className: "text-blue-400 border-blue-400",
     };
   }
