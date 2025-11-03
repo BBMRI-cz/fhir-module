@@ -10,8 +10,6 @@ from model.condition import Condition
 from persistence.condition_csv_repository import ConditionCsvRepository
 from persistence.condition_json_repository import ConditionJsonRepository
 from persistence.condition_xml_repository import ConditionXMLRepository
-from util.config import PARSING_MAP_CSV
-
 
 class TestConditionJsonRepository(unittest.TestCase):
     one_sample_correct = [{
@@ -129,6 +127,7 @@ class TestConditionJsonRepository(unittest.TestCase):
         self.assertEqual(2, len(conditions))
         self.assertEqual("C51", conditions[0].icd_10_code)
 
+    @unittest.skipIf(os.name == 'nt', "chmod doesn't work properly on Windows")
     @patchfs
     def test_file_with_no_permissions_trows_no_error(self, fake_fs):
         content = json.dumps(self.one_sample_correct)
@@ -136,6 +135,188 @@ class TestConditionJsonRepository(unittest.TestCase):
         # set permission to no access
         os.chmod(self.dir_path + "mock_file.json", 0o000)
         self.assertEqual(0, sum(1 for _ in self.condition_repository.get_all()))
+
+    @patchfs
+    def test_validate_conditions_from_json_file_valid_data(self, fake_fs):
+        content = json.dumps(self.one_sample_correct)
+        fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
+        dir_entry = os.scandir(self.dir_path).__next__()
+        errors = self.condition_repository._ConditionJsonRepository__validate_conditions_from_json_file(dir_entry)
+        self.assertEqual(0, len(errors))
+
+    @patchfs
+    def test_validate_conditions_from_json_file_wrong_diagnosis(self, fake_fs):
+        content = json.dumps(self.wrong_diagnosis)
+        fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
+        dir_entry = os.scandir(self.dir_path).__next__()
+        errors = self.condition_repository._ConditionJsonRepository__validate_conditions_from_json_file(dir_entry)
+        self.assertGreater(len(errors), 0)
+        self.assertTrue(any("No correct diagnosis has been found" in error for error in errors))
+
+    @patchfs
+    def test_validate_conditions_from_json_file_missing_diagnosis_field(self, fake_fs):
+        incomplete_parsing_map = {
+            "patient_id": "PatientId",
+            "diagnosis_date": "DateOfDiagnosis"
+        }
+        repo = ConditionJsonRepository(records_path=self.dir_path,
+                                      condition_parsing_map=incomplete_parsing_map)
+        content = json.dumps(self.one_sample_correct)
+        fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
+        dir_entry = os.scandir(self.dir_path).__next__()
+        errors = repo._ConditionJsonRepository__validate_conditions_from_json_file(dir_entry)
+        self.assertGreater(len(errors), 0)
+        self.assertTrue(any("No ICD-10 code field found" in error for error in errors))
+
+    @patchfs
+    def test_validate_conditions_from_json_file_missing_patient_id_field(self, fake_fs):
+        incomplete_parsing_map = {
+            "icd-10_code": "Diagnosis",
+            "diagnosis_date": "DateOfDiagnosis"
+        }
+        repo = ConditionJsonRepository(records_path=self.dir_path,
+                                      condition_parsing_map=incomplete_parsing_map)
+        content = json.dumps(self.one_sample_correct)
+        fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
+        dir_entry = os.scandir(self.dir_path).__next__()
+        errors = repo._ConditionJsonRepository__validate_conditions_from_json_file(dir_entry)
+        self.assertGreater(len(errors), 0)
+        self.assertTrue(any("No patient ID field found" in error for error in errors))
+
+    @patchfs
+    def test_validate_conditions_from_json_file_invalid_date_format(self, fake_fs):
+        invalid_date_sample = [{
+            "PatientId": "138331",
+            "SpecimenId": "14709",
+            "DateOfDiagnosis": "invalid-date-format",
+            "Diagnosis": "N880",
+            "Sex": "M"
+        }]
+        content = json.dumps(invalid_date_sample)
+        fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
+        dir_entry = os.scandir(self.dir_path).__next__()
+        errors = self.condition_repository._ConditionJsonRepository__validate_conditions_from_json_file(dir_entry)
+        self.assertGreater(len(errors), 0)
+        self.assertTrue(any("Diagnosis date parsing error" in error for error in errors))
+
+    @patchfs
+    def test_validate_conditions_from_json_file_invalid_json_format(self, fake_fs):
+        fake_fs.create_file(self.dir_path + "mock_file.json", contents="not valid json {")
+        dir_entry = os.scandir(self.dir_path).__next__()
+        errors = self.condition_repository._ConditionJsonRepository__validate_conditions_from_json_file(dir_entry)
+        self.assertGreater(len(errors), 0)
+        self.assertTrue(any("correct JSON format" in error for error in errors))
+
+    @patchfs
+    def test_validate_conditions_from_json_file_multiple_conditions_with_errors(self, fake_fs):
+        mixed_samples = self.multiple_samples + [self.wrong_diagnosis[0]]
+        content = json.dumps(mixed_samples)
+        fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
+        dir_entry = os.scandir(self.dir_path).__next__()
+        errors = self.condition_repository._ConditionJsonRepository__validate_conditions_from_json_file(dir_entry)
+        self.assertGreater(len(errors), 0)
+        self.assertTrue(any("index 2" in error for error in errors))
+
+    @patchfs
+    def test_validate_conditions_from_json_file_file_read_error(self, fake_fs):
+        content = json.dumps(self.one_sample_correct)
+        fake_fs.create_file(self.dir_path + "mock_file.json", contents=content)
+        dir_entry = os.scandir(self.dir_path).__next__()
+        if os.name != 'nt':
+            os.chmod(self.dir_path + "mock_file.json", 0o000)
+            errors = self.condition_repository._ConditionJsonRepository__validate_conditions_from_json_file(dir_entry)
+            self.assertGreater(len(errors), 0)
+            self.assertTrue(any("Error while opening file" in error for error in errors))
+
+    def test_validate_json_diagnosis_field_missing(self):
+        validation_errors = []
+        condition_json = {"PatientId": "123"}
+        result = self.condition_repository._ConditionJsonRepository__validate_json_diagnosis_field(
+            condition_json, validation_errors
+        )
+        self.assertIsNone(result)
+        self.assertEqual(1, len(validation_errors))
+        self.assertTrue(any("No ICD-10 code field found" in str(exc) for exc in validation_errors))
+
+    def test_validate_json_diagnosis_field_present(self):
+        validation_errors = []
+        condition_json = {"Diagnosis": "N880", "PatientId": "123"}
+        result = self.condition_repository._ConditionJsonRepository__validate_json_diagnosis_field(
+            condition_json, validation_errors
+        )
+        self.assertEqual("N880", result)
+        self.assertEqual(0, len(validation_errors))
+
+    def test_validate_json_patient_id_field_missing(self):
+        validation_errors = []
+        condition_json = {"Diagnosis": "N880"}
+        result = self.condition_repository._ConditionJsonRepository__validate_json_patient_id_field(
+            condition_json, validation_errors
+        )
+        self.assertIsNone(result)
+        self.assertEqual(1, len(validation_errors))
+        self.assertTrue(any("No patient ID field found" in str(exc) for exc in validation_errors))
+
+    def test_validate_json_patient_id_field_present(self):
+        validation_errors = []
+        condition_json = {"PatientId": "patient_123", "Diagnosis": "N880"}
+        result = self.condition_repository._ConditionJsonRepository__validate_json_patient_id_field(
+            condition_json, validation_errors
+        )
+        self.assertEqual("patient_123", result)
+        self.assertEqual(0, len(validation_errors))
+
+    def test_parse_json_diagnosis_datetime_valid(self):
+        validation_errors = []
+        condition_json = {"DateOfDiagnosis": "2020-01-15T00:00:00"}
+        result = self.condition_repository._ConditionJsonRepository__parse_json_diagnosis_datetime(
+            condition_json, validation_errors
+        )
+        self.assertIsNotNone(result)
+        self.assertEqual(datetime.datetime(2020, 1, 15), result)
+        self.assertEqual(0, len(validation_errors))
+
+    def test_parse_json_diagnosis_datetime_invalid(self):
+        validation_errors = []
+        condition_json = {"DateOfDiagnosis": "not-a-date"}
+        self.condition_repository._ConditionJsonRepository__parse_json_diagnosis_datetime(
+            condition_json, validation_errors
+        )
+        self.assertEqual(1, len(validation_errors))
+
+    def test_parse_json_diagnosis_datetime_missing_field(self):
+        validation_errors = []
+        condition_json = {"Diagnosis": "N880"}
+        result = self.condition_repository._ConditionJsonRepository__parse_json_diagnosis_datetime(
+            condition_json, validation_errors
+        )
+        self.assertIsNone(result)
+        self.assertEqual(0, len(validation_errors))
+
+    def test_validate_json_diagnoses_valid(self):
+        validation_errors = []
+        result = self.condition_repository._ConditionJsonRepository__validate_json_diagnoses(
+            "C50", "patient_123", validation_errors
+        )
+        self.assertEqual(["C50"], result)
+        self.assertEqual(0, len(validation_errors))
+
+    def test_validate_json_diagnoses_invalid(self):
+        validation_errors = []
+        result = self.condition_repository._ConditionJsonRepository__validate_json_diagnoses(
+            "invalid", "patient_123", validation_errors
+        )
+        self.assertEqual([], result)
+        self.assertEqual(1, len(validation_errors))
+        self.assertTrue(any("No correct diagnosis has been found" in str(exc) for exc in validation_errors))
+
+    def test_validate_json_diagnoses_none_field(self):
+        validation_errors = []
+        result = self.condition_repository._ConditionJsonRepository__validate_json_diagnoses(
+            None, "patient_123", validation_errors
+        )
+        self.assertEqual([], result)
+        self.assertEqual(1, len(validation_errors))
 
 
 if __name__ == '__main__':
