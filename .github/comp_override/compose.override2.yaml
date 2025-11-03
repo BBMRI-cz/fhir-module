@@ -17,3 +17,11 @@ services:
       - type: bind
         source: "test/json_data/miabis_material_type_map.json"
         target: "/opt/mappings/miabis_material_type_map.json"
+
+      - type: bind
+        source: "test/json_data/type_to_collection_map.json"
+        target: "/opt/mappings/type_to_collection_map.json"
+
+      - type: bind
+        source: "util/shared_config.json"
+        target: "/opt/fhir-module/util/shared_config.json"

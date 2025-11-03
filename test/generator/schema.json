@@ -1,0 +1,192 @@
+{
+  "csv": {
+    "fields": {
+      "sample_ID": {
+        "type": "sequential_global",
+        "start": 1
+      },
+      "patient_pseudonym": {
+        "type": "random_int",
+        "min": 0,
+        "max": 999999999
+      },
+      "sex": {
+        "type": "choice",
+        "options": ["m", "f", "other"]
+      },
+      "birth_year": {
+        "type": "random_int",
+        "min": 1940,
+        "max": 2010
+      },
+      "date_of_diagnosis": {
+        "type": "random_date",
+        "start_date": "2015-01-01",
+        "end_date": "2025-12-31",
+        "format": "%d.%m.%Y"
+      },
+      "diagnosis": {
+        "type": "from_file",
+        "file": "diagnoses.json"
+      },
+      "donor_age": {
+        "type": "random_int",
+        "min": 18,
+        "max": 90
+      },
+      "sampling_date": {
+        "type": "random_date",
+        "start_date": "2015-01-01",
+        "end_date": "2025-12-31",
+        "format": "%d.%m.%Y"
+      },
+      "sampling_type": {
+        "type": "from_file",
+        "file": "material_types.json"
+      },
+      "storage_temperature": {
+        "type": "from_file",
+        "file": "storage_temps.json"
+      }
+    }
+  },
+  "json": {
+    "fields": {
+      "PatientId": {
+        "type": "sequential_global",
+        "start": 0
+      },
+      "SpecimenId": {
+        "type": "sequential_global",
+        "start": 0
+      },
+      "DateOfDiagnosis": {
+        "type": "random_date",
+        "start_date": "2000-01-01",
+        "end_date": "2025-12-31",
+        "format": "%Y-%m-%dT%H:%M:%S"
+      },
+      "Diagnosis": {
+        "type": "from_file",
+        "file": "diagnoses.json"
+      },
+      "DonorAge": {
+        "type": "random_year_month",
+        "start_year": 1940,
+        "end_year": 2005
+      },
+      "SamplingDate": {
+        "type": "random_date",
+        "start_date": "2010-01-01",
+        "end_date": "2025-12-31",
+        "format": "%Y-%m-%dT%H:%M:%S"
+      },
+      "SampleType": {
+        "type": "from_file",
+        "file": "material_types.json"
+      },
+      "Sex": {
+        "type": "choice",
+        "options": ["M", "F", "other"]
+      },
+      "StorageTemperature": {
+        "type": "from_file",
+        "file": "storage_temps.json"
+      }
+    }
+  },
+  "xml": {
+    "root_element": "patient",
+    "root_attributes": {
+      "biobank": {
+        "type": "constant",
+        "value": "MOU"
+      },
+      "consent": {
+        "type": "constant",
+        "value": "true"
+      },
+      "id": {
+        "type": "sequential_global",
+        "start": 0
+      },
+      "month": {
+        "type": "random_month"
+      },
+      "sex": {
+        "type": "choice",
+        "options": ["male", "female", "other"]
+      },
+      "year": {
+        "type": "random_int",
+        "min": 1940,
+        "max": 2010
+      }
+    },
+    "collections": {
+      "LTS": {
+        "element": "tissue",
+        "count_range": [1, 5],
+        "attributes": {
+          "year": {
+            "type": "random_int",
+            "min": 2015,
+            "max": 2032
+          },
+          "number": {
+            "type": "random_int",
+            "min": 0,
+            "max": 9999999999
+          },
+          "sampleId": {
+            "type": "format_string",
+            "template": "BBM:{year}:{number}:1"
+          }
+        },
+        "fields": {
+          "samplesNo": {
+            "type": "random_int",
+            "min": 0,
+            "max": 9999999999
+          },
+          "availableSamplesNo": {
+            "type": "copy_field",
+            "source": "samplesNo"
+          },
+          "materialType": {
+            "type": "from_file",
+            "file": "material_types.json"
+          },
+          "pTNM": {
+            "type": "constant",
+            "value": "T4bN1M"
+          },
+          "morphology": {
+            "type": "constant",
+            "value": "8500/32"
+          },
+          "diagnosis": {
+            "type": "from_file",
+            "file": "diagnoses.json"
+          },
+          "cutTime": {
+            "type": "random_datetime",
+            "start_date": "2015-01-01",
+            "end_date": "2032-12-31",
+            "format": "%Y-%m-%dT%H:%M:%S"
+          },
+          "freezeTime": {
+            "type": "random_datetime",
+            "start_date": "2015-01-01",
+            "end_date": "2032-12-31",
+            "format": "%Y-%m-%dT%H:%M:%S"
+          },
+          "retrieved": {
+            "type": "choice",
+            "options": ["operational", "unknown"]
+          }
+        }
+      }
+    }
+  }
+}

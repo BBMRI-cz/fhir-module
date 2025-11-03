@@ -11,11 +11,24 @@ from model.sample import Sample
 from model.storage_temperature import StorageTemperature
 from miabis_model.storage_temperature import StorageTemperature as MiabisStorageTemperature
 from persistence.sample_csv_repository import SampleCsvRepository
-from util.config import PARSING_MAP_CSV, STORAGE_TEMP_MAP
+from util.config import get_parsing_map, get_storage_temp_map
 
 
 class TestSampleCsvRepository(unittest.TestCase):
     header = "sample_ID;patient_pseudonym;sex;birth_year;diagnosis_date;diagnosis;donor_age;sampling_date;sampling_type;storage_temperature;available_number_of_samples \n"
+
+    def _setup_fake_config_files(self, fake_fs):
+        """Helper method to add configuration files to fake filesystem and clear cache"""
+        import os
+        current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        fake_fs.add_real_file(os.path.join(current_dir, "util", "shared_config.json"))
+        fake_fs.add_real_file(os.path.join(current_dir, "util", "default_storage_temp_map.json"))
+        fake_fs.add_real_file(os.path.join(current_dir, "util", "default_csv_map.json"))
+        
+        # Clear config cache to force reload from fake filesystem
+        from util.config import _config
+        _config._config_cache = None
+        _config._loaded_maps.clear()
 
     missing_storage_temperature_field_header = "sample_ID;patient_pseudonym;sex;birth_year;date_of_diagnosis;diagnosis;donor_age;sampling_date;sampling_type;available_number_of_samples \n"
 
@@ -42,11 +55,38 @@ class TestSampleCsvRepository(unittest.TestCase):
     sample_multiple_diagnosis = "33;1111;m;1947;2007-10-16;M058,C51,E080;85;2100-01-16;serum;temperatureLN;0"
     dir_path = "/mock/dir/"
 
+
+    parsing_map = {
+        "sample_map": {
+            "sample_details": {
+            "id": "sample_ID",
+            "material_type": "sampling_type",
+            "diagnosis": "diagnosis",
+            "storage_temperature": "storage_temperature",
+            "collection_date": "sampling_date",
+            "diagnosis_date": "diagnosis_date",
+            "collection": "material_type"
+            },
+            "donor_id": "patient_pseudonym"
+        },
+    }
+
+    storage_temp_map = {
+        "temperatureLN": "TEMPERATURE_LN",
+        "temperatureOther": "TEMPERATURE_OTHER"
+    }
+
+    miabis_storage_temp_map = {
+        "-20": "TEMPERATURE_MINUS_18_TO_MINUS_35",
+        "temperatureLN": "TEMPERATURE_LN",
+        "temperatureOther": "TEMPERATURE_OTHER"
+    }
+
     @pytest.fixture(autouse=True)
     def run_around_tests(self):
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     sample_parsing_map=self.parsing_map['sample_map'],
                                                      material_type_map={"serum": "serum"})
         yield  # run test
 
@@ -61,13 +101,14 @@ class TestSampleCsvRepository(unittest.TestCase):
     def test_miabis_get_all_one_sample_ok(self, fake_fs):
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     sample_parsing_map=self.parsing_map['sample_map'],
                                                      material_type_map={"serum": "Serum"},
                                                      miabis_on_fhir_model=True)
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
         self.assertEqual(1, sum(1 for _ in self.sample_repository.get_all()))
 
 
+    @unittest.skipIf(os.name == 'nt', "chmod doesn't work properly on Windows")
     @patchfs
     def test_file_with_no_permissions_trows_no_error(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
@@ -87,7 +128,7 @@ class TestSampleCsvRepository(unittest.TestCase):
     def test_miabis_get_all_two_samples_ok(self, fake_fs):
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     sample_parsing_map=self.parsing_map['sample_map'],
                                                      material_type_map={"serum": "Serum"},
                                                      miabis_on_fhir_model=True)
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.samples)
@@ -129,7 +170,7 @@ class TestSampleCsvRepository(unittest.TestCase):
     def test_miabis_get_all_three_samples_from_two_collections_ok(self, fake_fs):
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     sample_parsing_map=self.parsing_map['sample_map'],
                                                      material_type_map={"serum": "Serum"},
                                                      miabis_on_fhir_model=True)
         fake_fs.create_file(self.dir_path + "mock_file.csv",
@@ -151,7 +192,7 @@ class TestSampleCsvRepository(unittest.TestCase):
 
     @patchfs
     def test_with_type_to_collection_map_ok(self, fake_fs):
-        spm = PARSING_MAP_CSV['sample_map']
+        spm = self.parsing_map['sample_map']
         spm['sample_details']['collection'] = "diagnosis"
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
@@ -162,7 +203,7 @@ class TestSampleCsvRepository(unittest.TestCase):
 
     @patchfs
     def test_with_wrong_type_to_collection_map_id_is_none(self, fake_fs):
-        spm = PARSING_MAP_CSV['sample_map']
+        spm = self.parsing_map['sample_map']
         spm['sample_details']['collection'] = "sampling_type"
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
@@ -175,11 +216,11 @@ class TestSampleCsvRepository(unittest.TestCase):
 
     @patchfs
     def test_with_type_to_collection_sampling_type_as_attribute_to_collection_ok(self, fake_fs):
-        spm = PARSING_MAP_CSV['sample_map']
+        spm = self.parsing_map['sample_map']
         spm['sample_details']['collection'] = "sampling_type"
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     sample_parsing_map=spm,
                                                      type_to_collection_map={"serum": "test:collection:id"},
                                                      )
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
@@ -187,32 +228,34 @@ class TestSampleCsvRepository(unittest.TestCase):
 
     @patchfs
     def test_with_wrong_type_to_collection_sampling_type_as_attribute_to_collection_id_is_none(self, fake_fs):
-        spm = PARSING_MAP_CSV['sample_map']
+        spm = self.parsing_map['sample_map']
         spm['sample_details']['collection'] = "sampling_type"
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     sample_parsing_map=spm,
                                                      type_to_collection_map={"not_present": "test:collection:id"})
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
         self.assertEqual(None, next(self.sample_repository.get_all()).sample_collection_id)
 
     @patchfs
     def test_with_non_existent_attribute_to_collection(self, fake_fs):
-        spm = PARSING_MAP_CSV['sample_map']
+        spm = self.parsing_map['sample_map']
         spm['sample_details']['collection'] = "non_existent"
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     sample_parsing_map=spm,
                                                      type_to_collection_map={"not_present": "test:collection:id"})
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
         self.assertEqual(None, next(self.sample_repository.get_all()).sample_collection_id)
 
     @patchfs
     def test_storage_temp_map_ok(self, fake_fs):
+        self._setup_fake_config_files(fake_fs)
+        
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
-                                                     storage_temp_map=STORAGE_TEMP_MAP)
+                                                     sample_parsing_map=self.parsing_map['sample_map'],
+                                                     storage_temp_map=self.storage_temp_map)
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
         self.assertEqual(StorageTemperature.TEMPERATURE_LN, next(self.sample_repository.get_all()).storage_temperature)
 
@@ -220,17 +263,19 @@ class TestSampleCsvRepository(unittest.TestCase):
     def test_storage_temp_map_code_not_found(self, fake_fs):
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
+                                                     sample_parsing_map=self.parsing_map['sample_map'],
                                                      storage_temp_map={"bad": "map"})
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.one_sample)
         self.assertEqual(None, next(self.sample_repository.get_all()).storage_temperature)
 
     @patchfs
     def test_missing_storage_temp_field(self, fake_fs):
+        self._setup_fake_config_files(fake_fs)
+        
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
-                                                     storage_temp_map=STORAGE_TEMP_MAP,
+                                                     sample_parsing_map=self.parsing_map['sample_map'],
+                                                     storage_temp_map=self.storage_temp_map,
                                                      material_type_map={"serum": "serum"})
         fake_fs.create_file(self.dir_path + "mock_file.csv",
                             contents=self.missing_storage_temperature_field_header
@@ -244,10 +289,12 @@ class TestSampleCsvRepository(unittest.TestCase):
 
     @patchfs
     def test_missing_material_type_field(self, fake_fs):
+        self._setup_fake_config_files(fake_fs)
+        
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
-                                                     storage_temp_map=STORAGE_TEMP_MAP)
+                                                     sample_parsing_map=self.parsing_map['sample_map'],
+                                                     storage_temp_map=self.storage_temp_map)
         fake_fs.create_file(self.dir_path + "mock_file.csv",
                             contents=self.missing_material_type_field_header
                                      + self.one_sample_missing_material_type)
@@ -260,10 +307,12 @@ class TestSampleCsvRepository(unittest.TestCase):
 
     @patchfs
     def test_missing_diagnosis_field(self, fake_fs):
+        self._setup_fake_config_files(fake_fs)
+        
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
-                                                     storage_temp_map=STORAGE_TEMP_MAP,
+                                                     sample_parsing_map=self.parsing_map['sample_map'],
+                                                     storage_temp_map=self.storage_temp_map,
                                                      material_type_map={"serum": "serum"})
         fake_fs.create_file(self.dir_path + "mock_file.csv",
                             contents=self.header
@@ -277,10 +326,12 @@ class TestSampleCsvRepository(unittest.TestCase):
 
     @patchfs
     def test_missing_collection_date_field(self, fake_fs):
+        self._setup_fake_config_files(fake_fs)
+        
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
-                                                     storage_temp_map=STORAGE_TEMP_MAP,
+                                                     sample_parsing_map=self.parsing_map['sample_map'],
+                                                     storage_temp_map=self.storage_temp_map,
                                                      material_type_map={"serum": "serum"})
         fake_fs.create_file(self.dir_path + "mock_file.csv",
                             contents=self.missing_collection_date_field_header
@@ -294,10 +345,12 @@ class TestSampleCsvRepository(unittest.TestCase):
 
     @patchfs
     def test_multiple_diagnosis_one_sample(self, fake_fs):
+        self._setup_fake_config_files(fake_fs)
+        
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
-                                                     storage_temp_map=STORAGE_TEMP_MAP,
+                                                     sample_parsing_map=self.parsing_map['sample_map'],
+                                                     storage_temp_map=self.storage_temp_map,
                                                      material_type_map={"serum": "serum"})
         fake_fs.create_file(self.dir_path + "mock_file.csv",
                             contents=self.header
@@ -313,10 +366,12 @@ class TestSampleCsvRepository(unittest.TestCase):
 
     @patchfs
     def test_diagnosis_observed_miabis_repo(self, fake_fs):
+        self._setup_fake_config_files(fake_fs)
+        
         self.sample_repository = SampleCsvRepository(records_path=self.dir_path,
                                                      separator=";",
-                                                     sample_parsing_map=PARSING_MAP_CSV['sample_map'],
-                                                     storage_temp_map=STORAGE_TEMP_MAP,
+                                                     sample_parsing_map=self.parsing_map['sample_map'],
+                                                     storage_temp_map=self.miabis_storage_temp_map,
                                                      material_type_map={"serum": "serum"},
                                                      miabis_on_fhir_model=True)
 

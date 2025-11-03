@@ -4,7 +4,7 @@ from pyfakefs.fake_filesystem_unittest import patchfs
 from exception.no_files_provided import NoFilesProvidedException
 from exception.nonexistent_attribute_parsing_map import NonexistentAttributeParsingMapException
 from exception.wrong_parsing_map import WrongParsingMapException
-from util.config import PARSING_MAP
+from util.config import get_parsing_map
 from validation.xml_validator import XMLValidator
 
 
@@ -206,16 +206,42 @@ class TestXMLValidator(unittest.TestCase):
         }
     }
 
+    parsing_map = {
+        "donor_map": {
+            "id": "patient.@id",
+            "gender": "patient.@sex",
+            "birthDate": "patient.@year"
+        },
+        "sample_map": {
+            "sample": "**.STS.* || **.LTS.*",
+            "sample_details": {
+            "id": "@sampleId",
+            "material_type": "materialType",
+            "diagnosis": "diagnosis",
+            "diagnosis_date": "diagnosis_date",
+            "storage_temperature": "storage_temperature",
+            "collection_date": "cutTime",
+            "collection": "materialType"
+            },
+            "donor_id": "patient.@id"
+        },
+        "condition_map": {
+            "icd-10_code": "**.diagnosis",
+            "diagnosis_date": "**.diagnosis_date",
+            "patient_id": "patient.@id"
+        }
+    }
+
     @patchfs
     def test_xml_validator_correct_parsing_map_and_file(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock.xml", contents=self.test_xml)
-        self.validator = XMLValidator(PARSING_MAP, self.dir_path)
+        self.validator = XMLValidator(self.parsing_map, self.dir_path)
         self.assertTrue(self.validator.validate())
 
     @patchfs
     def test_xml_validator_no_csv_files_present_in_records_directory_throws_exception(self, fake_fs):
         fake_fs.create_file(self.dir_path + "bad_file_format.txt")
-        self.validator = XMLValidator(PARSING_MAP, self.dir_path)
+        self.validator = XMLValidator(self.parsing_map, self.dir_path)
         self.assertRaises(NoFilesProvidedException, self.validator.validate)
 
     @patchfs
@@ -257,5 +283,5 @@ class TestXMLValidator(unittest.TestCase):
     @patchfs
     def test_xml_actual_file_missing_defined_sample_material_field(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock.xml", contents=self.content.format(sample=self.missing_materialType))
-        self.validator = XMLValidator(PARSING_MAP, self.dir_path)
+        self.validator = XMLValidator(self.parsing_map, self.dir_path)
         self.assertRaises(NonexistentAttributeParsingMapException, self.validator.validate)
