@@ -1,5 +1,5 @@
 import unittest
-from typing import List
+from typing import List, Callable
 
 from fhirclient.models.bundle import Bundle
 
@@ -13,9 +13,12 @@ class SampleDonorRepoStub(SampleDonorRepository):
     def get_all(self) -> List[SampleDonor]:
         return [SampleDonor("newId"), SampleDonor("patient2")]
 
+    def _get_supported_extensions(self) -> tuple[str, Callable]:
+        return ".json", self.__validate_sample_from_json_file
+
 
 class TestPatientService(unittest.TestCase):
-    patient_service = PatientService(SampleDonorRepoStub())
+    patient_service = PatientService(SampleDonorRepoStub("XX"))
 
     def test_get_all_patients_in_fhir_returns_bundle(self):
         bundle = self.patient_service.get_all_patients_in_fhir_transaction()

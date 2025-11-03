@@ -8,8 +8,6 @@ from pyfakefs.fake_filesystem_unittest import patchfs
 from miabis_model import Gender
 from model.sample_donor import SampleDonor
 from persistence.sample_donor_json_repository import SampleDonorJsonRepository
-from util.config import PARSING_MAP_CSV
-
 
 class TestDonorJsonRepo(unittest.TestCase):
     one_sample_correct = [{
@@ -75,6 +73,7 @@ class TestDonorJsonRepo(unittest.TestCase):
             counter += 1
         self.assertEqual(0, counter)
 
+    @unittest.skipIf(os.name == 'nt', "chmod doesn't work properly on Windows")
     @patchfs
     def test_file_with_no_permissions_trows_no_error(self, fake_fs):
         content = json.dumps(self.one_sample_correct)

@@ -1,0 +1,6 @@
+services:
+  fhir-module:
+    volumes:
+      - type: bind
+        source: "util/shared_config.json"
+        target: "/opt/fhir-module/util/shared_config.json"

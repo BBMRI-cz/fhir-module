@@ -5,8 +5,13 @@ services:
       MATERIAL_TYPE_MAP_PATH: "/opt/fhir-module/util/default_csv_material_type_map.json"
       MIABIS_MATERIAL_TYPE_MAP_PATH: "/opt/fhir-module/util/default_csv_miabis_material_type_map.json"
       RECORDS_FILE_TYPE: "csv"
-      COLLECTION_MAPPING_ATTRIBUTE : "diagnosis"
+      COLLECTION_MAPPING_ATTRIBUTE: "diagnosis"
+      BLAZE_URL: "http://test-blaze:8080/fhir"
+      MIABIS_BLAZE_URL: "http://miabis-blaze:8080/fhir"
     volumes:
       - type: bind
         source: "test/csv_data"
         target: "/opt/records"
+      - type: bind
+        source: "util/shared_config.json"
+        target: "/opt/fhir-module/util/shared_config.json"
