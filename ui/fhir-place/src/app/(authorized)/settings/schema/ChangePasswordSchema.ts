@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { validatePassword } from "@/lib/password-validation";
+import { validatePassword } from "@/lib/auth/password-validation";
 
 export const ChangePasswordSchema = z
   .object({
@@ -9,13 +9,13 @@ export const ChangePasswordSchema = z
     newPassword: z.string().superRefine(async (password, ctx) => {
       const validation = await validatePassword(password);
       if (!validation.isValid) {
-        validation.errors.forEach((error) => {
+        for (const error of validation.errors) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: error,
             path: [],
           });
-        });
+        }
       }
     }),
     confirmPassword: z.string(),

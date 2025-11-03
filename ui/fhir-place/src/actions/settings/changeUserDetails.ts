@@ -2,10 +2,10 @@
 
 import { z } from "zod";
 import { ChangeUserDetailsSchema } from "@/app/(authorized)/settings/schema/ChangeUserDetailsSchema";
-import { UserDetails } from "@/lib/auth-utils";
-import { users } from "@/lib/schema";
+import { UserDetails } from "@/lib/auth/auth-utils";
+import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { db } from "@/lib/db";
+import { db } from "@/lib/db/db";
 
 export async function changeUserDetails(
   formData: z.infer<typeof ChangeUserDetailsSchema>,
