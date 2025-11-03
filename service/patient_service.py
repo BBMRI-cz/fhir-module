@@ -20,10 +20,31 @@ class PatientService:
             bundle.entry.append(self.__build_bundle_entry_for_post(patient))
         return bundle
 
+    def update_mappings(self) -> None:
+        self._sample_donor_repository.update_mappings()
+
     def get_all(self) -> Generator[SampleDonorInterface, None, None]:
         """Fetches all patients/sample donors from the repository."""
         for donor in self._sample_donor_repository.get_all():
             yield donor
+
+    def smoke_validate(self, validate_all: bool = False) -> list[str]:
+        old_dir_path = self._sample_donor_repository._dir_path
+        old_donor_parsing_map = getattr(self._sample_donor_repository, '_donor_parsing_map', None)
+        old_separator = getattr(self._sample_donor_repository, '_separator', None)
+        
+        try:
+            self._sample_donor_repository.update_mappings()
+            
+            result = self._sample_donor_repository.smoke_validate(validate_all)
+            
+            return result
+        finally:
+            self._sample_donor_repository._dir_path = old_dir_path
+            if old_donor_parsing_map is not None:
+                self._sample_donor_repository._donor_parsing_map = old_donor_parsing_map
+            if old_separator is not None:
+                self._sample_donor_repository._separator = old_separator
 
     def __build_bundle(self) -> Bundle:
         bundle = Bundle()
