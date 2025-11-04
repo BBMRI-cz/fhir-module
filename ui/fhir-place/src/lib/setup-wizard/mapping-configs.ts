@@ -82,9 +82,16 @@ export const temperatureConfig: MappingConfig = {
     state: WizardState,
     targetConfig: SyncTargetConfig
   ) => state[targetConfig].allowCustomTemperatureValues,
-  allowCustomValuesSetter: (prev, value) => ({
+  allowCustomValuesSetter: (
+    prev: WizardState,
+    targetConfig: SyncTargetConfig,
+    value: boolean
+  ) => ({
     ...prev,
-    allowCustomTemperatureValues: value,
+    [targetConfig]: {
+      ...prev[targetConfig],
+      allowCustomTemperatureValues: value,
+    },
   }),
 };
 
