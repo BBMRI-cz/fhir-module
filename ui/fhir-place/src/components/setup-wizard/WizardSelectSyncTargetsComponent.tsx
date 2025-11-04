@@ -129,10 +129,12 @@ export default function WizardSelectSyncTargetsComponent() {
           )}
         </CardContent>
         <CardFooter className="flex justify-between p-6 pt-0">
-          <Button onClick={() => previousStep()} size="sm">
-            <ArrowLeft className="w-3 h-3 mr-1" />
-            Back
-          </Button>
+          {previousStep && (
+            <Button onClick={() => previousStep()} size="sm">
+              <ArrowLeft className="w-3 h-3 mr-1" />
+              Back
+            </Button>
+          )}
           <Button
             onClick={() => nextStep()}
             size="sm"

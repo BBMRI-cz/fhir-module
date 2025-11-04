@@ -9,7 +9,7 @@ import {
 import { useContext, useState } from "react";
 import { Button } from "@/components/ui/button";
 import SelectFolderDialog from "@/components/setup-wizard/SelectFolderDialog";
-import { FolderOpen, CheckCircle, ArrowRight, FileText } from "lucide-react";
+import { FolderOpen, CheckCircle, ArrowRight, FileText, ArrowLeft } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ export default function WizardSelectDataFolderComponent() {
     setCsvSeparator,
     nextStep,
     dataFiles,
+    previousStep,
   } = useContext(SetupWizardContext);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -206,7 +207,13 @@ export default function WizardSelectDataFolderComponent() {
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex justify-end">
+        <CardFooter className="flex justify-between">
+          {previousStep && (
+            <Button onClick={() => previousStep()} size="sm">
+              <ArrowLeft className="w-3 h-3 mr-1" />
+              Back
+            </Button>
+          )}
           <Button onClick={() => nextStep()} disabled={!canContinue} size="sm">
             Continue
             <ArrowRight className="w-3 h-3" />

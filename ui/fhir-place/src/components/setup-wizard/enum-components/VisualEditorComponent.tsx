@@ -38,14 +38,9 @@ export default function VisualEditorComponent(
 
         <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3">
           {mappings.map((mapping, index) => {
-            const key =
-              mapping.userValue && mapping.apiValue
-                ? `${mapping.userValue}-${mapping.apiValue}`
-                : `new-mapping-${index}`;
-
             return (
               <div
-                key={key}
+                key={index} // NOSONAR
                 className="flex flex-col sm:flex-row sm:items-end gap-2 p-3 border rounded-lg"
               >
                 <div className="flex-1 min-w-0">
