@@ -1,14 +1,1 @@
-{
-  "ROOT_DIR": "/opt/records",
-  "RECORDS_DIR_PATH": "/opt/records",
-  "PARSING_MAP_PATH": "default_map.json",
-  "MATERIAL_TYPE_MAP_PATH": "default_material_type_map.json",
-  "MIABIS_MATERIAL_TYPE_MAP_PATH": "default_miabis_material_type_map.json",
-  "SAMPLE_COLLECTIONS_PATH": "default_sample_collection.json",
-  "BIOBANK_PATH": "default_biobank.json",
-  "TYPE_TO_COLLECTION_MAP_PATH": "default_type_to_collection_map.json",
-  "STORAGE_TEMP_MAP_PATH": "/opt/fhir-module/util/default_storage_temp_map.json",
-  "MIABIS_STORAGE_TEMP_MAP_PATH": "default_miabis_storage_temp_map.json",
-  "CSV_SEPARATOR": ";",
-  "RECORDS_FILE_TYPE": "xml"
-}
+{}

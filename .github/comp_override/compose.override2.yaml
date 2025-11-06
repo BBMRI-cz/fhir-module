@@ -5,6 +5,8 @@ services:
       MIABIS_MATERIAL_TYPE_MAP_PATH: "/opt/mappings/miabis_material_type_map.json"
       RECORDS_FILE_TYPE: "json"
       STANDARDISED: "True"
+      TYPE_TO_COLLECTION_MAP_PATH: "/opt/mappings/type_to_collection_map.json"
+
     volumes:
       - type: bind
         source: "test/json_data/test_data.json"
