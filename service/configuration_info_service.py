@@ -668,7 +668,7 @@ def __read_first_data_file(data_files: list[dict]) -> tuple[str, str, str, dict 
         with open(real_file_path, 'r', encoding='utf-8') as f:
             file_content = f.read()
         return file_content, file_name, file_ext, None
-    except Exception as read_error:
+    except Exception:
         return '', file_name, file_ext, make_response(jsonify({
             'success': False,
             'message': f'Error reading {html.escape(file_name)}'

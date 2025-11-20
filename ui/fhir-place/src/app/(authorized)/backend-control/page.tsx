@@ -76,17 +76,14 @@ export default function BackendControlPage() {
   const handleDeleteMiabisWithProgress = async () => {
     const initialProgress = await getDeleteProgress("miabis");
 
-    console.log("initialProgress", initialProgress);
     if (initialProgress.success && initialProgress.resources) {
       const initialCounts: Record<string, number> = {};
       for (const resource of initialProgress.resources) {
         initialCounts[resource.resourceType] = resource.count;
       }
 
-      console.log("initialCounts", initialCounts);
       deleteProgressRef.current?.start("miabis", initialCounts);
     } else {
-      console.log("initialProgress failed", initialProgress);
       deleteProgressRef.current?.start("miabis");
     }
 
