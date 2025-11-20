@@ -540,6 +540,8 @@ def __list_directories(request):
         return make_response(jsonify({'error': 'Internal server error'}), 500)
 
 
+access_not_allowed_error = 'Access to the requested folder is not allowed'
+
 def __validate_folder_path_request(content: dict) -> tuple[str, dict | None]:
     """
     Validate folder path from request content.
@@ -566,12 +568,12 @@ def __validate_folder_path_request(content: dict) -> tuple[str, dict | None]:
         if os.path.commonpath([safe_root_real, candidate_real]) != safe_root_real:
             return candidate_real, make_response(jsonify({
                 'success': False,
-                'message': 'Access to the requested folder is not allowed'
+                'message': access_not_allowed_error
             }), 400)
     except ValueError:
         return candidate_real, make_response(jsonify({
             'success': False,
-            'message': 'Access to the requested folder is not allowed'
+            'message': access_not_allowed_error
         }), 400)
 
     if not os.path.exists(candidate_real):
@@ -602,14 +604,14 @@ def __find_supported_data_files(folder_path: str) -> tuple[list[dict], dict | No
         if os.path.commonpath([normalized_root, normalized_path]) != normalized_root:
             return [], make_response(jsonify({
                 'success': False,
-                'message': 'Access to the requested folder is not allowed'
+                'message': access_not_allowed_error
             }), 400)
     except (ValueError, OSError):
         # ValueError: paths on different drives on Windows
         # OSError: invalid path
         return [], make_response(jsonify({
             'success': False,
-            'message': 'Access to the requested folder is not allowed'
+            'message': access_not_allowed_error
         }), 400)
     
     supported_extensions = ['.json', '.csv', '.xml']
