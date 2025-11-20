@@ -11,15 +11,25 @@ jest.mock("../mappingChangeHelper", () => ({
 
 describe("validateMappings", () => {
   const mockMappings: WizardState = {
-    temperatureMapping: [],
-    materialMapping: [],
-    donorMapping: {},
-    sampleMapping: {},
-    conditionMapping: {},
-    typeToCollectionMapping: [],
-    allowCustomMaterialValues: false,
-    allowCustomTemperatureValues: false,
-    allowCustomTypeToCollectionValues: false,
+    syncTarget: "blaze",
+    sharedMappings: {
+      donorMapping: {},
+      sampleMapping: {},
+      conditionMapping: {},
+      typeToCollectionMapping: [],
+    },
+    blazeConfig: {
+      temperatureMapping: [],
+      materialMapping: [],
+      allowCustomTemperatureValues: false,
+      allowCustomMaterialValues: false,
+    },
+    miabisConfig: {
+      temperatureMapping: [],
+      materialMapping: [],
+      allowCustomTemperatureValues: false,
+      allowCustomMaterialValues: false,
+    },
   };
 
   beforeEach(() => {
@@ -32,7 +42,12 @@ describe("validateMappings", () => {
       json: jest.fn().mockResolvedValue({}),
     });
 
-    const result = await validateMappings(mockMappings, "json", "/test/path");
+    const result = await validateMappings(
+      mockMappings,
+      "json",
+      "/test/path",
+      "blaze"
+    );
 
     expect(result.success).toBe(true);
     expect(globalThis.fetch).toHaveBeenCalledWith(
@@ -59,7 +74,12 @@ describe("validateMappings", () => {
       json: jest.fn().mockResolvedValue(errorResponse),
     });
 
-    const result = await validateMappings(mockMappings, "json", "/test/path");
+    const result = await validateMappings(
+      mockMappings,
+      "json",
+      "/test/path",
+      "blaze"
+    );
 
     expect(result.success).toBe(false);
     expect(result.genericErrors).toEqual(["Invalid mapping"]);
@@ -76,7 +96,12 @@ describe("validateMappings", () => {
       json: jest.fn().mockResolvedValue(errorResponse),
     });
 
-    const result = await validateMappings(mockMappings, "json", "/test/path");
+    const result = await validateMappings(
+      mockMappings,
+      "json",
+      "/test/path",
+      "blaze"
+    );
 
     expect(result.success).toBe(false);
   });
@@ -87,7 +112,7 @@ describe("validateMappings", () => {
       json: jest.fn().mockResolvedValue({}),
     });
 
-    await validateMappings(mockMappings, "csv", "/test/path", ";");
+    await validateMappings(mockMappings, "csv", "/test/path", "blaze", ";");
 
     expect(globalThis.fetch).toHaveBeenCalled();
   });
@@ -98,7 +123,14 @@ describe("validateMappings", () => {
       json: jest.fn().mockResolvedValue({}),
     });
 
-    await validateMappings(mockMappings, "json", "/test/path", undefined, true);
+    await validateMappings(
+      mockMappings,
+      "json",
+      "/test/path",
+      "blaze",
+      undefined,
+      true
+    );
 
     expect(globalThis.fetch).toHaveBeenCalled();
   });
@@ -108,7 +140,12 @@ describe("validateMappings", () => {
       new Error("Network error")
     );
 
-    const result = await validateMappings(mockMappings, "json", "/test/path");
+    const result = await validateMappings(
+      mockMappings,
+      "json",
+      "/test/path",
+      "blaze"
+    );
 
     expect(result.success).toBe(false);
     expect(result.genericErrors).toBeDefined();
@@ -118,7 +155,12 @@ describe("validateMappings", () => {
   it("should handle non-Error exceptions", async () => {
     (globalThis.fetch as jest.Mock).mockRejectedValue("String error");
 
-    const result = await validateMappings(mockMappings, "json", "/test/path");
+    const result = await validateMappings(
+      mockMappings,
+      "json",
+      "/test/path",
+      "blaze"
+    );
 
     expect(result.success).toBe(false);
     expect(result.genericErrors?.[0]).toContain("Unknown error");

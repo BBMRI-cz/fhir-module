@@ -1,3 +1,4 @@
+// NOSONAR - This is an imported shadcn/ui component
 "use client";
 
 import * as React from "react";
