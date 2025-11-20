@@ -8,6 +8,12 @@ echo "=========================================="
 mkdir -p /app/data
 chown -R nextjs:nodejs /app/data
 
+# Fix permissions for shared_config.json if it exists
+if [ -f "/opt/fhir-module/util/shared_config.json" ]; then
+    echo "Fixing permissions for shared_config.json"
+    chmod 666 /opt/fhir-module/util/shared_config.json || echo "Failed to chmod shared_config.json"
+fi
+
 echo "Database will be initialized automatically when the UI starts"
 
 echo ""

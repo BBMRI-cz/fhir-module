@@ -34,7 +34,7 @@ ENV APP_DIR="/opt/fhir-module"
 
 WORKDIR $APP_DIR
 
-COPY --chown=1001:1001 --chmod=444 requirements.txt .
+COPY --chown=1001:1001 requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt gunicorn --break-system-packages
 
 COPY --chown=1001:1001 . .
@@ -59,6 +59,7 @@ RUN mkdir -p /var/log/fhir-module && \
     chown -R 1001:1001 /var/log/fhir-module /app /opt/config-snapshots /opt/fhir-module && \
     chown -R 1001:1001 /var/log/supervisor && \
     chmod 775 /opt/config-snapshots
+
 
 COPY --chown=1001:1001 supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY --chown=1001:1001 --chmod=755 startup.sh /usr/local/bin/startup.sh

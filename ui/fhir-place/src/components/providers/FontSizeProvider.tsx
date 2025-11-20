@@ -50,10 +50,7 @@ export function FontSizeProvider({ children }: FontSizeProviderProps) {
     root.classList.add(`font-${fontSize}`);
   }, [fontSize]);
 
-  const contextValue = useMemo(
-    () => ({ fontSize, setFontSize }),
-    [fontSize, setFontSize]
-  );
+  const contextValue = useMemo(() => ({ fontSize, setFontSize }), [fontSize]);
 
   return (
     <FontSizeContext.Provider value={contextValue}>
