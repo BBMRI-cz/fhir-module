@@ -12,6 +12,7 @@ from util.custom_logger import setup_logger
 setup_logger()
 logger = logging.getLogger()
 
+MAX_VALIDATION_FILES = 1000
 
 class ConfigLoader:
     """Dynamic configuration loader that reads from JSON file and allows runtime updates"""
@@ -56,7 +57,6 @@ class ConfigLoader:
         try:
             with open(self.config_file_path, 'r') as f:
                 config = json.load(f)
-            logger.debug(f"Loaded configuration from {self.config_file_path}")
         except FileNotFoundError:
             logger.error(f"Configuration file not found: {self.config_file_path}")
             sys.exit(1)
