@@ -80,9 +80,9 @@ class ConditionCsvRepository(ConditionRepository):
                         self.__build_conditions(row, is_validation=True)
                     except ExceptionGroup as eg:
                         for exc in eg.exceptions:
-                            errors.append(f"Condition (row {row_index}): {exc}")
+                            errors.append(f"File {dir_entry.name} - Condition (row {row_index}): {exc}")
                     except TypeError as err:
-                        errors.append(f"Condition (row {row_index}): {err}")
+                        errors.append(f"File {dir_entry.name} - Condition (row {row_index}): {err}")
                     finally:
                         row_index += 1
         except OSError as e:

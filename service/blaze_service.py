@@ -206,10 +206,6 @@ class BlazeService:
             return 404
         return response.status_code
 
-    def __update_sync_progress(self, resource_type: str, current: int, total: int):
-        """Update sync progress metrics if metrics are enabled."""
-        if self.metrics:
-            self.metrics.set_sync_progress(resource_type, current, total)
 
     def __validate_donor_type(self, donor) -> bool:
         """Validate that the donor is an instance of SampleDonor."""
@@ -256,16 +252,12 @@ class BlazeService:
             logger.error("Skipping patient sync due to parsing map error.")
             return {"processed": 0, "failed": 0, "skipped": 0}
         
-        all_donors = list(self._patient_service.get_all())
-        total = len(all_donors)
-        
-        self.__update_sync_progress('patients', 0, total)
-        
-        for idx, donor in enumerate(all_donors):
+        for donor in self._patient_service.get_all():
             # Validate donor type
             if not self.__validate_donor_type(donor):
                 skipped += 1
-                self.__update_sync_progress('patients', idx + 1, total)
+                if self.metrics:
+                    self.metrics.increment_sync_progress('patients')
                 continue
             
             donor = cast(SampleDonor, donor)
@@ -273,7 +265,8 @@ class BlazeService:
             # Skip if donor already exists
             if self.__should_skip_donor(donor):
                 skipped += 1
-                self.__update_sync_progress('patients', idx + 1, total)
+                if self.metrics:
+                    self.metrics.increment_sync_progress('patients')
                 continue
             
             # Process donor upload
@@ -281,8 +274,10 @@ class BlazeService:
             processed += new_processed
             failed += new_failed
             
-            self.__update_sync_progress('patients', idx + 1, total)
+            if self.metrics:
+                self.metrics.increment_sync_progress('patients')
 
+        logger.info(f"Patients sync complete: {processed} processed, {failed} failed, {skipped} skipped")
         return {'processed': processed, 'failed': failed, 'skipped': skipped}
 
     def __upload_donor(self, donor: SampleDonor) -> int:
@@ -345,18 +340,14 @@ class BlazeService:
             logger.error("Skipping condition sync due to parsing map error.")
             return {"processed": 0, "failed": 0, "skipped": 0}
         
-        all_conditions = list(self._condition_service.get_all())
-        total = len(all_conditions)
-        
-        self.__update_sync_progress('conditions', 0, total)
-        
-        for idx, condition in enumerate(all_conditions):
+        for condition in self._condition_service.get_all():
             # Check if patient exists and already has this condition
             patient_exists, patient_has_condition = self.__check_patient_for_condition(condition)
             
             if not patient_exists:
                 skipped += 1
-                self.__update_sync_progress('conditions', idx + 1, total)
+                if self.metrics:
+                    self.metrics.increment_sync_progress('conditions')
                 continue
             
             # Upload condition if patient doesn't have it yet
@@ -367,11 +358,13 @@ class BlazeService:
             else:
                 skipped += 1
             
-            self.__update_sync_progress('conditions', idx + 1, total)
+            if self.metrics:
+                self.metrics.increment_sync_progress('conditions')
 
         logger.info("Upload of conditions ended.")
         logger.debug(
             f"Successfully uploaded {self.get_number_of_resources('Condition') - num_of_conditions_before_upload} new conditions.")
+        logger.info(f"Conditions sync complete: {processed} processed, {failed} failed, {skipped} skipped")
 
         return {'processed': processed, 'failed': failed, 'skipped': skipped}
 
@@ -463,13 +456,7 @@ class BlazeService:
             logger.error("Skipping sample sync due to parsing map error.")
             return {"processed": 0, "failed": 0, "skipped": 0}
         
-        all_samples = list(self._sample_service.get_all())
-        total = len(all_samples)
-        
-        if self.metrics:
-            self.metrics.set_sync_progress('specimens', 0, total)
-        
-        for idx, sample in enumerate(all_samples):
+        for sample in self._sample_service.get_all():
             specimen_present, patient_present = self.__check_sample_and_patient_presence(sample)
             
             if not specimen_present and patient_present:
@@ -487,10 +474,11 @@ class BlazeService:
                 skipped += 1
             
             if self.metrics:
-                self.metrics.set_sync_progress('specimens', idx + 1, total)
+                self.metrics.increment_sync_progress('specimens')
 
         logger.info(f"Successfully uploaded {self.get_number_of_resources('Specimen') - num_of_samples_before_sync} new samples.")
         logger.info("Upload of samples ended.")
+        logger.info(f"Samples sync complete: {processed} processed, {failed} failed, {skipped} skipped")
 
         return {'processed': processed, 'failed': failed, 'skipped': skipped}
 
@@ -719,23 +707,13 @@ class BlazeService:
         except Exception:
             return 'failed'
     
-    def _update_metrics_progress(self, resource_type: str, current: int, total: int):
-        """Updates metrics progress if metrics are enabled."""
-        if self.metrics:
-            self.metrics.set_sync_progress(resource_type, current, total)
-    
     def upload_sample_collections(self):
         """Uploads SampleCollections as FHIR organizations and returns summary."""
         processed = 0
         failed = 0
         skipped = 0
         
-        all_collections = list(self._sample_collection_repository.get_all())
-        total = len(all_collections)
-        
-        self._update_metrics_progress('organizations', 0, total)
-        
-        for idx, sample_collection in enumerate(all_collections):
+        for sample_collection in self._sample_collection_repository.get_all():
             result = self._upload_single_collection(sample_collection)
             
             if result == 'processed':
@@ -745,9 +723,11 @@ class BlazeService:
             else:
                 skipped += 1
             
-            self._update_metrics_progress('organizations', idx + 1, total)
+            if self.metrics:
+                self.metrics.increment_sync_progress('organizations')
 
         logger.debug(f"Successfully uploaded {self.get_number_of_resources('Organization')} Sample collections.")
+        logger.info(f"Organizations sync complete: {processed} processed, {failed} failed, {skipped} skipped")
         return {'processed': processed, 'failed': failed, 'skipped': skipped}
 
     def get_sample_collection_id(self, sample_identifier: str) -> str | None:
