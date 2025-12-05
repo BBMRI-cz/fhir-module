@@ -191,13 +191,8 @@ class MiabisBlazeService(BlazeServiceInterface):
     def __upload_collections(self, summary: dict) -> None:
         """Upload all collections from repository."""
         logger.info(f"MIABIS on FHIR: Starting upload of collections")
-        all_collections = list(self.sample_collection_repository.get_all())
-        total_collections = len(all_collections)
         
-        if self.metrics:
-            self.metrics.set_sync_progress('collections', 0, total_collections)
-        
-        for idx, collection in enumerate(all_collections):
+        for collection in self.sample_collection_repository.get_all():
             validated_collection = self.__validate_collection_type(collection)
             if validated_collection is None:
                 summary['collections']['skipped'] += 1
@@ -205,19 +200,15 @@ class MiabisBlazeService(BlazeServiceInterface):
                 self.__process_single_collection(validated_collection, summary)
             
             if self.metrics:
-                self.metrics.set_sync_progress('collections', idx + 1, total_collections)
+                self.metrics.increment_sync_progress('collections')
+        
+        logger.info(f"MIABIS on FHIR: Collections sync complete: {summary['collections']['processed']} processed, {summary['collections']['failed']} failed, {summary['collections']['skipped']} skipped")
 
     def sync_biobank_and_collections(self):
         summary = self.__create_sync_summary()
         biobank = self.biobank_repository.get_biobank()
         
-        if self.metrics:
-            self.metrics.set_sync_progress('biobank', 0, 1)
-        
         biobank_success = self.__upload_biobank(biobank, summary)
-        
-        if self.metrics:
-            self.metrics.set_sync_progress('biobank', 1, 1)
         
         if biobank_success:
             self.__upload_collections(summary)
@@ -271,18 +262,12 @@ class MiabisBlazeService(BlazeServiceInterface):
         failed = 0
         skipped = 0
         
-        all_donors = list(self.patient_service.get_all())
-        total = len(all_donors)
-        
-        if self.metrics:
-            self.metrics.set_sync_progress('patients', 0, total)
-        
-        for idx, donor in enumerate(all_donors):
+        for donor in self.patient_service.get_all():
             validated_donor = self.__validate_donor_type(donor)
             if validated_donor is None:
                 skipped += 1
                 if self.metrics:
-                    self.metrics.set_sync_progress('patients', idx + 1, total)
+                    self.metrics.increment_sync_progress('patients')
                 continue
                 
             if not self.blaze_client.is_resource_present_in_blaze("Patient", validated_donor.identifier, "identifier"):
@@ -296,9 +281,10 @@ class MiabisBlazeService(BlazeServiceInterface):
                 skipped += new_skipped
             
             if self.metrics:
-                self.metrics.set_sync_progress('patients', idx + 1, total)
+                self.metrics.increment_sync_progress('patients')
                 
         logger.info(f"MIABIS on FHIR: Upload of donor resources is done.")
+        logger.info(f"MIABIS on FHIR: Patients sync complete: {processed} processed, {failed} failed, {skipped} skipped")
         return {'processed': processed, 'failed': failed, 'skipped': skipped}
 
     def upload_samples(self):
@@ -307,20 +293,14 @@ class MiabisBlazeService(BlazeServiceInterface):
         failed = 0
         skipped = 0
         
-        all_samples = list(self.sample_service.get_all())
-        total = len(all_samples)
-        
-        if self.metrics:
-            self.metrics.set_sync_progress('specimens', 0, total)
-        
         collection_with_new_samples_map = {}
-        for idx, sample in enumerate(all_samples):
+        for sample in self.sample_service.get_all():
             if not isinstance(sample, SampleMiabis):
                 logger.error(f"MIABIS on FHIR: sample is not instance of MIABIS on FHIR model, "
                              f"but rather its type is {type(sample)}. Skipping....")
                 skipped += 1
                 if self.metrics:
-                    self.metrics.set_sync_progress('specimens', idx + 1, total)
+                    self.metrics.increment_sync_progress('specimens')
                 continue
             sample = cast(SampleMiabis, sample)
             try:
@@ -368,7 +348,7 @@ class MiabisBlazeService(BlazeServiceInterface):
                 failed += 1
             
             if self.metrics:
-                self.metrics.set_sync_progress('specimens', idx + 1, total)
+                self.metrics.increment_sync_progress('specimens')
 
         for collection_id, sample_fhir_ids in collection_with_new_samples_map.items():
             logger.info(f"MIABIS on FHIR: adding samples to the respective collection with identifier {collection_id}")
@@ -380,6 +360,7 @@ class MiabisBlazeService(BlazeServiceInterface):
             else:
                 logger.info(f"MIABIS on FHIR: Collection {collection_id}  was not updated.")
         logger.info(f"MIABIS on FHIR: upload of samples is done.")
+        logger.info(f"MIABIS on FHIR: Samples sync complete: {processed} processed, {failed} failed, {skipped} skipped")
         return {'processed': processed, 'failed': failed, 'skipped': skipped}
 
     def delete_everything(self):
