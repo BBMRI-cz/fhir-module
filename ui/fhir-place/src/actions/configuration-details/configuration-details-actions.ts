@@ -10,7 +10,7 @@ import {
   ParsedDataResult,
   DataField,
 } from "@/types/actions/configuration-details/types";
-
+import { parseFolderData } from "@/actions/folder/parse-folder-data";
 const BASE_URL = process.env.BACKEND_API_URL || "http://localhost:5001";
 
 function normalizeKey(raw: any, saveToPath?: string): SimpleKeyInfo {
@@ -144,182 +144,12 @@ export async function getTemperatureValues(): Promise<string[]> {
   }
 }
 
-// Cache for material types
-let _materialTypesCache: string[] | null = null;
-let _cacheTimestamp: Date | null = null;
-const CACHE_DURATION_MINUTES = 60;
-
-// Taken from the python lib, there is no docs it could be fetched from
-const MIABIS_MATERIAL_TYPES = [
-  "AmnioticFluid",
-  "AscitesFluid",
-  "Bile",
-  "BodyCavityFluid",
-  "Bone",
-  "BoneMarrowAspirate",
-  "BoneMarrowPlasma",
-  "BoneMarrowWhole",
-  "BreastMilk",
-  "BronchLavage",
-  "BuffyCoat",
-  "CancerCellLine",
-  "CerebrospinalFluid",
-  "CordBlood",
-  "DentalPulp",
-  "DNA",
-  "Embryo",
-  "EntireOrgan",
-  "Faeces",
-  "FetalTissue",
-  "Fibroblast",
-  "FoodSpecimen",
-  "Gas",
-  "GastricFluid",
-  "Hair",
-  "ImmortalizedCellLine",
-  "IsolatedMicrobe",
-  "IsolatedExosome",
-  "IsolatedTumorCell",
-  "LiquidBiopsy",
-  "MenstrualBlood",
-  "Nail",
-  "NasalWashing",
-  "Organoid",
-  "Other",
-  "PericardialFluid",
-  "PBMC",
-  "Placenta",
-  "Plasma",
-  "PleuralFluid",
-  "PostMortemTissue",
-  "PrimaryCells",
-  "Protein",
-  "RedBloodCells",
-  "RNA",
-  "Saliva",
-  "Semen",
-  "Serum",
-  "SpecimenEnvironment",
-  "Sputum",
-  "StemCells",
-  "Swab",
-  "Sweat",
-  "SynovialFluid",
-  "Tears",
-  "Teeth",
-  "TissueFixed",
-  "TissueFreshFrozen",
-  "UmbilicalCord",
-  "Urine",
-  "UrineSediment",
-  "VitreousFluid",
-  "WholeBlood",
-  "WholeBloodDried",
-];
-/**
- * Recursively extract concept codes from FHIR ValueSet response
- */
-function extractConceptsFromFetch(data: any): string[] {
-  const concepts: string[] = [];
-
-  if (typeof data === "object" && data !== null && !Array.isArray(data)) {
-    // Check if this object has a code
-    const code = data.code;
-    if (code) {
-      concepts.push(code);
-    }
-
-    // Recursively process concept property
-    const concept = data.concept;
-    if (concept) {
-      concepts.push(...extractConceptsFromFetch(concept));
-    }
-  }
-
-  if (Array.isArray(data)) {
-    for (const item of data) {
-      concepts.push(...extractConceptsFromFetch(item));
-    }
-  }
-
-  return concepts;
-}
-
-/**
- * Fetch material types from BBMRI.de Simplifier API with caching.
- * Returns a list of material type codes.
- */
-export async function getMaterialTypes(isMiabis: boolean): Promise<string[]> {
-  if (isMiabis) {
-    return MIABIS_MATERIAL_TYPES;
-  }
-
-  if (
-    _materialTypesCache !== null &&
-    _cacheTimestamp !== null &&
-    (Date.now() - _cacheTimestamp.getTime()) / 1000 <
-      CACHE_DURATION_MINUTES * 60
-  ) {
-    return _materialTypesCache;
-  }
-
-  try {
-    const url =
-      "https://simplifier.net/bbmri.de/samplematerialtype/$download?format=json";
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch material types: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    const materialTypes = extractConceptsFromFetch(data);
-
-    // Update cache
-    _materialTypesCache = materialTypes;
-    _cacheTimestamp = new Date();
-
-    return materialTypes;
-  } catch (error) {
-    console.error("Error fetching material types from BBMRI.de API:", error);
-    throw error;
-  }
-}
-
 export async function parseDataFromFolder(
   folderPath: string,
   csvSeparator?: string
 ): Promise<ParsedDataResult> {
   try {
-    const BACKEND_BASE_URL =
-      process.env.BACKEND_API_URL || "http://localhost:5000";
-
-    const response = await fetch(`${BACKEND_BASE_URL}/parse-folder-data`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        folderPath: folderPath,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return {
-        success: false,
-        message:
-          errorData.message ||
-          `Backend API request failed: ${response.status} ${response.statusText}`,
-      };
-    }
-
-    const data = await response.json();
+    const data = await parseFolderData(folderPath);
 
     if (!data.success) {
       return {
@@ -328,11 +158,10 @@ export async function parseDataFromFolder(
       };
     }
 
-    // Parse the file content using the appropriate parser
     let fields: DataField[] = [];
-    const fileContent = data.fileContent;
-    const fileExtension = data.fileExtension;
-    const fileName = data.fileName;
+    const fileContent = data.fileContent!;
+    const fileExtension = data.fileExtension!;
+    const fileName = data.fileName!;
 
     try {
       if (fileExtension === ".json") {

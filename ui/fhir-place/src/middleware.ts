@@ -1,17 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-const protectedRoutes = new Set([
-  "/dashboard",
-  "/mappings",
-  "/setup-wizard",
-  "/settings",
-  "/backend-control",
-]);
-
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
-  const isProtectedRoute = protectedRoutes.has(path);
   const isPublicRoute =
     path === "/login" || path === "/register" || path === "/";
 
@@ -20,17 +11,17 @@ export async function middleware(req: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
   });
 
-  const isValidToken = token?.id;
+  const hasToken = !!token?.id;
 
-  if (isPublicRoute && !isValidToken) {
+  if (isPublicRoute && !hasToken) {
     return NextResponse.next();
   }
 
-  if (isPublicRoute && isValidToken) {
+  if (isPublicRoute && hasToken) {
     return NextResponse.redirect(new URL("/dashboard", req.nextUrl));
   }
 
-  if (isProtectedRoute && !isValidToken) {
+  if (!isPublicRoute && !hasToken) {
     const response = NextResponse.redirect(new URL("/login", req.nextUrl));
     response.cookies.delete("next-auth.session-token");
     response.cookies.delete("__Secure-next-auth.session-token");

@@ -2,7 +2,6 @@
 import {
   CircleCheckBig,
   FileCheck,
-  FileText,
   FolderOpen,
   FolderSync,
   GitBranch,
@@ -16,7 +15,8 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import { getFolders } from "@/actions/folder/folder-actions";
+import { getFolders } from "@/actions/folder/list-directories";
+import { parseDataFromFolder } from "@/actions/configuration-details/configuration-details-actions";
 import { DataField } from "@/types/actions/configuration-details/types";
 import {
   Step,
@@ -56,13 +56,6 @@ export const Steps = [
   },
   {
     stepNumber: 3,
-    stepName: "Review Data",
-    stepTitle: "Review Data",
-    stepDescription: "Review the data files in the selected folder.",
-    stepIcon: <FileText className="w-full h-full" />,
-  },
-  {
-    stepNumber: 4,
     stepName: "Configure BLAZE Enums",
     stepTitle: "Configure BLAZE Enums",
     stepDescription:
@@ -71,7 +64,7 @@ export const Steps = [
     onlyForSyncTargets: ["blaze", "both"],
   },
   {
-    stepNumber: 5,
+    stepNumber: 4,
     stepName: "Configure MIABIS Enums",
     stepTitle: "Configure MIABIS Enums",
     stepDescription:
@@ -80,28 +73,28 @@ export const Steps = [
     onlyForSyncTargets: ["miabis", "both"],
   },
   {
-    stepNumber: 6,
+    stepNumber: 5,
     stepName: "Configure Mappings",
     stepTitle: "Configure Mappings",
     stepDescription: "Configure data mappings for your FHIR server.",
     stepIcon: <Upload className="w-full h-full" />,
   },
   {
-    stepNumber: 7,
+    stepNumber: 6,
     stepName: "Validate Mappings",
     stepTitle: "Validate Mappings",
     stepDescription: "Validate the mappings for selected sync targets.",
     stepIcon: <CircleCheckBig className="w-full h-full" />,
   },
   {
-    stepNumber: 8,
+    stepNumber: 7,
     stepName: "Start the sync process",
     stepTitle: "Start the sync process",
     stepDescription: "Start the synchronization process for the data.",
     stepIcon: <FolderSync className="w-full h-full" />,
   },
   {
-    stepNumber: 9,
+    stepNumber: 8,
     stepName: "Setup Complete",
     stepTitle: "Setup Complete",
     stepDescription: "The setup process is complete.",
@@ -196,8 +189,16 @@ export function SetupWizardContextProvider({
       setCsvSeparator(separator);
 
       resetConfiguration();
+
+      if (dataFolderPath && dataFormat === "csv") {
+        parseDataFromFolder(dataFolderPath, separator).then((result) => {
+          if (result.success && result.fields) {
+            setDataFields(result.fields);
+          }
+        });
+      }
     },
-    [resetConfiguration]
+    [dataFolderPath, dataFormat, resetConfiguration]
   );
 
   const nextStep = useCallback((): Step | null => {
@@ -253,8 +254,9 @@ export function SetupWizardContextProvider({
         return acc;
       }, {} as Record<DataFormat, number>);
 
+      let detectedFormat: DataFormat | null = null;
       if (Object.keys(fileTypeMap).length === 1) {
-        const detectedFormat = Object.keys(fileTypeMap)[0] as DataFormat;
+        detectedFormat = Object.keys(fileTypeMap)[0] as DataFormat;
         setDataFormat(detectedFormat);
         setDataFiles(
           files.filter((f) => f.split(".").pop() === detectedFormat)
@@ -266,6 +268,14 @@ export function SetupWizardContextProvider({
       setDataFolderPath(dataFolderPath);
 
       resetConfiguration();
+
+      if (detectedFormat) {
+        parseDataFromFolder(dataFolderPath).then((result) => {
+          if (result.success && result.fields) {
+            setDataFields(result.fields);
+          }
+        });
+      }
     },
     [resetConfiguration]
   );
@@ -284,11 +294,18 @@ export function SetupWizardContextProvider({
           );
           setDataFiles(filteredFiles);
         });
+
+        const separator = format === "csv" ? csvSeparator : undefined;
+        parseDataFromFolder(dataFolderPath, separator).then((result) => {
+          if (result.success && result.fields) {
+            setDataFields(result.fields);
+          }
+        });
       }
 
       resetConfiguration();
     },
-    [dataFolderPath, resetConfiguration]
+    [dataFolderPath, csvSeparator, resetConfiguration]
   );
 
   const contextValue = useMemo(

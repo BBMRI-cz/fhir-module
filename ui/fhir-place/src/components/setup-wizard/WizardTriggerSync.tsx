@@ -7,6 +7,7 @@ import {
   Database,
   ArrowRight,
   ArrowLeft,
+  Save,
 } from "lucide-react";
 import { ActionButton } from "@/components/custom/ActionButton";
 import { useBackendControl } from "@/hooks/useBackendControl";
@@ -39,6 +40,9 @@ export default function WizardTriggerSync() {
 
   const [syncDone, setSyncDone] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [configSaved, setConfigSaved] = useState(false);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
+  const [configSaveError, setConfigSaveError] = useState<string | null>(null);
   const blazeSyncProgressRef = useRef<SyncProgressDisplayHandle>(null);
   const miabisSyncProgressRef = useRef<SyncProgressDisplayHandle>(null);
   const [completedSyncs, setCompletedSyncs] = useState<Set<string>>(new Set());
@@ -67,12 +71,39 @@ export default function WizardTriggerSync() {
   };
 
   useEffect(() => {
-    if (syncDone) {
+    if (syncDone || configSaved) {
       markSetupComplete();
     }
-  }, [syncDone]);
+  }, [syncDone, configSaved]);
+
+  const saveConfigurationOnly = async () => {
+    setIsSavingConfig(true);
+    setConfigSaveError(null);
+    setConfigSaved(false);
+
+    const result = await writeAndSynchronize(
+      wizardState,
+      dataFormat!,
+      dataFolderPath!,
+      csvSeparator
+    );
+
+    setIsSavingConfig(false);
+
+    if (!result.success) {
+      setConfigSaveError(
+        result.errors?.[0] || "Failed to save configuration. Please try again."
+      );
+      return;
+    }
+
+    setConfigSaved(true);
+  };
 
   const performTheChangeAndSync = async () => {
+    setConfigSaved(false);
+    setConfigSaveError(null);
+
     const result = await writeAndSynchronize(
       wizardState,
       dataFormat!,
@@ -88,9 +119,7 @@ export default function WizardTriggerSync() {
     setIsSyncing(true);
     setCompletedSyncs(new Set());
 
-    // Sync based on the selected targets
     if (wizardState.syncTarget === "both") {
-      // Start both syncs in parallel
       blazeSyncProgressRef.current?.start(false);
       miabisSyncProgressRef.current?.start(true);
       await Promise.all([handleSync(), handleMiabisSync()]);
@@ -120,21 +149,33 @@ export default function WizardTriggerSync() {
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-muted-foreground text-center">
-            Click the button below to start the synchronization process. This
-            will sync all patients, conditions, and samples from your configured
-            repositories to the FHIR server.
+            Save your configuration, or save and start the synchronization
+            process to sync all patients, conditions, and samples from your
+            configured repositories to the FHIR server.
           </p>
 
           <div className="space-y-4">
-            <ActionButton
-              onClick={performTheChangeAndSync}
-              disabled={isSyncing || isLoading !== null}
-              loading={isLoadingSync}
-              icon={RefreshCw}
-              className="w-full min-w-[160px] h-12"
-            >
-              {isSyncing ? "Syncing..." : "Start Sync"}
-            </ActionButton>
+            <div className="flex gap-3">
+              <ActionButton
+                onClick={saveConfigurationOnly}
+                disabled={isSyncing || isLoading !== null || isSavingConfig}
+                loading={isSavingConfig}
+                icon={Save}
+                className="flex-1 min-w-[140px] h-12"
+                variant="outline"
+              >
+                {isSavingConfig ? "Saving..." : "Save Config Only"}
+              </ActionButton>
+              <ActionButton
+                onClick={performTheChangeAndSync}
+                disabled={isSyncing || isLoading !== null || isSavingConfig}
+                loading={isLoadingSync}
+                icon={RefreshCw}
+                className="flex-1 min-w-[140px] h-12"
+              >
+                {isSyncing ? "Syncing..." : "Save & Sync"}
+              </ActionButton>
+            </div>
 
             {/* Sync Progress - Always render both to avoid hooks issues */}
             <div className="space-y-6">
@@ -193,6 +234,35 @@ export default function WizardTriggerSync() {
               </div>
             )}
 
+            {/* Config Saved Status */}
+            {configSaved && !syncDone && (
+              <div className="space-y-2 pt-4">
+                <Badge
+                  variant="secondary"
+                  className="w-full justify-center py-2"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Configuration Saved Successfully
+                </Badge>
+              </div>
+            )}
+
+            {/* Config Save Error */}
+            {configSaveError && (
+              <div className="space-y-2">
+                <Badge
+                  variant="destructive"
+                  className="w-full justify-center py-2"
+                >
+                  <AlertCircle className="w-3 h-3 mr-1" />
+                  Configuration Save Failed
+                </Badge>
+                <p className="text-sm text-red-600 text-center">
+                  {configSaveError}
+                </p>
+              </div>
+            )}
+
             {/* Error Status */}
             {syncResult && !syncResult.success && (
               <div className="space-y-2">
@@ -230,7 +300,11 @@ export default function WizardTriggerSync() {
             <ArrowLeft className="w-3 h-3 mr-1" />
             Back
           </Button>
-          <Button onClick={() => nextStep()} disabled={!syncDone} size="sm">
+          <Button
+            onClick={() => nextStep()}
+            disabled={!syncDone && !configSaved}
+            size="sm"
+          >
             Continue
             <ArrowRight className="w-3 h-3 ml-1" />
           </Button>
