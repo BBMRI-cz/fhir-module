@@ -68,7 +68,7 @@ class SampleJsonRepository(SampleRepository):
                 sample_index = 0  # Start from 0 for JSON array index
                 for sample_json in samples_json:
                     try:
-                        sample = self.__build_sample(sample_json, sample_index)
+                        sample = self.__build_sample(sample_json)
                         yield sample
                     except (ValueError, TypeError, KeyError) as err:
                         logger.info(f"{err} Skipping....")

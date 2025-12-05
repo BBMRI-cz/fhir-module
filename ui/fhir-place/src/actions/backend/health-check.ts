@@ -9,7 +9,7 @@ export interface HealthCheckResponse {
 
 export async function checkBackendHealth(): Promise<HealthCheckResponse> {
   try {
-    const response = await fetch(`${BACKEND_BASE_URL}/configuration-info`, {
+    const response = await fetch(`${BACKEND_BASE_URL}/setup-status`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

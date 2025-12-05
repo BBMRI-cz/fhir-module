@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { ActionButton } from "@/components/custom/ActionButton";
 import { LucideIcon } from "lucide-react";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export interface ActionResult {
   success: boolean;
@@ -24,6 +25,7 @@ interface ActionItemProps {
     | "ghost"
     | "link";
   disabled?: boolean;
+  disabledTooltip?: string;
   children?: React.ReactNode;
 }
 
@@ -38,6 +40,7 @@ export function ActionItem({
   icon,
   variant = "default",
   disabled = false,
+  disabledTooltip,
   children,
 }: ActionItemProps) {
   const resultBadge = result && (
@@ -57,6 +60,25 @@ export function ActionItem({
     </Badge>
   );
 
+  const button = children || (
+    <ActionButton
+      onClick={onAction}
+      disabled={disabled}
+      loading={isLoading}
+      icon={icon}
+      variant={variant}
+    >
+      {buttonText}
+    </ActionButton>
+  );
+
+  const wrappedButton =
+    disabled && disabledTooltip ? (
+      <Tooltip content={disabledTooltip}>{button}</Tooltip>
+    ) : (
+      button
+    );
+
   return (
     <div className="flex items-center justify-between">
       <div className="space-y-1">
@@ -65,17 +87,7 @@ export function ActionItem({
       </div>
       <div className="flex items-center gap-2">
         {resultBadge}
-        {children || (
-          <ActionButton
-            onClick={onAction}
-            disabled={disabled}
-            loading={isLoading}
-            icon={icon}
-            variant={variant}
-          >
-            {buttonText}
-          </ActionButton>
-        )}
+        {wrappedButton}
       </div>
     </div>
   );

@@ -9,7 +9,13 @@ import {
 import { useContext, useState } from "react";
 import { Button } from "@/components/ui/button";
 import SelectFolderDialog from "@/components/setup-wizard/SelectFolderDialog";
-import { FolderOpen, CheckCircle, ArrowRight, FileText, ArrowLeft } from "lucide-react";
+import {
+  FolderOpen,
+  CheckCircle,
+  ArrowRight,
+  FileText,
+  ArrowLeft,
+} from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -175,37 +181,6 @@ export default function WizardSelectDataFolderComponent() {
               </div>
             </div>
           </div>
-
-          {/* Data Files Summary */}
-          {dataFolderPath && dataFormat && dataFiles.length > 0 && (
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-3">
-              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                <CheckCircle className="w-4 h-4" />
-                <span className="text-sm font-medium">
-                  {dataFiles.length} {dataFormat.toUpperCase()} file
-                  {dataFiles.length !== 1 && "s"} found and ready for review
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* No Files Found Warning */}
-          {dataFolderPath && dataFormat && dataFiles.length === 0 && (
-            <div className="space-y-2">
-              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded p-2">
-                <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 mb-1">
-                  <FileText className="w-3 h-3" />
-                  <span className="text-xs font-medium">
-                    No {dataFormat.toUpperCase()} files found
-                  </span>
-                </div>
-                <p className="text-xs text-amber-700 dark:text-amber-300">
-                  The selected folder doesn&apos;t contain any .{dataFormat}{" "}
-                  files. Please select a different folder or format.
-                </p>
-              </div>
-            </div>
-          )}
         </CardContent>
         <CardFooter className="flex justify-between">
           {previousStep && (

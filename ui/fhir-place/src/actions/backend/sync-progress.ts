@@ -2,8 +2,8 @@
 
 export interface ResourceProgress {
   current: number;
-  total: number;
-  percentage: number;
+  total?: number;
+  percentage?: number;
 }
 
 export interface SyncProgressResponse {
