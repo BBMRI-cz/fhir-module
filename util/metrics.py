@@ -1,4 +1,9 @@
 import logging
+import os
+import threading
+import requests
+import schedule
+import time
 from util.custom_logger import setup_logger
 
 from prometheus_client import Gauge
@@ -11,6 +16,9 @@ sync_progress_current = Gauge('fhir_sync_progress_current', 'Current items proce
 sync_in_progress = Gauge('fhir_sync_in_progress', 'Whether sync is currently running', ['service'])
 sync_current_phase = Gauge('fhir_sync_current_phase', 'Current sync phase (0=idle, 1=organizations, 2=patients, 3=conditions, 4=specimens)', ['service'])
 
+# FHIR resource count metrics
+fhir_resource_count = Gauge('fhir_resource_count', 'Total count of FHIR resources', ['service', 'resource_type'])
+
 # Metric registry for generic access
 METRIC_REGISTRY = {
     'last_sync_timestamp': last_sync_timestamp,
@@ -18,6 +26,7 @@ METRIC_REGISTRY = {
     'sync_progress_current': sync_progress_current,
     'sync_in_progress': sync_in_progress,
     'sync_current_phase': sync_current_phase,
+    'fhir_resource_count': fhir_resource_count,
 }
 
 setup_logger()
@@ -99,6 +108,58 @@ class MetricsService:
 
 def get_metrics_for_service(service_name: str) -> MetricsService:
     return MetricsService(service_name)
+
+
+def update_fhir_resource_counts(blaze_url: str = None, miabis_blaze_url: str = None):
+    """Update FHIR resource count metrics by querying the Blaze servers."""
+    blaze_url = blaze_url or os.environ.get("BLAZE_URL", "http://test-blaze:8080/fhir")
+    miabis_blaze_url = miabis_blaze_url or os.environ.get("MIABIS_BLAZE_URL", "http://miabis-blaze:8080/fhir")
+    
+    def fetch_count(base_url: str, resource_type: str) -> int:
+        try:
+            response = requests.get(
+                f"{base_url}/{resource_type}?_summary=count",
+                headers={"Accept": "application/fhir+json"},
+                timeout=10
+            )
+            if response.ok:
+                return response.json().get("total", 0)
+        except Exception as e:
+            logger.debug(f"Error fetching {resource_type} count: {e}")
+        return 0
+    
+    if blaze_url:
+        for res in ["Patient", "Organization", "Condition", "Specimen"]:
+            fhir_resource_count.labels(service="blaze", resource_type=res).set(fetch_count(blaze_url, res))
+    
+    if miabis_blaze_url:
+        for fhir_type, label in [("Patient", "Patient"), ("Organization", "Organization"), ("Group", "SampleCollection"), ("Specimen", "Specimen")]:
+            fhir_resource_count.labels(service="miabis", resource_type=label).set(fetch_count(miabis_blaze_url, fhir_type))
+
+
+_resource_count_scheduler_started = False
+
+def start_resource_count_scheduler(interval_seconds: int = 30):
+    """Start periodic updates of FHIR resource counts."""
+    global _resource_count_scheduler_started
+    if _resource_count_scheduler_started:
+        return
+    _resource_count_scheduler_started = True
+    
+    # Initial update
+    update_fhir_resource_counts()
+    
+    # Schedule periodic updates
+    schedule.every(interval_seconds).seconds.do(update_fhir_resource_counts)
+    
+    def run_scheduler():
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+    
+    thread = threading.Thread(target=run_scheduler, daemon=True, name="resource-count-scheduler")
+    thread.start()
+    logger.info(f"Started FHIR resource count scheduler (every {interval_seconds}s)")
 
 
 def _find_metric_value_for_service(metric_gauge, service_name: str, default_value=0, value_type=int):
