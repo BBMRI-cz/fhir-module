@@ -56,8 +56,10 @@ RUN mkdir -p /var/log/fhir-module && \
     mkdir -p /var/log/supervisor && \
     mkdir -p /app/data && \
     mkdir -p /opt/config-snapshots && \
+    mkdir -p /tmp/prometheus_multiproc && \
     chown -R 1001:1001 /var/log/fhir-module /app /opt/config-snapshots /opt/fhir-module && \
     chown -R 1001:1001 /var/log/supervisor && \
+    chown -R 1001:1001 /tmp/prometheus_multiproc && \
     chmod 775 /opt/config-snapshots
 
 
@@ -67,7 +69,7 @@ COPY --chown=1001:1001 --chmod=755 startup.sh /usr/local/bin/startup.sh
 # ============================================
 # Runtime
 # ============================================
-EXPOSE 3000 5000
+EXPOSE 3000 5000 8080
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"

@@ -19,14 +19,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useContext, useState, useRef, useEffect } from "react";
+import { useContext, useState, useEffect } from "react";
 import { SetupWizardContext } from "@/context/SetupWizardContext";
 import writeAndSynchronize from "@/actions/setup-wizard/writeAndSynchronize";
 import { Button } from "@/components/ui/button";
-import SyncProgressDisplay, {
-  type SyncProgressDisplayHandle,
-} from "@/components/setup-wizard/SyncProgressDisplay";
 import { markSetupComplete } from "@/actions/setup-wizard/setup-status";
+import SyncProgressDisplay from "@/components/setup-wizard/SyncProgressDisplay";
 
 export default function WizardTriggerSync() {
   const {
@@ -43,32 +41,10 @@ export default function WizardTriggerSync() {
   const [configSaved, setConfigSaved] = useState(false);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [configSaveError, setConfigSaveError] = useState<string | null>(null);
-  const blazeSyncProgressRef = useRef<SyncProgressDisplayHandle>(null);
-  const miabisSyncProgressRef = useRef<SyncProgressDisplayHandle>(null);
-  const [completedSyncs, setCompletedSyncs] = useState<Set<string>>(new Set());
+  const [hasStartedAction, setHasStartedAction] = useState(false);
 
   const { isLoading, lastResults, fadingBadges, handleSync, handleMiabisSync } =
     useBackendControl();
-
-  const handleSyncComplete = (syncType: string) => {
-    setCompletedSyncs((prev) => {
-      const newSet = new Set(prev);
-      newSet.add(syncType);
-
-      // Check if all required syncs are complete
-      const isBoth = wizardState.syncTarget === "both";
-      const allComplete = isBoth
-        ? newSet.has("blaze") && newSet.has("miabis")
-        : newSet.size > 0;
-
-      if (allComplete) {
-        setSyncDone(true);
-        setIsSyncing(false);
-      }
-
-      return newSet;
-    });
-  };
 
   useEffect(() => {
     if (syncDone || configSaved) {
@@ -77,6 +53,7 @@ export default function WizardTriggerSync() {
   }, [syncDone, configSaved]);
 
   const saveConfigurationOnly = async () => {
+    setHasStartedAction(true);
     setIsSavingConfig(true);
     setConfigSaveError(null);
     setConfigSaved(false);
@@ -101,6 +78,7 @@ export default function WizardTriggerSync() {
   };
 
   const performTheChangeAndSync = async () => {
+    setHasStartedAction(true);
     setConfigSaved(false);
     setConfigSaveError(null);
 
@@ -117,19 +95,17 @@ export default function WizardTriggerSync() {
 
     setSyncDone(false);
     setIsSyncing(true);
-    setCompletedSyncs(new Set());
 
     if (wizardState.syncTarget === "both") {
-      blazeSyncProgressRef.current?.start(false);
-      miabisSyncProgressRef.current?.start(true);
       await Promise.all([handleSync(), handleMiabisSync()]);
     } else if (wizardState.syncTarget === "miabis") {
-      miabisSyncProgressRef.current?.start(true);
       await handleMiabisSync();
     } else {
-      blazeSyncProgressRef.current?.start(false);
       await handleSync();
     }
+
+    setIsSyncing(false);
+    setSyncDone(true);
   };
 
   const syncResult = lastResults["Sync"];
@@ -177,52 +153,8 @@ export default function WizardTriggerSync() {
               </ActionButton>
             </div>
 
-            {/* Sync Progress - Always render both to avoid hooks issues */}
-            <div className="space-y-6">
-              {/* BLAZE Sync Progress */}
-              <div
-                className={`space-y-2 ${
-                  wizardState.syncTarget === "miabis" ? "hidden" : ""
-                }`}
-              >
-                {wizardState.syncTarget === "both" && (
-                  <div className="flex items-center justify-center gap-2">
-                    <h3 className="text-sm font-semibold text-center">
-                      BLAZE FHIR Server Sync
-                    </h3>
-                    {completedSyncs.has("blaze") && (
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                    )}
-                  </div>
-                )}
-                <SyncProgressDisplay
-                  ref={blazeSyncProgressRef}
-                  onComplete={() => handleSyncComplete("blaze")}
-                />
-              </div>
-
-              {/* MIABIS Sync Progress */}
-              <div
-                className={`space-y-2 ${
-                  wizardState.syncTarget === "blaze" ? "hidden" : ""
-                }`}
-              >
-                {wizardState.syncTarget === "both" && (
-                  <div className="flex items-center justify-center gap-2">
-                    <h3 className="text-sm font-semibold text-center">
-                      MIABIS FHIR Server Sync
-                    </h3>
-                    {completedSyncs.has("miabis") && (
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                    )}
-                  </div>
-                )}
-                <SyncProgressDisplay
-                  ref={miabisSyncProgressRef}
-                  onComplete={() => handleSyncComplete("miabis")}
-                />
-              </div>
-            </div>
+            {/* Sync Progress Display */}
+            <SyncProgressDisplay />
 
             {/* Completion Status */}
             {syncDone && (
@@ -302,7 +234,7 @@ export default function WizardTriggerSync() {
           </Button>
           <Button
             onClick={() => nextStep()}
-            disabled={!syncDone && !configSaved}
+            disabled={!hasStartedAction}
             size="sm"
           >
             Continue

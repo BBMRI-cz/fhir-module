@@ -90,20 +90,18 @@ class BlazeService:
         if self.metrics:
             self.metrics.start_sync()
 
-        if not self._refresh_services():
-            error_msg = "Sync failed: Mapping files are misconfigured. Please check your parsing map configuration."
-            sync_logger.error(error_msg)
-            if self.metrics:
-                self.metrics.set_metric('last_sync_error', error_msg)
-                self.metrics.end_sync()
-            return
-
-        org_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
-        pat_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
-        cond_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
-        samp_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
-
         try:
+            if not self._refresh_services():
+                error_msg = "Sync failed: Mapping files are misconfigured. Please check your parsing map configuration."
+                sync_logger.error(error_msg)
+                if self.metrics:
+                    self.metrics.set_metric('last_sync_error', error_msg)
+                return
+
+            org_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
+            pat_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
+            cond_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
+            samp_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
             if self.metrics:
                 self.metrics.set_sync_phase(1)
             org_summary = self.upload_sample_collections()
@@ -122,7 +120,6 @@ class BlazeService:
 
             if self.metrics:
                 self.metrics.set_metric('last_sync_timestamp', time.time())
-                self.metrics.end_sync()
 
             sync_summary_obj = {
                 'patients': pat_summary,
@@ -138,9 +135,6 @@ class BlazeService:
         except Exception as e:
             logger.error(f"Sync failed: {e}")
             
-            if self.metrics:
-                self.metrics.end_sync()
-            
             sync_summary_obj = {
                 'patients': pat_summary,
                 'conditions': cond_summary,
@@ -151,6 +145,10 @@ class BlazeService:
                 'error_message': str(e)
             }
             sync_logger.info(json.dumps({'sync_summary': sync_summary_obj}))
+        finally:
+            # Always ensure sync state is cleaned up
+            if self.metrics:
+                self.metrics.end_sync()
 
     def __initialize_scheduler(self):
         logger.info("Initializing scheduler...")

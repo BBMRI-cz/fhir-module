@@ -12,12 +12,15 @@ services:
     ports:
       - "5000:5000" # FHIR module port
       - "3000:3000" # UI port
+      - "9100:8080" # Prometheus metrics port
     environment:
       BLAZE_URL: "${BLAZE_URL:-http://test-blaze:8080/fhir}"
       MIABIS_BLAZE_URL: "${MIABIS_BLAZE_URL:-http://miabis-blaze:8080/fhir}"
       MIABIS_ON_FHIR: "${MIABIS_ON_FHIR:-True}"
       ROOT_DIR: "/opt/test"
       DIR_PATH: "/opt/records"
+      SAMPLE_COLLECTIONS_PATH: "/opt/fhir-module/util/default_sample_collection.json"
+      BIOBANK_PATH: "/opt/fhir-module/util/default_biobank.json"
       PYTHONWARNINGS: "ignore:Unverified HTTPS request"
     env_file:
       - .env
@@ -37,19 +40,22 @@ services:
       - type: bind
         source: "./util/shared_config.json"
         target: "/opt/fhir-module/util/shared_config.json"
+      - type: bind
+        source: "./util/default_sample_collection.json"
+        target: "/opt/fhir-module/util/default_sample_collection.json"
+      - type: bind
+        source: "./util/default_biobank.json"
+        target: "/opt/fhir-module/util/default_biobank.json"
       - fhir-logs:/var/log/fhir-module
       - ui-data:/app/data
       - config-snapshots:/opt/config-snapshots
-    depends_on:
-      - miabis-blaze
-      - test-blaze
     healthcheck:
       test:
         [
           "CMD",
           "sh",
           "-c",
-          "curl -f http://localhost:3000 && curl -f http://localhost:5000/metrics",
+          "curl -f http://localhost:3000 && curl -f http://localhost:8080/metrics",
         ]
       interval: 30s
       timeout: 10s

@@ -1,8 +1,8 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { Code, Edit, ArrowLeft } from "lucide-react";
+import { Code, Edit, ArrowLeft, FileSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useMemo } from "react";
 import {
   CommonEnumMappingProps,
   EnumMapping,
@@ -10,7 +10,9 @@ import {
 } from "@/types/setup-wizard/types";
 import FreeTextVisualEditorComponent from "@/components/setup-wizard/type-to-collection-components/FreeTextVisualEditorComponent";
 import ManualEditorComponent from "@/components/setup-wizard/enum-components/ManualEditorComponent";
+import ExtractValuesDialog from "@/components/setup-wizard/enum-components/ExtractValuesDialog";
 import { SetupWizardContext } from "@/context/SetupWizardContext";
+import { getSampleCollectionIdentifiers } from "@/actions/configuration-details/configuration-details-actions";
 
 export default function DefineTypeToCollectionComponent({
   config,
@@ -24,14 +26,42 @@ export default function DefineTypeToCollectionComponent({
 
   const [activeTab, setActiveTab] = useState<"visual" | "manual">("visual");
   const [hasError, setHasError] = useState<boolean>(false);
+  const [collectionIdentifiers, setCollectionIdentifiers] = useState<string[]>(
+    []
+  );
 
-  const { wizardState, setWizardState } = useContext(SetupWizardContext);
+  const { wizardState, setWizardState, dataFormat, dataFolderPath } =
+    useContext(SetupWizardContext);
+
+  const [isExtractDialogOpen, setIsExtractDialogOpen] = useState(false);
+
+  const existingUserValues = useMemo(
+    () => new Set(mappings.map((m) => m.userValue)),
+    [mappings]
+  );
+
+  const handleExtractedValues = (newValues: string[]) => {
+    const newMappings: EnumMapping[] = newValues.map((value) => ({
+      userValue: value,
+      apiValue: "",
+    }));
+    setMappings((prev) => {
+      const existingFilled = prev.filter(
+        (mapping) => mapping.userValue.trim() !== "" || mapping.apiValue.trim() !== ""
+      );
+      return [...existingFilled, ...newMappings];
+    });
+  };
 
   useEffect(() => {
     const existingMappings = wizardStateFetchFunction(wizardState);
     if (existingMappings && existingMappings.length > 0) {
       setMappings(existingMappings);
     }
+
+    getSampleCollectionIdentifiers().then((identifiers) => {
+      setCollectionIdentifiers(identifiers);
+    });
   }, []);
 
   const addMapping = () => {
@@ -81,6 +111,35 @@ export default function DefineTypeToCollectionComponent({
 
   return (
     <div className="h-full w-full flex flex-col">
+      {/* Extract from Data Section */}
+      {dataFormat && dataFolderPath && (
+        <div className="mb-4 p-3 border rounded-lg bg-muted/30">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              Populate mapping values by extracting data from your files.
+            </p>
+            <Button
+              onClick={() => setIsExtractDialogOpen(true)}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 shrink-0"
+            >
+              <FileSearch className="h-4 w-4" />
+              <span className="hidden sm:inline">Extract from Data</span>
+              <span className="sm:hidden">Extract</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Data Path Selection Dialog */}
+      <ExtractValuesDialog
+        isOpen={isExtractDialogOpen}
+        onOpenChange={setIsExtractDialogOpen}
+        onExtract={handleExtractedValues}
+        existingUserValues={existingUserValues}
+      />
+
       {/* Tabs for Visual/Manual mode */}
       <Tabs
         value={activeTab}
@@ -119,6 +178,7 @@ export default function DefineTypeToCollectionComponent({
             addMapping={addMapping}
             updateMapping={updateMapping}
             removeMapping={removeMapping}
+            availableCollectionIds={collectionIdentifiers}
           />
         </TabsContent>
 
