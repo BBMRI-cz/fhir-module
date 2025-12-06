@@ -8,29 +8,17 @@ import { ConfirmationDialog } from "@/components/custom/ConfirmationDialog";
 import { useBackendControl } from "@/hooks/useBackendControl";
 import { useConfirmationDialog } from "@/hooks/useConfirmationDialog";
 import { useRef, useEffect, useState } from "react";
-import SyncProgressDisplay, {
-  type SyncProgressDisplayHandle,
-  type SyncRunningStatus,
-} from "@/components/setup-wizard/SyncProgressDisplay";
 import DeleteProgressDisplay, {
   type DeleteProgressDisplayHandle,
 } from "@/components/setup-wizard/DeleteProgressDisplay";
+import SyncProgressDisplay from "@/components/setup-wizard/SyncProgressDisplay";
 import { getDeleteProgress } from "@/actions/backend/delete-progress";
 import { getViableSyncTargets } from "@/actions/setup-wizard/getSystemSetup";
 import { SyncTarget } from "@/types/setup-wizard/types";
-import {
-  getSyncProgress,
-  getMiabisSyncProgress,
-  type SyncProgressResponse,
-} from "@/actions/backend/sync-progress";
 
 export default function BackendControlPage() {
   const [syncTargets, setSyncTargets] = useState<SyncTarget[]>([]);
   const [isLoadingMode, setIsLoadingMode] = useState<boolean>(true);
-  const [syncStatus, setSyncStatus] = useState<SyncRunningStatus>({
-    blazeSyncRunning: false,
-    miabisSyncRunning: false,
-  });
 
   const {
     isLoading,
@@ -42,22 +30,7 @@ export default function BackendControlPage() {
     handleMiabisDelete,
   } = useBackendControl();
 
-  const syncProgressRef = useRef<SyncProgressDisplayHandle>(null);
   const deleteProgressRef = useRef<DeleteProgressDisplayHandle>(null);
-
-  const handleSyncStatusChange = (status: SyncRunningStatus) => {
-    setSyncStatus(status);
-  };
-
-  const isSyncActive = (progress: SyncProgressResponse) => {
-    if (!progress?.in_progress) return false;
-
-    const hasCounts = Object.values(progress.resources || {}).some(
-      (res) => (res?.current ?? 0) > 0
-    );
-
-    return hasCounts;
-  };
 
   useEffect(() => {
     const fetchSyncTargets = async () => {
@@ -68,50 +41,11 @@ export default function BackendControlPage() {
     fetchSyncTargets();
   }, []);
 
-  useEffect(() => {
-    const checkOngoingSyncs = async () => {
-      try {
-        // Check both sync types in parallel
-        const [blazeProgress, miabisProgress] = await Promise.all([
-          getSyncProgress(),
-          getMiabisSyncProgress(),
-        ]);
-
-        const blazeRunning = isSyncActive(blazeProgress);
-        const miabisRunning = isSyncActive(miabisProgress);
-
-        setSyncStatus({
-          blazeSyncRunning: blazeRunning,
-          miabisSyncRunning: miabisRunning,
-        });
-
-        if (blazeRunning) {
-          syncProgressRef.current?.start(false);
-        }
-        if (miabisRunning) {
-          syncProgressRef.current?.start(true);
-        }
-
-        if (!blazeRunning && !miabisRunning) {
-          syncProgressRef.current?.reset();
-        }
-      } catch (error) {
-        console.error("Error checking ongoing syncs:", error);
-      }
-    };
-
-    checkOngoingSyncs();
-  }, []);
-
   const handleSyncWithProgress = async () => {
-    syncProgressRef.current?.start(false);
-
     await handleSync();
   };
 
   const handleMiabisSyncWithProgress = async () => {
-    syncProgressRef.current?.start(true);
-
     await handleMiabisSync();
   };
 
@@ -206,10 +140,7 @@ export default function BackendControlPage() {
                 result={lastResults["Sync"]}
                 isFading={fadingBadges["Sync"]}
                 icon={RefreshCw}
-                disabled={isLoading !== null || syncStatus.blazeSyncRunning}
-                disabledTooltip={
-                  syncStatus.blazeSyncRunning ? "Sync is running" : undefined
-                }
+                disabled={isLoading !== null}
               />
             )}
 
@@ -224,10 +155,7 @@ export default function BackendControlPage() {
                 result={lastResults["MIABIS Sync"]}
                 isFading={fadingBadges["MIABIS Sync"]}
                 icon={RefreshCw}
-                disabled={isLoading !== null || syncStatus.miabisSyncRunning}
-                disabledTooltip={
-                  syncStatus.miabisSyncRunning ? "Sync is running" : undefined
-                }
+                disabled={isLoading !== null}
               />
             )}
           </OperationCard>
@@ -248,10 +176,7 @@ export default function BackendControlPage() {
                 isLoading={isLoading === "Delete All"}
                 result={lastResults["Delete All"]}
                 isFading={fadingBadges["Delete All"]}
-                disabled={isLoading !== null || syncStatus.blazeSyncRunning}
-                disabledTooltip={
-                  syncStatus.blazeSyncRunning ? "Sync is running" : undefined
-                }
+                disabled={isLoading !== null}
               >
                 <ConfirmationDialog
                   isOpen={isDeleteBlazeDialogOpen}
@@ -262,11 +187,11 @@ export default function BackendControlPage() {
                   confirmButtonText="Delete All"
                   form={deleteBlazeForm}
                   onConfirm={handleDeleteBlazeConfirm}
-                  isLoading={isLoading !== null || syncStatus.blazeSyncRunning}
+                  isLoading={isLoading !== null}
                 >
                   <ActionButton
                     onClick={() => {}}
-                    disabled={isLoading !== null || syncStatus.blazeSyncRunning}
+                    disabled={isLoading !== null}
                     loading={isLoading === "Delete All"}
                     icon={Trash2}
                     variant="destructive"
@@ -287,10 +212,7 @@ export default function BackendControlPage() {
                 isLoading={isLoading === "Delete MIABIS"}
                 result={lastResults["Delete MIABIS"]}
                 isFading={fadingBadges["Delete MIABIS"]}
-                disabled={isLoading !== null || syncStatus.miabisSyncRunning}
-                disabledTooltip={
-                  syncStatus.miabisSyncRunning ? "Sync is running" : undefined
-                }
+                disabled={isLoading !== null}
               >
                 <ConfirmationDialog
                   isOpen={isDeleteMiabisDialogOpen}
@@ -301,13 +223,11 @@ export default function BackendControlPage() {
                   confirmButtonText="Delete MIABIS"
                   form={deleteMiabisForm}
                   onConfirm={handleDeleteMiabisConfirm}
-                  isLoading={isLoading !== null || syncStatus.miabisSyncRunning}
+                  isLoading={isLoading !== null}
                 >
                   <ActionButton
                     onClick={() => {}}
-                    disabled={
-                      isLoading !== null || syncStatus.miabisSyncRunning
-                    }
+                    disabled={isLoading !== null}
                     loading={isLoading === "Delete MIABIS"}
                     icon={Trash2}
                     variant="destructive"
@@ -323,10 +243,7 @@ export default function BackendControlPage() {
 
       {/* Progress Displays */}
       <div className="mt-6 flex-1 min-h-0 overflow-y-auto space-y-6 pr-2">
-        <SyncProgressDisplay
-          ref={syncProgressRef}
-          onSyncStatusChange={handleSyncStatusChange}
-        />
+        <SyncProgressDisplay syncTargets={syncTargets} />
         <DeleteProgressDisplay ref={deleteProgressRef} />
       </div>
     </main>

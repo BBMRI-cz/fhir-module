@@ -144,6 +144,66 @@ export async function getTemperatureValues(): Promise<string[]> {
   }
 }
 
+export async function getConfigValue(key: string): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/config-value?key=${encodeURIComponent(key)}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch config value for key ${key}: ${response.statusText}`
+      );
+    }
+
+    const data = await response.json();
+    return data.value || null;
+  } catch (error) {
+    console.error(`Error fetching config value for key ${key}:`, error);
+    return null;
+  }
+}
+
+export async function getSampleCollectionIdentifiers(): Promise<string[]> {
+  try {
+    const fs = await import("fs");
+
+    const filePath = await getConfigValue("SAMPLE_COLLECTIONS_PATH");
+    if (!filePath) {
+      return [];
+    }
+
+    if (!fs.existsSync(filePath)) {
+      return [];
+    }
+
+    const fileContent = fs.readFileSync(filePath, "utf-8");
+    const collections = JSON.parse(fileContent);
+
+    if (!Array.isArray(collections)) {
+      return [];
+    }
+
+    return collections
+      .filter(
+        (c): c is { identifier: string } =>
+          typeof c === "object" &&
+          c !== null &&
+          typeof c.identifier === "string"
+      )
+      .map((c) => c.identifier);
+  } catch (error) {
+    console.error("Error fetching sample collection identifiers:", error);
+    return [];
+  }
+}
+
 export async function parseDataFromFolder(
   folderPath: string,
   csvSeparator?: string

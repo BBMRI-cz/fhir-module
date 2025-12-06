@@ -6,7 +6,7 @@ async function isUrlReachable(url: string): Promise<boolean> {
   if (!url) return false;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 1000);
+  const timeout = setTimeout(() => controller.abort(), 5000);
 
   try {
     const response = await fetch(url, {
