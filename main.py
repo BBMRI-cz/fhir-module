@@ -13,6 +13,7 @@ from util.custom_logger import setup_logger
 from util.http_util import is_endpoint_available
 from service.configuration_info_service import register_details_routes
 from util.service_preparation_utils import prepare_services, prepare_services_miabis
+from util.metrics import start_resource_count_scheduler
 
 BLAZE_URL = get_blaze_url()
 MIABIS_BLAZE_URL = get_miabis_blaze_url()
@@ -90,6 +91,9 @@ if is_endpoint_available(endpoint_url=BLAZE_URL, wait_time=10, max_attempts=5):
     if MIABIS_ON_FHIR and miabis_services_initialized and miabis_blaze_service is not None:
         threading.Thread(target=miabis_blaze_service.sync).start()
         miabis_blaze_service.start_scheduler()
+    
+    # Start periodic FHIR resource count updates for Prometheus
+    start_resource_count_scheduler(interval_seconds=30)
         
     scheduler_mail_thread = threading.Thread(target=mail_service.run_scheduler, daemon=True)
     scheduler_mail_thread.start()
