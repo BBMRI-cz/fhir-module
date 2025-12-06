@@ -34,3 +34,5 @@ node_modules/
 **/generated_test_data_*
 
 **/local_configs
+
+**/deploy_folder

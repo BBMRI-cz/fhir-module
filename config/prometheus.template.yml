@@ -7,7 +7,7 @@ global:
 scrape_configs:
   - job_name: "fhir-module"
     static_configs:
-      - targets: ["fhir-module:5000"]
+      - targets: ["fhir-module:8080"]
     metrics_path: "/metrics"
 
 remote_write:

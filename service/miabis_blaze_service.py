@@ -74,20 +74,18 @@ class MiabisBlazeService(BlazeServiceInterface):
         if self.metrics:
             self.metrics.start_sync()
         
-        if not self._refresh_services():
-            error_msg = "MIABIS sync failed: Mapping files are misconfigured. Please check your parsing map configuration."
-            sync_logger.error(error_msg)
-            if self.metrics:
-                self.metrics.set_metric('last_sync_error', error_msg)
-                self.metrics.end_sync()
-            return
-
-        biobank_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
-        collection_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
-        pat_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
-        samp_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
-
         try:
+            if not self._refresh_services():
+                error_msg = "MIABIS sync failed: Mapping files are misconfigured. Please check your parsing map configuration."
+                sync_logger.error(error_msg)
+                if self.metrics:
+                    self.metrics.set_metric('last_sync_error', error_msg)
+                return
+
+            biobank_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
+            collection_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
+            pat_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
+            samp_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
             if self.metrics:
                 self.metrics.set_sync_phase(1)  # Phase 1: Biobank and Collections
             biobank_collection_summary = self.sync_biobank_and_collections()
@@ -104,7 +102,6 @@ class MiabisBlazeService(BlazeServiceInterface):
 
             if self.metrics:
                 self.metrics.set_metric('last_sync_timestamp', time.time())
-                self.metrics.end_sync()
 
             sync_summary_obj = {
                 'patients': pat_summary,
@@ -120,9 +117,6 @@ class MiabisBlazeService(BlazeServiceInterface):
         except Exception as e:
             logger.error(f"MIABIS on FHIR: Sync failed: {e}")
             
-            if self.metrics:
-                self.metrics.end_sync()
-            
             sync_summary_obj = {
                 'patients': pat_summary,
                 'specimens': samp_summary,
@@ -133,6 +127,10 @@ class MiabisBlazeService(BlazeServiceInterface):
                 'error_message': str(e)
             }
             sync_logger.info(json.dumps({'sync_summary': sync_summary_obj}))
+        finally:
+            # Always ensure sync state is cleaned up
+            if self.metrics:
+                self.metrics.end_sync()
 
     def __create_sync_summary(self) -> dict:
         """Create empty sync summary structure for biobank and collections."""

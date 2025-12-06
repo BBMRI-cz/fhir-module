@@ -3,6 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { EnumMapping } from "@/types/setup-wizard/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export type FreeTextVisualEditorComponentProps = {
   mappings: EnumMapping[];
@@ -13,6 +20,7 @@ export type FreeTextVisualEditorComponentProps = {
     value: string
   ) => void;
   removeMapping: (index: number) => void;
+  availableCollectionIds?: string[];
 };
 
 export default function FreeTextVisualEditorComponent({
@@ -20,6 +28,7 @@ export default function FreeTextVisualEditorComponent({
   addMapping,
   updateMapping,
   removeMapping,
+  availableCollectionIds = [],
 }: FreeTextVisualEditorComponentProps) {
   return (
     <div className="flex flex-col h-full">
@@ -54,14 +63,38 @@ export default function FreeTextVisualEditorComponent({
                 <span className="text-xs font-medium text-gray-700 mb-1 block">
                   Collection ID
                 </span>
-                <Input
-                  value={mapping.apiValue}
-                  onChange={(e) =>
-                    updateMapping(index, "apiValue", e.target.value)
-                  }
-                  placeholder="Enter collection ID (e.g., bbmri-eric:ID:...)"
-                  className="h-8 sm:h-10 text-xs sm:text-sm"
-                />
+                {availableCollectionIds.length > 0 ? (
+                  <Select
+                    value={mapping.apiValue}
+                    onValueChange={(value) =>
+                      updateMapping(index, "apiValue", value)
+                    }
+                  >
+                    <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm">
+                      <SelectValue placeholder="Select collection ID" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableCollectionIds.map((id) => (
+                        <SelectItem
+                          key={id}
+                          value={id}
+                          className="text-xs sm:text-sm"
+                        >
+                          {id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={mapping.apiValue}
+                    onChange={(e) =>
+                      updateMapping(index, "apiValue", e.target.value)
+                    }
+                    placeholder="Enter collection ID (e.g., bbmri-eric:ID:...)"
+                    className="h-8 sm:h-10 text-xs sm:text-sm"
+                  />
+                )}
               </div>
 
               <div className="flex items-end">

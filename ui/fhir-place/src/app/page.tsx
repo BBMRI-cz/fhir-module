@@ -11,10 +11,11 @@ export default async function Home() {
         <div className="flex items-baseline">
           <Image
             src="/fhir-flame.png"
-            alt="Next.js logo"
+            alt="FHIR Place logo"
             width={90}
             height={20}
             priority
+            unoptimized
             className="w-auto h-12 md:h-20"
           />
           <h1 className="md:text-8xl text-5xl font-bold ml-1">
