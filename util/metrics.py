@@ -135,7 +135,7 @@ def update_fhir_resource_counts(blaze_url: str = None, miabis_blaze_url: str = N
     
     if miabis_blaze_url:
         for fhir_type, label in [("Patient", "Patient"), ("Organization", "Organization"), ("Group", "SampleCollection"), ("Specimen", "Specimen")]:
-            fhir_resource_count.labels(service="miabis", resource_type=label).set(fetch_count(miabis_blaze_url, fhir_type))
+            fhir_resource_count.labels(service="miabis-blaze", resource_type=label).set(fetch_count(miabis_blaze_url, fhir_type))
 
 
 _resource_count_scheduler_started = False

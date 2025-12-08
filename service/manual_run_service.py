@@ -55,7 +55,7 @@ def create_api(blaze_service: BlazeService,miabis_blaze_service: MiabisBlazeServ
         """Get progress of the MIABIS on FHIR sync operation"""
         if miabis_blaze_service is None:
             return jsonify({"error": not_initialized_error}), 503
-        progress = get_sync_progress('miabis_blaze')
+        progress = get_sync_progress('miabis-blaze')
         return jsonify(progress)
 
     return app

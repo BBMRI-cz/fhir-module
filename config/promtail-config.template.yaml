@@ -30,7 +30,7 @@ scrape_configs:
     static_configs:
       - targets: ["localhost"]
         labels:
-          job: miabis_blaze
+          job: miabis-blaze
           environment: "${ENVIRONMENT}"
           __path__: /var/log/fhir-module/miabis_sync.log
     pipeline_stages:
