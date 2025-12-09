@@ -8,6 +8,9 @@ import WizardDefineEnumGroupMappingComponent from "@/components/setup-wizard/Wiz
 const WizardInitComponent = dynamic(
   () => import("@/components/setup-wizard/WizardInitComponent")
 );
+const WizardDisclaimerComponent = dynamic(
+  () => import("@/components/setup-wizard/WizardDisclaimerComponent")
+);
 const WizardSelectDataFolderComponent = dynamic(
   () => import("@/components/setup-wizard/WizardSelectDataFolderComponent")
 );
@@ -33,18 +36,19 @@ export default function SetupWizard() {
   return (
     <>
       {step.stepNumber === 0 && <WizardInitComponent />}
-      {step.stepNumber === 1 && <WizardSelectSyncTargetsComponent />}
-      {step.stepNumber === 2 && <WizardSelectDataFolderComponent />}
-      {step.stepNumber === 3 && (
+      {step.stepNumber === 1 && <WizardDisclaimerComponent />}
+      {step.stepNumber === 2 && <WizardSelectSyncTargetsComponent />}
+      {step.stepNumber === 3 && <WizardSelectDataFolderComponent />}
+      {step.stepNumber === 4 && (
         <WizardDefineEnumGroupMappingComponent targetConfig="blazeConfig" />
       )}
-      {step.stepNumber === 4 && (
+      {step.stepNumber === 5 && (
         <WizardDefineEnumGroupMappingComponent targetConfig="miabisConfig" />
       )}
-      {step.stepNumber === 5 && <WizardDefineMappingComponent />}
-      {step.stepNumber === 6 && <WizardValidateMappingComponent />}
-      {step.stepNumber === 7 && <WizardTriggerSync />}
-      {step.stepNumber === 8 && <WizardCompleteComponent />}
+      {step.stepNumber === 6 && <WizardDefineMappingComponent />}
+      {step.stepNumber === 7 && <WizardValidateMappingComponent />}
+      {step.stepNumber === 8 && <WizardTriggerSync />}
+      {step.stepNumber === 9 && <WizardCompleteComponent />}
     </>
   );
 }

@@ -10,7 +10,7 @@ import {
   ParsedDataResult,
   DataField,
 } from "@/types/actions/configuration-details/types";
-import { parseFolderData } from "@/actions/folder/parse-folder-data";
+import { parseMultipleFolderData } from "@/actions/folder/parse-folder-data";
 const BASE_URL = process.env.BACKEND_API_URL || "http://localhost:5001";
 
 function normalizeKey(raw: any, saveToPath?: string): SimpleKeyInfo {
@@ -209,7 +209,7 @@ export async function parseDataFromFolder(
   csvSeparator?: string
 ): Promise<ParsedDataResult> {
   try {
-    const data = await parseFolderData(folderPath);
+    const data = await parseMultipleFolderData(folderPath);
 
     if (!data.success) {
       return {
@@ -218,38 +218,63 @@ export async function parseDataFromFolder(
       };
     }
 
-    let fields: DataField[] = [];
-    const fileContent = data.fileContent!;
     const fileExtension = data.fileExtension!;
-    const fileName = data.fileName!;
+    const filesCount = data.files.length;
 
-    try {
-      if (fileExtension === ".json") {
-        fields = parseJsonFile(fileContent);
-      } else if (fileExtension === ".csv") {
-        fields = parseCsvFile(fileContent, csvSeparator);
-      } else if (fileExtension === ".xml") {
-        fields = parseXmlFile(fileContent);
-      } else {
-        return {
-          success: false,
-          message: `Unsupported file type: ${fileExtension}`,
-        };
+    // Use a Map to track unique paths by their path string
+    // This allows us to keep the full DataField info while deduplicating
+    const pathsMap = new Map<string, DataField>();
+
+    for (const file of data.files) {
+      try {
+        let fileFields: DataField[] = [];
+
+        if (fileExtension === ".json") {
+          fileFields = parseJsonFile(file.content);
+        } else if (fileExtension === ".csv") {
+          fileFields = parseCsvFile(file.content, csvSeparator);
+        } else if (fileExtension === ".xml") {
+          fileFields = parseXmlFile(file.content);
+        }
+
+        // Add fields to the map, deduplicating by path
+        for (const field of fileFields) {
+          if (!pathsMap.has(field.path)) {
+            pathsMap.set(field.path, field);
+          } else {
+            // Merge attributes if the existing field has fewer
+            const existing = pathsMap.get(field.path)!;
+            if (
+              field.attributes &&
+              (!existing.attributes ||
+                field.attributes.length > existing.attributes.length)
+            ) {
+              pathsMap.set(field.path, field);
+            }
+          }
+        }
+      } catch (parseError) {
+        // Skip files that fail to parse, continue with others
+        console.warn(
+          `Failed to parse ${file.name}: ${
+            parseError instanceof Error ? parseError.message : "Unknown error"
+          }`
+        );
       }
-    } catch (parseError) {
+    }
+
+    if (pathsMap.size === 0) {
       return {
         success: false,
-        message: `Error parsing ${fileName}: ${
-          parseError instanceof Error
-            ? parseError.message
-            : "Unknown parsing error"
-        }`,
+        message: `No fields could be parsed from the ${filesCount} file(s) found`,
       };
     }
 
+    const fields = Array.from(pathsMap.values());
+
     return {
       success: true,
-      message: `Successfully parsed ${fields.length} fields from ${fileName} (first file found)`,
+      message: `Successfully parsed ${fields.length} unique fields from ${filesCount} file(s)`,
       fields,
     };
   } catch (error) {

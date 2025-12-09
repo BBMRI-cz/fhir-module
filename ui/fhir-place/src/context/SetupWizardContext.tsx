@@ -40,6 +40,14 @@ export const Steps = [
   },
   {
     stepNumber: 1,
+    stepName: "Important Information",
+    stepTitle: "Before You Begin",
+    stepDescription:
+      "Please read the important information and limitations before proceeding.",
+    stepIcon: <HeartHandshake className="w-full h-full" />,
+  },
+  {
+    stepNumber: 2,
     stepName: "Select Sync Targets",
     stepTitle: "Select Sync Targets",
     stepDescription:
@@ -47,7 +55,7 @@ export const Steps = [
     stepIcon: <GitBranch className="w-full h-full" />,
   },
   {
-    stepNumber: 2,
+    stepNumber: 3,
     stepName: "Select Data Folder & Format",
     stepTitle: "Select Data Folder & Format",
     stepDescription:
@@ -55,7 +63,7 @@ export const Steps = [
     stepIcon: <FolderOpen className="w-full h-full" />,
   },
   {
-    stepNumber: 3,
+    stepNumber: 4,
     stepName: "Configure BLAZE Enums",
     stepTitle: "Configure BLAZE Enums",
     stepDescription:
@@ -64,7 +72,7 @@ export const Steps = [
     onlyForSyncTargets: ["blaze", "both"],
   },
   {
-    stepNumber: 4,
+    stepNumber: 5,
     stepName: "Configure MIABIS Enums",
     stepTitle: "Configure MIABIS Enums",
     stepDescription:
@@ -73,28 +81,28 @@ export const Steps = [
     onlyForSyncTargets: ["miabis", "both"],
   },
   {
-    stepNumber: 5,
+    stepNumber: 6,
     stepName: "Configure Mappings",
     stepTitle: "Configure Mappings",
     stepDescription: "Configure data mappings for your FHIR server.",
     stepIcon: <Upload className="w-full h-full" />,
   },
   {
-    stepNumber: 6,
+    stepNumber: 7,
     stepName: "Validate Mappings",
     stepTitle: "Validate Mappings",
     stepDescription: "Validate the mappings for selected sync targets.",
     stepIcon: <CircleCheckBig className="w-full h-full" />,
   },
   {
-    stepNumber: 7,
+    stepNumber: 8,
     stepName: "Start the sync process",
     stepTitle: "Start the sync process",
     stepDescription: "Start the synchronization process for the data.",
     stepIcon: <FolderSync className="w-full h-full" />,
   },
   {
-    stepNumber: 8,
+    stepNumber: 9,
     stepName: "Setup Complete",
     stepTitle: "Setup Complete",
     stepDescription: "The setup process is complete.",

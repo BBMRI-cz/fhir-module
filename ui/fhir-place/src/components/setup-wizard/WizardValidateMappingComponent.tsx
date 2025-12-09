@@ -134,6 +134,7 @@ export default function WizardValidateMappingComponent() {
     null
   );
   const [validateAllFiles, setValidateAllFiles] = useState(false);
+  const [skipValidation, setSkipValidation] = useState(false);
   const [isValidatingBlaze, setIsValidatingBlaze] = useState(false);
   const [isValidatingMiabis, setIsValidatingMiabis] = useState(false);
 
@@ -200,6 +201,9 @@ export default function WizardValidateMappingComponent() {
 
   // Determine if user can continue
   const canContinue = () => {
+    if (skipValidation) {
+      return true;
+    }
     if (syncTarget === "both") {
       return blazeValidationResult?.success && miabisValidationResult?.success;
     } else if (syncTarget === "blaze") {
@@ -393,7 +397,7 @@ export default function WizardValidateMappingComponent() {
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex justify-between gap-2 p-4 sm:p-6 2xl:py-0 sm:py-0">
+        <CardFooter className="flex justify-between items-center gap-2 p-4 sm:p-6 2xl:py-0 sm:py-0">
           <Button
             onClick={previousStep}
             variant="outline"
@@ -401,13 +405,33 @@ export default function WizardValidateMappingComponent() {
           >
             Back
           </Button>
-          <Button
-            onClick={nextStep}
-            disabled={!canContinue()}
-            className="h-8 sm:h-10 text-xs sm:text-sm px-3 sm:px-4"
-          >
-            Continue
-          </Button>
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="skipValidation"
+                checked={skipValidation}
+                onCheckedChange={(checked) =>
+                  setSkipValidation(checked as boolean)
+                }
+                className="border-amber-500 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
+              />
+              <label
+                htmlFor="skipValidation"
+                className="text-xs sm:text-sm text-amber-600 cursor-pointer flex items-center gap-1"
+              >
+                <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Skip validation</span>
+                <span className="sm:hidden">Skip</span>
+              </label>
+            </div>
+            <Button
+              onClick={nextStep}
+              disabled={!canContinue()}
+              className="h-8 sm:h-10 text-xs sm:text-sm px-3 sm:px-4"
+            >
+              Continue
+            </Button>
+          </div>
         </CardFooter>
       </Card>
 

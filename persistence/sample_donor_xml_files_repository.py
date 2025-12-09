@@ -33,10 +33,10 @@ class SampleDonorXMLFilesRepository(SampleDonorRepository):
 
     def get_all(self) -> Generator[SampleDonorInterface, None, None]:
         self._ids = set()
-        dir_entries = list(os.scandir(self._dir_path))
-        for dir_entry in dir_entries:
-            if dir_entry.name.lower().endswith(".xml"):
-                yield from self.__extract_donor_from_xml_file(dir_entry)
+        with os.scandir(self._dir_path) as entries:
+            for dir_entry in entries:
+                if dir_entry.name.lower().endswith(".xml"):
+                    yield from self.__extract_donor_from_xml_file(dir_entry)
 
     def update_mappings(self) -> None:
         super().update_mappings()
