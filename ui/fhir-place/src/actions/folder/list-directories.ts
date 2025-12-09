@@ -3,10 +3,12 @@
 import * as fs from "fs";
 import * as path from "path";
 import { FolderTreeRecord } from "@/types/actions/folder/types";
+import {
+  MAX_FILES_LIMIT,
+  MAX_ENTRIES_TO_SCAN,
+} from "@/lib/folder-constants";
 
 const SAFE_ROOT_FOLDER = process.env.ROOT_DIR || "../../test/";
-
-const MAX_FILES_LIMIT = 10;
 
 interface DirectoryEntry {
   name: string;
@@ -63,6 +65,7 @@ interface BuildEntriesResult {
  * Build list of directory entries with metadata.
  * Returns all directories but limits files to MAX_FILES_LIMIT.
  * Uses fs.opendirSync to iterate without loading all entries into memory.
+ * Stops scanning after MAX_ENTRIES_TO_SCAN to prevent freezing on huge directories.
  */
 function buildDirectoryEntries(
   dirPath: string,
@@ -75,10 +78,18 @@ function buildDirectoryEntries(
 
   const dir = fs.opendirSync(dirPath);
   let hasMoreFiles = false;
+  let entriesScanned = 0;
 
   try {
     let dirent: fs.Dirent | null;
     while ((dirent = dir.readSync()) !== null) {
+      entriesScanned++;
+
+      if (entriesScanned > MAX_ENTRIES_TO_SCAN) {
+        hasMoreFiles = true;
+        break;
+      }
+
       const entryName = dirent.name;
       const entryPath = path.join(dirPath, entryName);
 

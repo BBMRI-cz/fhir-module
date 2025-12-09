@@ -594,8 +594,7 @@ class TestConfigurationInfoService(unittest.TestCase):
     @patch('service.configuration_info_service.shutil.copy2')
     @patch('service.configuration_info_service.os.makedirs')
     @patch('service.configuration_info_service.os.path.exists')
-    @patch('service.configuration_info_service.os.listdir')
-    @patch('service.configuration_info_service.os.path.isfile')
+    @patch('service.configuration_info_service.os.scandir')
     @patch('service.configuration_info_service.get_records_file_type')
     @patch('service.configuration_info_service.get_validator_factory')
     @patch('service.configuration_info_service.get_repository_factory')
@@ -606,12 +605,14 @@ class TestConfigurationInfoService(unittest.TestCase):
     def test_validate_mappings_with_csv_validation(self, mock_get_config, mock_set_config,
                                                    mock_write, mock_reload, mock_repo_factory,
                                                    mock_validator_factory, mock_file_type,
-                                                   mock_isfile, mock_listdir, mock_exists,
+                                                   mock_scandir, mock_exists,
                                                    mock_makedirs, mock_copy, mock_rmtree):
         mock_get_config.return_value = '/test/path'
         mock_exists.return_value = True
-        mock_listdir.return_value = ['test.csv']
-        mock_isfile.return_value = True
+        mock_entry = MagicMock()
+        mock_entry.is_file.return_value = True
+        mock_entry.name = 'test.csv'
+        mock_scandir.return_value = [mock_entry]
         mock_file_type.return_value = 'csv'
         
         mock_validator = MagicMock()
@@ -651,8 +652,7 @@ class TestConfigurationInfoService(unittest.TestCase):
     @patch('service.configuration_info_service.shutil.copy2')
     @patch('service.configuration_info_service.os.makedirs')
     @patch('service.configuration_info_service.os.path.exists')
-    @patch('service.configuration_info_service.os.listdir')
-    @patch('service.configuration_info_service.os.path.isfile')
+    @patch('service.configuration_info_service.os.scandir')
     @patch('service.configuration_info_service.get_records_file_type')
     @patch('service.configuration_info_service.get_validator_factory')
     @patch('service.configuration_info_service.get_repository_factory')
@@ -663,12 +663,14 @@ class TestConfigurationInfoService(unittest.TestCase):
     def test_validate_mappings_with_xml_validation(self, mock_get_config, mock_set_config,
                                                    mock_write, mock_reload, mock_repo_factory,
                                                    mock_validator_factory, mock_file_type,
-                                                   mock_isfile, mock_listdir, mock_exists,
+                                                   mock_scandir, mock_exists,
                                                    mock_makedirs, mock_copy, mock_rmtree):
         mock_get_config.return_value = '/test/path'
         mock_exists.return_value = True
-        mock_listdir.return_value = ['test.xml']
-        mock_isfile.return_value = True
+        mock_entry = MagicMock()
+        mock_entry.is_file.return_value = True
+        mock_entry.name = 'test.xml'
+        mock_scandir.return_value = [mock_entry]
         mock_file_type.return_value = 'xml'
         
         mock_validator = MagicMock()
@@ -911,8 +913,7 @@ class TestConfigurationInfoService(unittest.TestCase):
     @patch('service.configuration_info_service.shutil.copy2')
     @patch('service.configuration_info_service.os.makedirs')
     @patch('service.configuration_info_service.os.path.exists')
-    @patch('service.configuration_info_service.os.listdir')
-    @patch('service.configuration_info_service.os.path.isfile')
+    @patch('service.configuration_info_service.os.scandir')
     @patch('service.configuration_info_service.get_records_file_type')
     @patch('service.configuration_info_service.get_validator_factory')
     @patch('service.configuration_info_service.get_repository_factory')
@@ -923,12 +924,14 @@ class TestConfigurationInfoService(unittest.TestCase):
     def test_validate_mappings_with_miabis_mode(self, mock_get_config, mock_set_config,
                                                 mock_write, mock_reload, mock_repo_factory,
                                                 mock_validator_factory, mock_file_type,
-                                                mock_isfile, mock_listdir, mock_exists,
+                                                mock_scandir, mock_exists,
                                                 mock_makedirs, mock_copy, mock_rmtree):
         mock_get_config.return_value = '/test/path'
         mock_exists.return_value = True
-        mock_listdir.return_value = ['test.json']
-        mock_isfile.return_value = True
+        mock_entry = MagicMock()
+        mock_entry.is_file.return_value = True
+        mock_entry.name = 'test.json'
+        mock_scandir.return_value = [mock_entry]
         mock_file_type.return_value = 'json'
         
         mock_patient_service = MagicMock()

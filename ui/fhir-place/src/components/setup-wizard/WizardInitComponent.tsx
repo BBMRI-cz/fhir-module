@@ -11,11 +11,7 @@ export default function WizardInitComponent() {
 
   return (
     <div className="flex flex-col flex-1 items-center">
-      <Button
-        className="mt-4"
-        onClick={() => nextStep()}
-        disabled={isDisabled}
-      >
+      <Button className="mt-4" onClick={() => nextStep()} disabled={isDisabled}>
         <p>{isDisabled ? "Waiting for backend..." : "Get Started"}</p>
       </Button>
       {isDisabled && (
@@ -24,5 +20,5 @@ export default function WizardInitComponent() {
         </p>
       )}
     </div>
-  )
+  );
 }

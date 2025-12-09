@@ -6,11 +6,25 @@ jest.mock("fs", () => ({
   realpathSync: jest.fn(),
   existsSync: jest.fn(),
   statSync: jest.fn(),
-  readdirSync: jest.fn(),
+  opendirSync: jest.fn(),
   readFileSync: jest.fn(),
 }));
 
 const mockFs = fs as jest.Mocked<typeof fs>;
+
+// Helper to create a mock Dir object for opendirSync
+function createMockDir(files: string[]) {
+  let index = 0;
+  return {
+    readSync: jest.fn(() => {
+      if (index < files.length) {
+        return { name: files[index++] };
+      }
+      return null;
+    }),
+    closeSync: jest.fn(),
+  };
+}
 
 jest.mock("path", () => ({
   ...jest.requireActual("path"),
@@ -40,7 +54,7 @@ describe("parseFolderData", () => {
       isDirectory: () => true,
       isFile: () => false,
     } as fs.Stats);
-    (mockFs.readdirSync as jest.Mock).mockReturnValue([]);
+    (mockFs.opendirSync as jest.Mock).mockReturnValue(createMockDir([]));
   });
 
   afterAll(() => {
@@ -108,7 +122,7 @@ describe("parseFolderData", () => {
         if (pathStr.includes("./../../")) return "/opt";
         return pathStr.startsWith("/opt") ? pathStr : `/opt/${pathStr}`;
       });
-      (mockFs.readdirSync as jest.Mock).mockReturnValue(["data.json"]);
+      (mockFs.opendirSync as jest.Mock).mockReturnValue(createMockDir(["data.json"]));
       mockFs.statSync.mockImplementation((p: fs.PathLike) => {
         const pathStr = p.toString();
         return {
@@ -132,7 +146,7 @@ describe("parseFolderData", () => {
         if (pathStr.includes("./../../")) return "/opt";
         return pathStr.startsWith("/opt") ? pathStr : `/opt/${pathStr}`;
       });
-      (mockFs.readdirSync as jest.Mock).mockReturnValue(["data.csv"]);
+      (mockFs.opendirSync as jest.Mock).mockReturnValue(createMockDir(["data.csv"]));
       mockFs.statSync.mockImplementation((p: fs.PathLike) => {
         const pathStr = p.toString();
         return {
@@ -154,7 +168,7 @@ describe("parseFolderData", () => {
         if (pathStr.includes("./../../")) return "/opt";
         return pathStr.startsWith("/opt") ? pathStr : `/opt/${pathStr}`;
       });
-      (mockFs.readdirSync as jest.Mock).mockReturnValue(["data.xml"]);
+      (mockFs.opendirSync as jest.Mock).mockReturnValue(createMockDir(["data.xml"]));
       mockFs.statSync.mockImplementation((p: fs.PathLike) => {
         const pathStr = p.toString();
         return {
@@ -176,10 +190,10 @@ describe("parseFolderData", () => {
         if (pathStr.includes("./../../")) return "/opt";
         return pathStr.startsWith("/opt") ? pathStr : `/opt/${pathStr}`;
       });
-      (mockFs.readdirSync as jest.Mock).mockReturnValue([
+      (mockFs.opendirSync as jest.Mock).mockReturnValue(createMockDir([
         "readme.txt",
         "image.png",
-      ]);
+      ]));
 
       const result = await parseFolderData("/opt/data");
 
@@ -193,10 +207,10 @@ describe("parseFolderData", () => {
         if (pathStr.includes("./../../")) return "/opt";
         return pathStr.startsWith("/opt") ? pathStr : `/opt/${pathStr}`;
       });
-      (mockFs.readdirSync as jest.Mock).mockReturnValue([
+      (mockFs.opendirSync as jest.Mock).mockReturnValue(createMockDir([
         "readme.txt",
         "data.json",
-      ]);
+      ]));
       mockFs.statSync.mockImplementation((p: fs.PathLike) => {
         const pathStr = p.toString();
         return {
@@ -221,10 +235,10 @@ describe("parseFolderData", () => {
         if (pathStr.includes("bad.json")) throw new Error("ENOENT");
         return pathStr;
       });
-      (mockFs.readdirSync as jest.Mock).mockReturnValue([
+      (mockFs.opendirSync as jest.Mock).mockReturnValue(createMockDir([
         "bad.json",
         "good.json",
-      ]);
+      ]));
       mockFs.statSync.mockImplementation((p: fs.PathLike) => {
         const pathStr = p.toString();
         return {
@@ -246,10 +260,10 @@ describe("parseFolderData", () => {
         if (pathStr.includes("./../../")) return "/opt";
         return pathStr.startsWith("/opt") ? pathStr : `/opt/${pathStr}`;
       });
-      (mockFs.readdirSync as jest.Mock).mockReturnValue([
+      (mockFs.opendirSync as jest.Mock).mockReturnValue(createMockDir([
         "folder.json",
         "real.json",
-      ]);
+      ]));
       mockFs.statSync.mockImplementation((p: fs.PathLike) => {
         const pathStr = p.toString();
         // folder.json is a directory, real.json is a file
@@ -275,7 +289,7 @@ describe("parseFolderData", () => {
         if (pathStr.includes("./../../")) return "/opt";
         return pathStr.startsWith("/opt") ? pathStr : `/opt/${pathStr}`;
       });
-      (mockFs.readdirSync as jest.Mock).mockImplementation(() => {
+      (mockFs.opendirSync as jest.Mock).mockImplementation(() => {
         throw new Error("EACCES");
       });
 
@@ -293,7 +307,7 @@ describe("parseFolderData", () => {
       });
       // Create 150 non-matching files
       const files = Array.from({ length: 150 }, (_, i) => `file${i}.txt`);
-      (mockFs.readdirSync as jest.Mock).mockReturnValue(files);
+      (mockFs.opendirSync as jest.Mock).mockReturnValue(createMockDir(files));
 
       const result = await parseFolderData("/opt/data");
 

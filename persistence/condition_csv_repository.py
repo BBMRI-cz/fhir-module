@@ -29,10 +29,10 @@ class ConditionCsvRepository(ConditionRepository):
         logger.debug(f"Loaded the following condition parsing map {condition_parsing_map}")
 
     def get_all(self) -> Generator[Condition, None, None]:
-        dir_entries = list(os.scandir(self._dir_path))
-        for dir_entry in dir_entries:
-            if dir_entry.name.lower().endswith(".csv"):
-                yield from self.__extract_condition_from_csv_file(dir_entry)
+        with os.scandir(self._dir_path) as entries:
+            for dir_entry in entries:
+                if dir_entry.name.lower().endswith(".csv"):
+                    yield from self.__extract_condition_from_csv_file(dir_entry)
 
     def update_mappings(self) -> None:
         """Update the mappings for the repository."""

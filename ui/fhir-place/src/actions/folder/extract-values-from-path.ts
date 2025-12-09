@@ -3,6 +3,10 @@
 import * as fs from "fs";
 import * as path from "path";
 import { XMLParser } from "fast-xml-parser";
+import {
+  MAX_FILES_TO_PROCESS,
+  MAX_ENTRIES_TO_SCAN,
+} from "@/lib/folder-constants";
 
 const SAFE_ROOT_FOLDER = process.env.ROOT_DIR || "./../..";
 
@@ -368,8 +372,6 @@ function filterXmlMetadata(jsonData: unknown): unknown {
   return filtered;
 }
 
-const MAX_FILES_TO_PROCESS = 100;
-
 /**
  * Extract unique values from specified paths across all files in a folder
  */
@@ -390,12 +392,41 @@ export async function extractValuesFromPaths(
     const validatedPath = validateFolderPath(folderPath);
     const extension = `.${fileType}`;
 
-    const files = fs.readdirSync(validatedPath);
-    const allDataFiles = files.filter(
-      (f) => path.extname(f).toLowerCase() === extension
-    );
+    // Use opendirSync to iterate without loading all entries into memory
+    const dataFiles: string[] = [];
+    let entriesScanned = 0;
+    let hasMoreFiles = false;
 
-    if (allDataFiles.length === 0) {
+    const dir = fs.opendirSync(validatedPath);
+    try {
+      let dirent: fs.Dirent | null;
+      while ((dirent = dir.readSync()) !== null) {
+        entriesScanned++;
+
+        // Stop scanning if we've hit the limit to prevent freezing on huge directories
+        if (entriesScanned > MAX_ENTRIES_TO_SCAN) {
+          hasMoreFiles = true;
+          break;
+        }
+
+        const fileName = dirent.name;
+        if (path.extname(fileName).toLowerCase() !== extension) {
+          continue;
+        }
+
+        dataFiles.push(fileName);
+
+        // Stop collecting files once we have enough
+        if (dataFiles.length >= MAX_FILES_TO_PROCESS) {
+          hasMoreFiles = true;
+          break;
+        }
+      }
+    } finally {
+      dir.closeSync();
+    }
+
+    if (dataFiles.length === 0) {
       return {
         success: false,
         message: `No ${fileType.toUpperCase()} files found in the folder`,
@@ -403,11 +434,8 @@ export async function extractValuesFromPaths(
     }
 
     let warning: string | undefined;
-    let dataFiles = allDataFiles;
-
-    if (allDataFiles.length > MAX_FILES_TO_PROCESS) {
-      warning = `The folder contains ${allDataFiles.length} files. Only the first ${MAX_FILES_TO_PROCESS} files will be processed.`;
-      dataFiles = allDataFiles.slice(0, MAX_FILES_TO_PROCESS);
+    if (hasMoreFiles) {
+      warning = `The folder may contain more files. Only the first ${dataFiles.length} ${fileType.toUpperCase()} files will be processed.`;
     }
 
     const allValues: Set<string> = new Set();
