@@ -103,7 +103,7 @@ export const Steps = [
 ] as Step[];
 
 function isDataFormat(value: string): value is DataFormat {
-  return typeof value === "string" && ["json", "csv", "xml"].includes(value);
+  return typeof value === "string" && ["json", "csv", "xml"].includes(value.toLowerCase());
 }
 
 export const DataFormats: {
@@ -247,9 +247,9 @@ export function SetupWizardContextProvider({
         .map((f) => f.name);
 
       const fileTypeMap = files.reduce((acc, file) => {
-        const extension = file.split(".").pop();
+        const extension = file.split(".").pop()?.toLowerCase();
         if (extension && isDataFormat(extension)) {
-          acc[extension] = (acc[extension] || 0) + 1;
+          acc[extension as DataFormat] = (acc[extension as DataFormat] || 0) + 1;
         }
         return acc;
       }, {} as Record<DataFormat, number>);
@@ -259,7 +259,7 @@ export function SetupWizardContextProvider({
         detectedFormat = Object.keys(fileTypeMap)[0] as DataFormat;
         setDataFormat(detectedFormat);
         setDataFiles(
-          files.filter((f) => f.split(".").pop() === detectedFormat)
+          files.filter((f) => f.split(".").pop()?.toLowerCase() === detectedFormat)
         );
       } else {
         setDataFiles([]);
@@ -290,7 +290,7 @@ export function SetupWizardContextProvider({
             .filter((f) => f.isDirectory === false)
             .map((f) => f.name);
           const filteredFiles = files.filter(
-            (f) => f.split(".").pop() === format
+            (f) => f.split(".").pop()?.toLowerCase() === format
           );
           setDataFiles(filteredFiles);
         });
