@@ -10,7 +10,6 @@ import json
 
 from requests import HTTPError
 
-from exception.wrong_parsing_map import WrongParsingMapException
 from model.miabis.collection_miabis import CollectionMiabis
 from model.miabis.sample_donor_miabis import SampleDonorMiabis
 from model.miabis.sample_miabis import SampleMiabis
@@ -86,6 +85,8 @@ class MiabisBlazeService(BlazeServiceInterface):
             collection_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
             pat_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
             samp_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
+            condition_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
+
             if self.metrics:
                 self.metrics.set_sync_phase(1)  # Phase 1: Biobank and Collections
             biobank_collection_summary = self.sync_biobank_and_collections()
