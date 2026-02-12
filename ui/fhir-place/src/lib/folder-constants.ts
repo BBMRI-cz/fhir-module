@@ -7,8 +7,14 @@ export const MAX_ENTRIES_TO_SCAN = 1000;
 /** Maximum files to scan when parsing folder for field extraction */
 export const MAX_FILES_TO_SCAN = 1000;
 
+/** Maximum files to read for schema discovery (field names only, not all data) */
+export const MAX_FILES_FOR_SCHEMA = 100;
+
 /** Maximum files to process when extracting values from paths */
 export const MAX_FILES_TO_PROCESS = 1000;
+
+/** Maximum cumulative bytes to read across all files (500 MB) — stops reading when reached */
+export const MAX_TOTAL_READ_BYTES = 500 * 1024 * 1024;
 
 /** Supported data file extensions */
 export const SUPPORTED_EXTENSIONS: string[] = [".json", ".csv", ".xml"];

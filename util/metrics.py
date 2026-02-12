@@ -150,12 +150,14 @@ def start_resource_count_scheduler(interval_seconds: int = 30):
     # Initial update
     update_fhir_resource_counts()
     
-    # Schedule periodic updates
-    schedule.every(interval_seconds).seconds.do(update_fhir_resource_counts)
+    # Schedule periodic updates using a dedicated Scheduler instance
+    # to avoid conflicts with the global schedule used by sync services
+    metrics_scheduler = schedule.Scheduler()
+    metrics_scheduler.every(interval_seconds).seconds.do(update_fhir_resource_counts)
     
     def run_scheduler():
         while True:
-            schedule.run_pending()
+            metrics_scheduler.run_pending()
             time.sleep(1)
     
     thread = threading.Thread(target=run_scheduler, daemon=True, name="resource-count-scheduler")
