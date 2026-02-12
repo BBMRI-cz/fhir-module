@@ -59,6 +59,8 @@ class BlazeService:
         session.auth = get_blaze_auth()
         self._session = session
         self._scheduler_thread = None
+        self._sync_lock = threading.Lock()
+        self._scheduler = schedule.Scheduler()
 
     def _refresh_services(self) -> bool:
         """
@@ -79,12 +81,14 @@ class BlazeService:
             return False
         
         logger.debug("Services refreshed successfully.")
-        # Ensure scheduler is still running after refresh
-        self.ensure_scheduler_running()
         return True
 
     def sync(self):
         """Starts the sync between the repositories and the Blaze store."""
+        if not self._sync_lock.acquire(blocking=False):
+            logger.warning("Sync already in progress, skipping duplicate invocation.")
+            return
+
         logger.info("Starting sync with Blaze 🔥!")
 
         if self.metrics:
@@ -149,17 +153,19 @@ class BlazeService:
             # Always ensure sync state is cleaned up
             if self.metrics:
                 self.metrics.end_sync()
+            self._sync_lock.release()
 
     def __initialize_scheduler(self):
         logger.info("Initializing scheduler...")
-        schedule.every().week.do(self.sync)
+        self._scheduler.clear()
+        self._scheduler.every().week.do(self.sync)
         logger.info("Scheduler initialized.")
 
     def run_scheduler(self):
         self.__initialize_scheduler()
         logger.info("Running_scheduler.")
         while True:
-            schedule.run_pending()
+            self._scheduler.run_pending()
             time.sleep(1)
 
     def start_scheduler(self):

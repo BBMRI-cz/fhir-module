@@ -6,6 +6,7 @@ import { XMLParser } from "fast-xml-parser";
 import {
   MAX_FILES_TO_PROCESS,
   MAX_ENTRIES_TO_SCAN,
+  MAX_TOTAL_READ_BYTES,
 } from "@/lib/folder-constants";
 
 const SAFE_ROOT_FOLDER = process.env.ROOT_DIR || "./../..";
@@ -373,7 +374,12 @@ function filterXmlMetadata(jsonData: unknown): unknown {
 }
 
 /**
- * Extract unique values from specified paths across all files in a folder
+ * Extract unique values from specified paths across all files in a folder.
+ *
+ * Guards:
+ * - Skips individual files larger than MAX_FILE_SIZE_BYTES (10 MB)
+ * - Stops reading once cumulative bytes reach MAX_TOTAL_READ_BYTES (500 MB)
+ * - Stops after MAX_FILES_TO_PROCESS files or MAX_ENTRIES_TO_SCAN dir entries
  */
 export async function extractValuesFromPaths(
   folderPath: string,
@@ -433,27 +439,52 @@ export async function extractValuesFromPaths(
       };
     }
 
-    let warning: string | undefined;
+    const warnings: string[] = [];
     if (hasMoreFiles) {
-      warning = `The folder may contain more files. Only the first ${dataFiles.length} ${fileType.toUpperCase()} files will be processed.`;
+      warnings.push(
+        `The folder may contain more files. Only the first ${dataFiles.length} ${fileType.toUpperCase()} files will be processed.`
+      );
     }
 
     const allValues: Set<string> = new Set();
-
     const paths = pathOptions.map((opt) => opt.path);
+
+    // Hoist outside the loop — the safe root doesn't change between files
+    const safeRootReal = fs.realpathSync(SAFE_ROOT_FOLDER);
+
+    let totalBytesRead = 0;
+    let filesRead = 0;
 
     for (const fileName of dataFiles) {
       const filePath = path.join(validatedPath, fileName);
 
-      const safeRootReal = fs.realpathSync(SAFE_ROOT_FOLDER);
-      const realFilePath = fs.realpathSync(filePath);
+      let realFilePath: string;
+      try {
+        realFilePath = fs.realpathSync(filePath);
+      } catch {
+        continue;
+      }
+
       const commonPath = getCommonPath(safeRootReal, realFilePath);
       if (commonPath !== safeRootReal) {
         continue;
       }
 
       try {
+        const stats = fs.statSync(realFilePath);
+
+        // Stop if this file would push us over the cumulative memory budget
+        if (totalBytesRead + stats.size > MAX_TOTAL_READ_BYTES) {
+          warnings.push(
+            `Stopped after reading ${filesRead} files (cumulative size limit of ${Math.round(MAX_TOTAL_READ_BYTES / 1024 / 1024)} MB reached).`
+          );
+          break;
+        }
+
         const content = fs.readFileSync(realFilePath, "utf-8");
+        totalBytesRead += stats.size;
+        filesRead++;
+
         let extractedValues: string[] = [];
 
         if (fileType === "json") {
@@ -478,9 +509,9 @@ export async function extractValuesFromPaths(
 
     return {
       success: true,
-      message: `Extracted ${uniqueValues.length} unique values from ${dataFiles.length} files`,
+      message: `Extracted ${uniqueValues.length} unique values from ${filesRead} files`,
       values: uniqueValues,
-      warning,
+      warning: warnings.length > 0 ? warnings.join(" ") : undefined,
     };
   } catch (error) {
     console.error("Error extracting values:", error);

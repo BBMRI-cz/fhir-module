@@ -28,6 +28,7 @@ class MailService:
         self.email_receiver = email_receiver
         #TODO CHANGE TO CORRECT EMAIL ONCE SET UP BY BBMRI
         self.email_sender = "test@example.com"
+        self._scheduler = schedule.Scheduler()
 
     def send_message(self,subject: str, body: str):
         message = MIMEMultipart()
@@ -61,14 +62,15 @@ class MailService:
         return
 
     def __initialize_fresh_data_files_scheduler(self):
-        logger.info("Initializing scheduler....")
-        schedule.every().week.do(self.check_if_data_files_are_fresh)
-        logger.info("Scheduler initialized.")
+        logger.info("Initializing mail scheduler....")
+        self._scheduler.clear()
+        self._scheduler.every().week.do(self.check_if_data_files_are_fresh)
+        logger.info("Mail scheduler initialized.")
 
     def run_scheduler(self):
         self.__initialize_fresh_data_files_scheduler()
-        logger.info("Running Scheduler.")
+        logger.info("Running mail scheduler.")
         while True:
-            schedule.run_pending()
+            self._scheduler.run_pending()
             time.sleep(1)
 
