@@ -1,36 +1,23 @@
 import {
   validatePassword,
   getPasswordRequirementsDescription,
-  resetClientCache,
 } from "../password-validation";
-
-// Mock fetch for client-side tests
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
 
 // Mock environment variables for consistent testing
 const originalEnv = process.env;
 
 beforeEach(() => {
   jest.resetModules();
-  jest.clearAllMocks();
-
-  // Reset the client cache to prevent test interference
-  resetClientCache();
-
-  // Mock fetch to return the expected password configuration
-  mockFetch.mockResolvedValue({
-    ok: true,
-    json: async () => ({
-      minLength: 8,
-      maxLength: 128,
-      requireUppercase: true,
-      requireLowercase: true,
-      requireNumbers: true,
-      requireSpecialChars: true,
-      specialChars: "!@#$%^&*()_+-=[]{}|;:,.<>?",
-    }),
-  });
+  process.env = {
+    ...originalEnv,
+    NEXT_PUBLIC_PASSWORD_MIN_LENGTH: "8", // NOSONAR
+    NEXT_PUBLIC_PASSWORD_MAX_LENGTH: "128", // NOSONAR
+    NEXT_PUBLIC_PASSWORD_REQUIRE_UPPERCASE: "true", // NOSONAR
+    NEXT_PUBLIC_PASSWORD_REQUIRE_LOWERCASE: "true", // NOSONAR
+    NEXT_PUBLIC_PASSWORD_REQUIRE_NUMBERS: "true", // NOSONAR
+    NEXT_PUBLIC_PASSWORD_REQUIRE_SPECIAL_CHARS: "true", // NOSONAR
+    NEXT_PUBLIC_PASSWORD_SPECIAL_CHARS: "!@#$%^&*()_+-=[]{}|;:,.<>?", // NOSONAR
+  };
 });
 
 afterAll(() => {
@@ -38,16 +25,16 @@ afterAll(() => {
 });
 
 describe("validatePassword", () => {
-  it("should return valid for a strong password", async () => {
-    const result = await validatePassword("StrongPass123!"); // NOSONAR
+  it("should return valid for a strong password", () => {
+    const result = validatePassword("StrongPass123!"); // NOSONAR
 
     expect(result.isValid).toBe(true);
     expect(result.errors).toHaveLength(0);
     expect(result.requirements).toBeDefined();
   });
 
-  it("should reject password that is too short", async () => {
-    const result = await validatePassword("Short1!"); // NOSONAR
+  it("should reject password that is too short", () => {
+    const result = validatePassword("Short1!"); // NOSONAR
 
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
@@ -55,8 +42,8 @@ describe("validatePassword", () => {
     );
   });
 
-  it("should reject password without uppercase letter", async () => {
-    const result = await validatePassword("lowercase123!"); // NOSONAR
+  it("should reject password without uppercase letter", () => {
+    const result = validatePassword("lowercase123!"); // NOSONAR
 
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
@@ -64,8 +51,8 @@ describe("validatePassword", () => {
     );
   });
 
-  it("should reject password without lowercase letter", async () => {
-    const result = await validatePassword("UPPERCASE123!"); // NOSONAR
+  it("should reject password without lowercase letter", () => {
+    const result = validatePassword("UPPERCASE123!"); // NOSONAR
 
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
@@ -73,8 +60,8 @@ describe("validatePassword", () => {
     );
   });
 
-  it("should reject password without numbers", async () => {
-    const result = await validatePassword("PasswordNoNumbers!"); // NOSONAR
+  it("should reject password without numbers", () => {
+    const result = validatePassword("PasswordNoNumbers!"); // NOSONAR
 
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
@@ -82,8 +69,8 @@ describe("validatePassword", () => {
     );
   });
 
-  it("should reject password without special characters", async () => {
-    const result = await validatePassword("PasswordWithNumbers123"); // NOSONAR
+  it("should reject password without special characters", () => {
+    const result = validatePassword("PasswordWithNumbers123"); // NOSONAR
 
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
@@ -91,9 +78,9 @@ describe("validatePassword", () => {
     );
   });
 
-  it("should reject password that is too long", async () => {
+  it("should reject password that is too long", () => {
     const longPassword = "A".repeat(130) + "1!"; // NOSONAR
-    const result = await validatePassword(longPassword); // NOSONAR
+    const result = validatePassword(longPassword); // NOSONAR
 
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
@@ -101,8 +88,8 @@ describe("validatePassword", () => {
     );
   });
 
-  it("should accumulate multiple errors", async () => {
-    const result = await validatePassword("weak"); // NOSONAR
+  it("should accumulate multiple errors", () => {
+    const result = validatePassword("weak"); // NOSONAR
 
     expect(result.isValid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(1);
@@ -120,22 +107,16 @@ describe("validatePassword", () => {
     );
   });
 
-  it("should work with different environment configurations", async () => {
-    // Mock fetch to return the updated configuration
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        minLength: 6,
-        maxLength: 128,
-        requireUppercase: false,
-        requireLowercase: true,
-        requireNumbers: true,
-        requireSpecialChars: false,
-        specialChars: "!@#$%^&*()_+-=[]{}|;:,.<>?",
-      }),
-    });
+  it("should work with different environment configurations", () => {
+    // Test with less strict requirements
+    process.env.NEXT_PUBLIC_PASSWORD_MIN_LENGTH = "6"; // NOSONAR
+    process.env.NEXT_PUBLIC_PASSWORD_REQUIRE_UPPERCASE = "false"; // NOSONAR
+    process.env.NEXT_PUBLIC_PASSWORD_REQUIRE_SPECIAL_CHARS = "false"; // NOSONAR
 
-    const result = await validatePassword("simple123"); // NOSONAR
+    // Re-import to get new env values
+    jest.resetModules();
+
+    const result = validatePassword("simple123"); // NOSONAR
 
     expect(result.isValid).toBe(true);
     expect(result.errors).toHaveLength(0);
@@ -143,8 +124,8 @@ describe("validatePassword", () => {
 });
 
 describe("getPasswordRequirementsDescription", () => {
-  it("should generate correct description for default requirements", async () => {
-    const description = await getPasswordRequirementsDescription();
+  it("should generate correct description for default requirements", () => {
+    const description = getPasswordRequirementsDescription();
 
     expect(description).toContain("8-128 characters");
     expect(description).toContain("uppercase letter");
@@ -153,22 +134,15 @@ describe("getPasswordRequirementsDescription", () => {
     expect(description).toContain("special character");
   });
 
-  it("should generate simpler description when only length is required", async () => {
-    // Mock fetch to return the updated configuration
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        minLength: 8,
-        maxLength: 128,
-        requireUppercase: false,
-        requireLowercase: false,
-        requireNumbers: false,
-        requireSpecialChars: false,
-        specialChars: "!@#$%^&*()_+-=[]{}|;:,.<>?",
-      }),
-    });
+  it("should generate simpler description when only length is required", () => {
+    process.env.NEXT_PUBLIC_PASSWORD_REQUIRE_UPPERCASE = "false"; // NOSONAR
+    process.env.NEXT_PUBLIC_PASSWORD_REQUIRE_LOWERCASE = "false"; // NOSONAR
+    process.env.NEXT_PUBLIC_PASSWORD_REQUIRE_NUMBERS = "false"; // NOSONAR
+    process.env.NEXT_PUBLIC_PASSWORD_REQUIRE_SPECIAL_CHARS = "false"; // NOSONAR
 
-    const description = await getPasswordRequirementsDescription();
+    jest.resetModules();
+
+    const description = getPasswordRequirementsDescription();
 
     expect(description).toBe("Password must be 8-128 characters");
   });
