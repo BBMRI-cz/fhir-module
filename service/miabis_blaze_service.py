@@ -98,7 +98,7 @@ class MiabisBlazeService(BlazeServiceInterface):
             
             if self.metrics:
                 self.metrics.set_sync_phase(4)  # Phase 4: Specimens (skipping 3 as MIABIS handles conditions differently)
-            samp_summary, condition_summary = self.upload_samples()
+            samp_summary = self.upload_samples()
 
             if self.metrics:
                 self.metrics.set_metric('last_sync_timestamp', time.time())
@@ -106,7 +106,6 @@ class MiabisBlazeService(BlazeServiceInterface):
             sync_summary_obj = {
                 'patients': pat_summary,
                 'specimens': samp_summary,
-                'conditions': condition_summary,
                 'biobank': biobank_summary,
                 'collections': collection_summary,
                 'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
@@ -121,7 +120,6 @@ class MiabisBlazeService(BlazeServiceInterface):
             sync_summary_obj = {
                 'patients': pat_summary,
                 'specimens': samp_summary,
-                'conditions': condition_summary,
                 'biobank': biobank_summary,
                 'collections': collection_summary,
                 'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
@@ -289,19 +287,16 @@ class MiabisBlazeService(BlazeServiceInterface):
 
     def upload_samples(self):
         logger.info("MIABIS on FHIR: Starting upload of samples...")
-        processed_samples = 0
-        failed_samples = 0
-        skipped_samples = 0
-
-        processed_conditions = 0
-        failed_conditions = 0
-        skipped_conditions = 0
+        processed = 0
+        failed = 0
+        skipped = 0
+        
         collection_with_new_samples_map = {}
         for sample in self.sample_service.get_all():
             if not isinstance(sample, SampleMiabis):
                 logger.error(f"MIABIS on FHIR: sample is not instance of MIABIS on FHIR model, "
                              f"but rather its type is {type(sample)}. Skipping....")
-                skipped_samples += 1
+                skipped += 1
                 if self.metrics:
                     self.metrics.increment_sync_progress('specimens')
                 continue
@@ -321,22 +316,16 @@ class MiabisBlazeService(BlazeServiceInterface):
                             logger.debug(
                                 f"MIABIS on FHIR: Condition for patient : {sample.donor_identifier} is not present. Uploading new condition")
 
-                            try:
-                                self.blaze_client.upload_condition(sample.condition)
-                                processed_conditions += 1
-                            except Exception as e:
-                                logger.error(f"MIABIS on FHIR: Error uploading condition {sample.condition.icd_10_code}: {e}")
-                                failed_conditions += 1
+                            self.blaze_client.upload_condition(sample.condition)
                             logger.debug(f"MIABIS on FHIR: Succesfully uploaded new Condition")
                         else:
-                            skipped_conditions += 1
                             condition_fhir_id = self.blaze_client.get_condition_by_patient_fhir_id(patient_fhir_id)
                             self.blaze_client.add_diagnoses_to_condition(condition_fhir_id, sample_fhir_id)
                         if sample.sample_collection_id is not None:
                             collection_with_new_samples_map.setdefault(sample.sample_collection_id, []).append(
                                 sample_fhir_id)
 
-                        processed_samples += 1
+                        processed += 1
                 else:
                     logger.debug(f"MIABIS on FHIR: sample with id {sample.identifier}  is already present in the blaze store. Checking if the data of sample are same.")
                     sample_fhir_id = self.blaze_client.get_fhir_id("Specimen",sample.identifier)
@@ -352,12 +341,12 @@ class MiabisBlazeService(BlazeServiceInterface):
                             collection_with_new_samples_map.setdefault(sample.sample_collection_id, []).append(
                                 sample_fhir_id)
 
-                        processed_samples += 1
+                        processed += 1
                     else:
-                        skipped_samples += 1
+                        skipped += 1
             except (NonExistentResourceException, HTTPError) as err:
                 logger.error(f"MIABIS on FHIR: {err}")
-                failed_samples += 1
+                failed += 1
             
             if self.metrics:
                 self.metrics.increment_sync_progress('specimens')
@@ -372,8 +361,8 @@ class MiabisBlazeService(BlazeServiceInterface):
             else:
                 logger.info(f"MIABIS on FHIR: Collection {collection_id}  was not updated.")
         logger.info(f"MIABIS on FHIR: upload of samples is done.")
-        logger.info(f"MIABIS on FHIR: Samples sync complete: {processed_samples} processed, {failed_samples} failed, {skipped_samples} skipped")
-        return {'processed': processed_samples, 'failed': failed_samples, 'skipped': skipped_samples}, {'processed': processed_conditions, 'failed': failed_conditions, 'skipped': skipped_conditions}
+        logger.info(f"MIABIS on FHIR: Samples sync complete: {processed} processed, {failed} failed, {skipped} skipped")
+        return {'processed': processed, 'failed': failed, 'skipped': skipped}
 
     def delete_everything(self):
         """Just as name says.DELETES EVERYTHING!!!"""

@@ -172,7 +172,7 @@ class TestMiabisBlazeServiceMetrics(unittest.TestCase):
         self.mock_blaze_client.get_fhir_id.side_effect = ["patient_fhir_id", "collection_fhir_id"]
         self.mock_blaze_client.add_already_present_samples_to_existing_collection.return_value = True
         
-        result, _ = self.miabis_service.upload_samples()
+        result = self.miabis_service.upload_samples()
         
         self.assertEqual(result, {'processed': 1, 'failed': 0, 'skipped': 0})
 
@@ -181,7 +181,7 @@ class TestMiabisBlazeServiceMetrics(unittest.TestCase):
         invalid_sample = "not_a_sample_object"
         self.mock_sample_service.get_all.return_value = [invalid_sample]
         
-        result, _ = self.miabis_service.upload_samples()
+        result = self.miabis_service.upload_samples()
         
         self.assertEqual(result, {'processed': 0, 'failed': 0, 'skipped': 1})
 
@@ -209,7 +209,7 @@ class TestMiabisBlazeServiceMetrics(unittest.TestCase):
         )
         self.mock_blaze_client.build_sample_from_json.return_value = same_sample
         
-        result, _ = self.miabis_service.upload_samples()
+        result = self.miabis_service.upload_samples()
         
         self.assertEqual(result, {'processed': 0, 'failed': 0, 'skipped': 1})
 
@@ -238,7 +238,7 @@ class TestMiabisBlazeServiceMetrics(unittest.TestCase):
         self.mock_blaze_client.build_sample_from_json.return_value = different_sample
         self.mock_blaze_client.update_sample.return_value = "updated_sample_fhir_id"
         
-        result, _ = self.miabis_service.upload_samples()
+        result = self.miabis_service.upload_samples()
         
         self.assertEqual(result, {'processed': 1, 'failed': 0, 'skipped': 0})
 
@@ -254,7 +254,7 @@ class TestMiabisBlazeServiceMetrics(unittest.TestCase):
         
         self.mock_blaze_client.is_resource_present_in_blaze.side_effect = NonExistentResourceException("Resource not found")
         
-        result, _ = self.miabis_service.upload_samples()
+        result = self.miabis_service.upload_samples()
         
         self.assertEqual(result, {'processed': 0, 'failed': 1, 'skipped': 0})
 
