@@ -21,12 +21,6 @@ services:
       PYTHONWARNINGS: "ignore:Unverified HTTPS request"
     env_file:
       - .env
-    command:
-      [
-        "/bin/sh",
-        "-c",
-        "chmod 666 /opt/fhir-module/util/shared_config.json && /usr/local/bin/startup.sh",
-      ]
     volumes:
       - type: bind
         source: "test/xml_data"
@@ -34,9 +28,7 @@ services:
       - type: bind
         source: "test"
         target: "/opt/test"
-      - type: bind
-        source: "./util/shared_config.json"
-        target: "/opt/fhir-module/util/shared_config.json"
+      - shared-config:/opt/fhir-module/util
       - fhir-logs:/var/log/fhir-module
       - ui-data:/app/data
       - config-snapshots:/opt/config-snapshots
@@ -137,3 +129,4 @@ volumes:
   fhir-logs:
   ui-data:
   config-snapshots:
+  shared-config:
