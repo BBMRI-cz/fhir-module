@@ -398,7 +398,7 @@ export default function ExtractValuesDialog({
                 Extract Values
                 {selectedPaths.length > 0 &&
                   ` (${selectedPaths.length} path${
-                    selectedPaths.length !== 1 ? "s" : ""
+                    selectedPaths.length === 1 ? "" : "s"
                   })`}
               </>
             )}

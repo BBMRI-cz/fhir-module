@@ -85,18 +85,11 @@ export function ManualJsonTab(props: ManualJsonTabProps) {
         </div>
         <div className="flex-1 p-4 overflow-y-auto">
           <div className="space-y-2">
-            {(Object.entries({}) as [string, { required: boolean }][]).map(
-              ([field, info]) => (
-                <div key={field} className="p-2 border rounded text-sm">
-                  <div className="font-mono font-medium">
-                    {field}
-                    {info.required && (
-                      <span className="text-red-500 ml-1">* Required</span>
-                    )}
-                  </div>
-                </div>
-              )
-            )}
+            {Object.entries({}).map(([field]) => (
+              <div key={field} className="p-2 border rounded text-sm">
+                <div className="font-mono font-medium">{field}</div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

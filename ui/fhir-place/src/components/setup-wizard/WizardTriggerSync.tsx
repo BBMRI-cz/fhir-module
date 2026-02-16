@@ -53,6 +53,8 @@ export default function WizardTriggerSync() {
   }, [syncDone, configSaved]);
 
   const saveConfigurationOnly = async () => {
+    if (!dataFormat) return;
+
     setHasStartedAction(true);
     setIsSavingConfig(true);
     setConfigSaveError(null);
@@ -60,8 +62,8 @@ export default function WizardTriggerSync() {
 
     const result = await writeAndSynchronize(
       wizardState,
-      dataFormat!,
-      dataFolderPath!,
+      dataFormat,
+      dataFolderPath,
       csvSeparator
     );
 
@@ -78,14 +80,16 @@ export default function WizardTriggerSync() {
   };
 
   const performTheChangeAndSync = async () => {
+    if (!dataFormat) return;
+
     setHasStartedAction(true);
     setConfigSaved(false);
     setConfigSaveError(null);
 
     const result = await writeAndSynchronize(
       wizardState,
-      dataFormat!,
-      dataFolderPath!,
+      dataFormat,
+      dataFolderPath,
       csvSeparator
     );
 
@@ -154,7 +158,7 @@ export default function WizardTriggerSync() {
             </div>
 
             {/* Sync Progress Display */}
-            <SyncProgressDisplay />
+            <SyncProgressDisplay syncTargets={wizardState.syncTarget ? [wizardState.syncTarget] : []} />
 
             {/* Completion Status */}
             {syncDone && (

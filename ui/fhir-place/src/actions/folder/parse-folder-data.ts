@@ -1,7 +1,7 @@
 "use server";
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import {
   MAX_FILES_TO_SCAN,
   MAX_FILES_FOR_SCHEMA,
@@ -176,6 +176,99 @@ function readFirstDataFile(folderPath: string): {
   );
 }
 
+interface CandidateFile {
+  name: string;
+  ext: string;
+}
+
+/**
+ * Scan the directory and collect candidate file names filtered by extension.
+ * All returned files share the same extension (the first supported one found).
+ */
+function scanDirectoryForCandidates(
+  folderPath: string,
+  maxFiles: number,
+): CandidateFile[] {
+  const dir = fs.opendirSync(folderPath);
+  const candidates: CandidateFile[] = [];
+  let scannedCount = 0;
+  let targetExt: string | null = null;
+
+  try {
+    let dirent: fs.Dirent | null;
+    while ((dirent = dir.readSync()) !== null) {
+      if (scannedCount >= MAX_FILES_TO_SCAN) break;
+      scannedCount++;
+      if (candidates.length >= maxFiles) break;
+
+      const ext = path.extname(dirent.name).toLowerCase();
+      if (!SUPPORTED_EXTENSIONS.includes(ext)) continue;
+
+      if (targetExt === null) {
+        targetExt = ext;
+      } else if (ext !== targetExt) {
+        continue;
+      }
+
+      candidates.push({ name: dirent.name, ext });
+    }
+  } finally {
+    dir.closeSync();
+  }
+
+  return candidates;
+}
+
+/** Resolve and validate that a file path stays within the allowed directory. */
+function resolveValidFilePath(
+  fileName: string,
+  folderPath: string,
+  normalizedPath: string,
+): string | null {
+  const filePath = path.join(folderPath, fileName);
+  try {
+    const realFilePath = fs.realpathSync(filePath);
+    if (getCommonPath(normalizedPath, realFilePath) !== normalizedPath)
+      return null;
+    return realFilePath;
+  } catch {
+    return null;
+  }
+}
+
+/** Read validated candidate files, respecting the cumulative size budget. */
+function readValidatedFiles(
+  candidates: CandidateFile[],
+  folderPath: string,
+  normalizedPath: string,
+): DataFileInfo[] {
+  const files: DataFileInfo[] = [];
+  let totalBytesRead = 0;
+
+  for (const candidate of candidates) {
+    const realFilePath = resolveValidFilePath(
+      candidate.name,
+      folderPath,
+      normalizedPath,
+    );
+    if (!realFilePath) continue;
+
+    try {
+      const stats = fs.statSync(realFilePath);
+      if (!stats.isFile()) continue;
+      if (totalBytesRead + stats.size > MAX_TOTAL_READ_BYTES) break;
+
+      const content = fs.readFileSync(realFilePath, "utf-8");
+      totalBytesRead += stats.size;
+      files.push({ content, name: candidate.name, ext: candidate.ext });
+    } catch {
+      continue;
+    }
+  }
+
+  return files;
+}
+
 /**
  * Find and read supported data files from a folder.
  * Uses opendirSync to iterate without loading all entries into memory.
@@ -190,95 +283,23 @@ function readFirstDataFile(folderPath: string): {
  */
 function readMultipleDataFiles(
   folderPath: string,
-  maxFiles: number = MAX_FILES_TO_SCAN
+  maxFiles: number = MAX_FILES_TO_SCAN,
 ): DataFileInfo[] {
   const safeRootReal = fs.realpathSync(SAFE_ROOT_FOLDER);
   const normalizedPath = fs.realpathSync(folderPath);
 
-  const folderCommonPath = getCommonPath(safeRootReal, normalizedPath);
-  if (folderCommonPath !== safeRootReal) {
+  if (getCommonPath(safeRootReal, normalizedPath) !== safeRootReal) {
     throw new Error(ACCESS_NOT_ALLOWED_ERROR);
   }
 
-  let dir: fs.Dir;
+  let candidates: CandidateFile[];
   try {
-    dir = fs.opendirSync(folderPath);
+    candidates = scanDirectoryForCandidates(folderPath, maxFiles);
   } catch {
     throw new Error("Permission denied accessing folder");
   }
 
-  const files: DataFileInfo[] = [];
-  let scannedCount = 0;
-  let totalBytesRead = 0;
-  let targetExt: string | null = null;
-
-  try {
-    let dirent: fs.Dirent | null;
-    while ((dirent = dir.readSync()) !== null) {
-      if (scannedCount >= MAX_FILES_TO_SCAN) {
-        break;
-      }
-      scannedCount++;
-
-      // Stop collecting once we have enough files
-      if (files.length >= maxFiles) {
-        break;
-      }
-
-      const fileName = dirent.name;
-      const ext = path.extname(fileName).toLowerCase();
-      if (!SUPPORTED_EXTENSIONS.includes(ext)) {
-        continue;
-      }
-
-      // Only collect files of the same type as the first found
-      if (targetExt === null) {
-        targetExt = ext;
-      } else if (ext !== targetExt) {
-        continue;
-      }
-
-      const filePath = path.join(folderPath, fileName);
-      let realFilePath: string;
-
-      try {
-        realFilePath = fs.realpathSync(filePath);
-      } catch {
-        continue;
-      }
-
-      const fileCommonPath = getCommonPath(normalizedPath, realFilePath);
-      if (fileCommonPath !== normalizedPath) {
-        continue;
-      }
-
-      try {
-        const stats = fs.statSync(realFilePath);
-        if (!stats.isFile()) {
-          continue;
-        }
-
-        // Stop if this file would push us over the cumulative memory budget
-        if (totalBytesRead + stats.size > MAX_TOTAL_READ_BYTES) {
-          break;
-        }
-
-        const content = fs.readFileSync(realFilePath, "utf-8");
-        totalBytesRead += stats.size;
-        files.push({
-          content,
-          name: fileName,
-          ext: ext,
-        });
-      } catch {
-        continue;
-      }
-    }
-  } finally {
-    dir.closeSync();
-  }
-
-  return files;
+  return readValidatedFiles(candidates, folderPath, normalizedPath);
 }
 
 /**
@@ -286,11 +307,11 @@ function readMultipleDataFiles(
  */
 function escapeHtml(text: string): string {
   return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 /**

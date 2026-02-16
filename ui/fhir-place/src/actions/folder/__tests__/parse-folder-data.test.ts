@@ -1,5 +1,5 @@
 import { parseFolderData } from "../parse-folder-data";
-import * as fs from "fs";
+import * as fs from "node:fs";
 
 jest.mock("fs", () => ({
   ...jest.requireActual("fs"),
@@ -31,7 +31,7 @@ jest.mock("path", () => ({
   sep: "/",
   join: (...args: string[]) => args.join("/"),
   extname: (p: string) => {
-    const match = p.match(/\.[^.]+$/);
+    const match = /\.[^.]+$/.exec(p);
     return match ? match[0] : "";
   },
 }));

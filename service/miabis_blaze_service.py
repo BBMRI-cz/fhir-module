@@ -74,10 +74,9 @@ class MiabisBlazeService(BlazeServiceInterface):
             logger.warning("MIABIS on FHIR: Sync already in progress, skipping duplicate invocation.")
             return
 
-        if self.metrics:
-            self.metrics.start_sync()
-        
         try:
+            if self.metrics:
+                self.metrics.start_sync()
             if not self._refresh_services():
                 error_msg = "MIABIS sync failed: Mapping files are misconfigured. Please check your parsing map configuration."
                 sync_logger.error(error_msg)

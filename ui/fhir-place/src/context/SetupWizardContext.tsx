@@ -257,7 +257,7 @@ export function SetupWizardContextProvider({
       const fileTypeMap = files.reduce((acc, file) => {
         const extension = file.split(".").pop()?.toLowerCase();
         if (extension && isDataFormat(extension)) {
-          acc[extension as DataFormat] = (acc[extension as DataFormat] || 0) + 1;
+          acc[extension] = (acc[extension] || 0) + 1;
         }
         return acc;
       }, {} as Record<DataFormat, number>);
