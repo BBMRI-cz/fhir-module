@@ -399,9 +399,9 @@ def __validate_test_records_path(test_records_path: str, errors: dict[str, list[
     
     try:
         test_files = []
-        for entry in os.scandir(test_records_path):
-            if entry.is_file():
-                test_files.append(entry.name)
+        for f in os.listdir(test_records_path):
+            if os.path.isfile(os.path.join(test_records_path, f)):
+                test_files.append(f)
                 if len(test_files) >= 100:
                     break
     except Exception as e:

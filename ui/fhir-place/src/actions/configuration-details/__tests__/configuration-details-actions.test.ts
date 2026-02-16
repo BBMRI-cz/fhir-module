@@ -5,17 +5,17 @@ import {
   getTemperatureValues,
   parseDataFromFolder,
 } from "@/actions/configuration-details/configuration-details-actions";
-import { parseMultipleFolderData } from "@/actions/folder/parse-folder-data";
+import { parseFolderData } from "@/actions/folder/parse-folder-data";
 
 // Mock fetch globally
 globalThis.fetch = jest.fn();
 
-// Mock parseMultipleFolderData (which is what parseDataFromFolder uses internally)
+// Mock parseFolderData
 jest.mock("@/actions/folder/parse-folder-data", () => ({
-  parseMultipleFolderData: jest.fn(),
+  parseFolderData: jest.fn(),
 }));
-const mockParseMultipleFolderData = parseMultipleFolderData as jest.MockedFunction<
-  typeof parseMultipleFolderData
+const mockParseFolderData = parseFolderData as jest.MockedFunction<
+  typeof parseFolderData
 >;
 
 describe("configuration-details-actions", () => {
@@ -164,11 +164,12 @@ describe("configuration-details-actions", () => {
 
   describe("parseDataFromFolder", () => {
     it("should parse JSON file successfully", async () => {
-      mockParseMultipleFolderData.mockResolvedValue({
+      mockParseFolderData.mockResolvedValue({
         success: true,
         message: "OK",
-        files: [{ content: '{"name": "John", "age": 30}', name: "data.json", ext: ".json" }],
+        fileContent: '{"name": "John", "age": 30}',
         fileExtension: ".json",
+        fileName: "data.json",
       });
 
       const result = await parseDataFromFolder("/test/path");
@@ -179,11 +180,12 @@ describe("configuration-details-actions", () => {
     });
 
     it("should parse CSV file successfully", async () => {
-      mockParseMultipleFolderData.mockResolvedValue({
+      mockParseFolderData.mockResolvedValue({
         success: true,
         message: "OK",
-        files: [{ content: "name,age\nJohn,30\nJane,25", name: "data.csv", ext: ".csv" }],
+        fileContent: "name,age\nJohn,30\nJane,25",
         fileExtension: ".csv",
+        fileName: "data.csv",
       });
 
       const result = await parseDataFromFolder("/test/path");
@@ -194,11 +196,12 @@ describe("configuration-details-actions", () => {
     });
 
     it("should parse XML file successfully", async () => {
-      mockParseMultipleFolderData.mockResolvedValue({
+      mockParseFolderData.mockResolvedValue({
         success: true,
         message: "OK",
-        files: [{ content: "<person><name>John</name><age>30</age></person>", name: "data.xml", ext: ".xml" }],
+        fileContent: "<person><name>John</name><age>30</age></person>",
         fileExtension: ".xml",
+        fileName: "data.xml",
       });
 
       const result = await parseDataFromFolder("/test/path");
@@ -208,24 +211,24 @@ describe("configuration-details-actions", () => {
     });
 
     it("should handle unsupported file types", async () => {
-      mockParseMultipleFolderData.mockResolvedValue({
+      mockParseFolderData.mockResolvedValue({
         success: true,
         message: "OK",
-        files: [{ content: "some content", name: "data.txt", ext: ".txt" }],
+        fileContent: "some content",
         fileExtension: ".txt",
+        fileName: "data.txt",
       });
 
       const result = await parseDataFromFolder("/test/path");
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain("No fields could be parsed");
+      expect(result.message).toContain("Unsupported file type");
     });
 
     it("should handle folder not found errors", async () => {
-      mockParseMultipleFolderData.mockResolvedValue({
+      mockParseFolderData.mockResolvedValue({
         success: false,
         message: "Folder not found",
-        files: [],
       });
 
       const result = await parseDataFromFolder("/nonexistent");
@@ -237,7 +240,7 @@ describe("configuration-details-actions", () => {
     it("should handle parseFolderData errors", async () => {
       const consoleSpy = jest.spyOn(console, "error").mockImplementation();
 
-      mockParseMultipleFolderData.mockRejectedValue(new Error("File system error"));
+      mockParseFolderData.mockRejectedValue(new Error("File system error"));
 
       const result = await parseDataFromFolder("/test/path");
 
@@ -248,21 +251,18 @@ describe("configuration-details-actions", () => {
     });
 
     it("should handle JSON parsing errors", async () => {
-      const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
-
-      mockParseMultipleFolderData.mockResolvedValue({
+      mockParseFolderData.mockResolvedValue({
         success: true,
         message: "OK",
-        files: [{ content: "invalid json {", name: "bad.json", ext: ".json" }],
+        fileContent: "invalid json {",
         fileExtension: ".json",
+        fileName: "bad.json",
       });
 
       const result = await parseDataFromFolder("/test/path");
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain("No fields could be parsed");
-
-      consoleSpy.mockRestore();
+      expect(result.message).toContain("Error parsing");
     });
   });
 });

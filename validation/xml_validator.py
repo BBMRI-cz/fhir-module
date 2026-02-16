@@ -9,7 +9,7 @@ from exception.nonexistent_attribute_parsing_map import NonexistentAttributePars
 from exception.wrong_parsing_map import WrongParsingMapException
 from persistence.xml_util import parse_xml_file
 from util.custom_logger import setup_logger
-from validation.validator import Validator, MAX_FILES_TO_SCAN
+from validation.validator import Validator
 
 setup_logger()
 logger = logging.getLogger()
@@ -25,15 +25,9 @@ class XMLValidator(Validator):
     def _validate_files_present(self, file_type: str) -> bool:
         """this method validates if files with correct format are provided inside the specified directory. """
         dir_entry: os.DirEntry
-        files_scanned = 0
-        
         for dir_entry in os.scandir(self._dir_path):
             if dir_entry.name.lower().endswith("." + file_type):
                 return True
-            files_scanned += 1
-            if files_scanned > MAX_FILES_TO_SCAN:
-                break
-                
         error_message = "No XML files are provided for data transformation. Please check that you provided correct directory in RECORDS_DIR_PATH variable."
         logger.error(error_message)
         raise NoFilesProvidedException(error_message)

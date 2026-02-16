@@ -51,25 +51,29 @@ class SampleDonorRepository(abc.ABC):
         all_errors: list[str] = []
         
         ext, validation_method = self._get_supported_extensions()
-        files_to_validate = []
-        max_files = MAX_VALIDATION_FILES if validate_all else 1
         
         with os.scandir(self._dir_path) as entries:
-            for entry in entries:
-                if entry.name.lower().endswith(ext):
+            if validate_all:
+                files_to_validate = []
+                count = 0
+                for entry in entries:
                     files_to_validate.append(entry)
-                    if len(files_to_validate) >= max_files:
+                    count += 1
+                    if count >= MAX_VALIDATION_FILES:
                         break
+            else:
+                files_to_validate = [next(entries, None)]
         
-        if not files_to_validate:
-            error_message = f"No {ext} files found in directory {self._dir_path}"
+        if not files_to_validate or files_to_validate[0] is None:
+            error_message = f"No files found in directory {self._dir_path}"
             return [error_message]
         
         for file_entry in files_to_validate:
-            try:
-                errors = validation_method(file_entry)
-                all_errors.extend(errors)
-            except Exception as e:
-                all_errors.append(f"Error validating file {file_entry.name}: {str(e)}")
+            if file_entry and file_entry.name.lower().endswith(ext):
+                try:
+                    errors = validation_method(file_entry)
+                    all_errors.extend(errors)
+                except Exception as e:
+                    all_errors.append(f"Error validating file {file_entry.name}: {str(e)}")
         
         return all_errors

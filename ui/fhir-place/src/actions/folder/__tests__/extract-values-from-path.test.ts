@@ -4,16 +4,9 @@ import {
 } from "../extract-values-from-path";
 import * as fs from "fs";
 
-// Mock the fs module with specific implementations
-jest.mock("fs", () => ({
-  ...jest.requireActual("fs"),
-  realpathSync: jest.fn(),
-  existsSync: jest.fn(),
-  statSync: jest.fn(),
-  opendirSync: jest.fn(),
-  readFileSync: jest.fn(),
-}));
-const mockFs = fs as jest.Mocked<typeof fs>;
+// Mock the fs module
+jest.mock("fs");
+const mockFs = jest.mocked(fs);
 
 // Mock path.sep for cross-platform compatibility
 jest.mock("path", () => ({
@@ -26,23 +19,9 @@ jest.mock("path", () => ({
   },
 }));
 
-// Helper to create a mock Dir object for opendirSync
-function createMockDir(files: string[]) {
-  let index = 0;
-  return {
-    readSync: jest.fn(() => {
-      if (index < files.length) {
-        return { name: files[index++] };
-      }
-      return null;
-    }),
-    closeSync: jest.fn(),
-  };
-}
-
-// Helper to mock opendirSync - replaces the old mockReadDir
+// Helper to mock readdirSync - it returns string[] when withFileTypes is not used
 const mockReadDir = (files: string[]) => {
-  (mockFs.opendirSync as jest.Mock).mockReturnValue(createMockDir(files));
+  (mockFs.readdirSync as jest.Mock).mockReturnValue(files);
 };
 
 describe("extractValuesFromPaths", () => {
@@ -65,7 +44,7 @@ describe("extractValuesFromPaths", () => {
 
     mockFs.existsSync.mockReturnValue(true);
     mockFs.statSync.mockReturnValue({ isDirectory: () => true } as fs.Stats);
-    (mockFs.opendirSync as jest.Mock).mockReturnValue(createMockDir([]));
+    (mockFs.readdirSync as jest.Mock).mockReturnValue([]);
   });
 
   afterAll(() => {
@@ -178,7 +157,7 @@ describe("extractValuesFromPaths", () => {
       expect(result.message).toBe("No JSON files found in the folder");
     });
 
-    it("should return warning when more than MAX_FILES_TO_PROCESS files are found", async () => {
+    it("should return warning when more than 100 files are found", async () => {
       mockFs.realpathSync.mockImplementation((p: fs.PathLike) => {
         const pathStr = p.toString();
         if (pathStr === "./../.." || pathStr === "/opt") {
@@ -187,8 +166,8 @@ describe("extractValuesFromPaths", () => {
         return pathStr;
       });
 
-      // Create 1001 files (MAX_FILES_TO_PROCESS is 1000)
-      const files = Array.from({ length: 1001 }, (_, i) => `file${i}.json`);
+      // Create 150 files
+      const files = Array.from({ length: 150 }, (_, i) => `file${i}.json`);
       mockReadDir(files);
       mockFs.readFileSync.mockReturnValue('{"name": "test"}');
 
@@ -200,8 +179,8 @@ describe("extractValuesFromPaths", () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.warning).toContain("may contain more files");
-      expect(result.warning).toContain("1000 JSON files will be processed");
+      expect(result.warning).toContain("150 files");
+      expect(result.warning).toContain("100 files will be processed");
     });
   });
 

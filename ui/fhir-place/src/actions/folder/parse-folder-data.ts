@@ -2,7 +2,6 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { MAX_FILES_TO_SCAN, SUPPORTED_EXTENSIONS } from "@/lib/folder-constants";
 
 const SAFE_ROOT_FOLDER = process.env.ROOT_DIR || "./../../";
 
@@ -14,19 +13,6 @@ export interface ParseFolderResult {
   message: string;
   fileContent?: string;
   fileName?: string;
-  fileExtension?: string;
-}
-
-export interface DataFileInfo {
-  content: string;
-  name: string;
-  ext: string;
-}
-
-export interface ParseMultipleFilesResult {
-  success: boolean;
-  message: string;
-  files: DataFileInfo[];
   fileExtension?: string;
 }
 
@@ -88,10 +74,11 @@ function getCommonPath(path1: string, path2: string): string {
   return common.join(path.sep);
 }
 
+const MAX_FILES_TO_SCAN = 50;
+const SUPPORTED_EXTENSIONS = [".json", ".csv", ".xml"];
 
 /**
  * Find and read the first supported data file from a folder.
- * Uses opendirSync to iterate without loading all entries into memory.
  * Limited to scanning MAX_FILES_TO_SCAN files to prevent performance issues.
  */
 function readFirstDataFile(folderPath: string): {
@@ -107,61 +94,55 @@ function readFirstDataFile(folderPath: string): {
     throw new Error(ACCESS_NOT_ALLOWED_ERROR);
   }
 
-  let dir: fs.Dir;
+  let files: string[];
   try {
-    dir = fs.opendirSync(folderPath);
+    files = fs.readdirSync(folderPath);
   } catch {
     throw new Error("Permission denied accessing folder");
   }
 
   let scannedCount = 0;
 
-  try {
-    let dirent: fs.Dirent | null;
-    while ((dirent = dir.readSync()) !== null) {
-      if (scannedCount >= MAX_FILES_TO_SCAN) {
-        break;
-      }
-      scannedCount++;
-
-      const fileName = dirent.name;
-      const ext = path.extname(fileName).toLowerCase();
-      if (!SUPPORTED_EXTENSIONS.includes(ext)) {
-        continue;
-      }
-
-      const filePath = path.join(folderPath, fileName);
-      let realFilePath: string;
-
-      try {
-        realFilePath = fs.realpathSync(filePath);
-      } catch {
-        continue;
-      }
-
-      const fileCommonPath = getCommonPath(normalizedPath, realFilePath);
-      if (fileCommonPath !== normalizedPath) {
-        continue;
-      }
-
-      try {
-        const stats = fs.statSync(realFilePath);
-        if (!stats.isFile()) {
-          continue;
-        }
-
-        const content = fs.readFileSync(realFilePath, "utf-8");
-        return {
-          content,
-          name: fileName,
-          ext: ext,
-        };
-      } catch {
-        continue;
-      }
+  for (const fileName of files) {
+    if (scannedCount >= MAX_FILES_TO_SCAN) {
+      break;
     }
-  } finally {
-    dir.closeSync();
+    scannedCount++;
+
+    const ext = path.extname(fileName).toLowerCase();
+    if (!SUPPORTED_EXTENSIONS.includes(ext)) {
+      continue;
+    }
+
+    const filePath = path.join(folderPath, fileName);
+    let realFilePath: string;
+
+    try {
+      realFilePath = fs.realpathSync(filePath);
+    } catch {
+      continue;
+    }
+
+    const fileCommonPath = getCommonPath(normalizedPath, realFilePath);
+    if (fileCommonPath !== normalizedPath) {
+      continue;
+    }
+
+    try {
+      const stats = fs.statSync(realFilePath);
+      if (!stats.isFile()) {
+        continue;
+      }
+
+      const content = fs.readFileSync(realFilePath, "utf-8");
+      return {
+        content,
+        name: fileName,
+        ext: ext,
+      };
+    } catch {
+      continue;
+    }
   }
 
   throw new Error(
@@ -169,89 +150,6 @@ function readFirstDataFile(folderPath: string): {
       folderPath
     )}. Supported formats: JSON, CSV, XML`
   );
-}
-
-/**
- * Find and read up to MAX_FILES_TO_SCAN supported data files from a folder.
- * Uses opendirSync to iterate without loading all entries into memory.
- * All files must be of the same type (extension).
- */
-function readMultipleDataFiles(folderPath: string): DataFileInfo[] {
-  const safeRootReal = fs.realpathSync(SAFE_ROOT_FOLDER);
-  const normalizedPath = fs.realpathSync(folderPath);
-
-  const folderCommonPath = getCommonPath(safeRootReal, normalizedPath);
-  if (folderCommonPath !== safeRootReal) {
-    throw new Error(ACCESS_NOT_ALLOWED_ERROR);
-  }
-
-  let dir: fs.Dir;
-  try {
-    dir = fs.opendirSync(folderPath);
-  } catch {
-    throw new Error("Permission denied accessing folder");
-  }
-
-  const files: DataFileInfo[] = [];
-  let scannedCount = 0;
-  let targetExt: string | null = null;
-
-  try {
-    let dirent: fs.Dirent | null;
-    while ((dirent = dir.readSync()) !== null) {
-      if (scannedCount >= MAX_FILES_TO_SCAN) {
-        break;
-      }
-      scannedCount++;
-
-      const fileName = dirent.name;
-      const ext = path.extname(fileName).toLowerCase();
-      if (!SUPPORTED_EXTENSIONS.includes(ext)) {
-        continue;
-      }
-
-      // Only collect files of the same type as the first found
-      if (targetExt === null) {
-        targetExt = ext;
-      } else if (ext !== targetExt) {
-        continue;
-      }
-
-      const filePath = path.join(folderPath, fileName);
-      let realFilePath: string;
-
-      try {
-        realFilePath = fs.realpathSync(filePath);
-      } catch {
-        continue;
-      }
-
-      const fileCommonPath = getCommonPath(normalizedPath, realFilePath);
-      if (fileCommonPath !== normalizedPath) {
-        continue;
-      }
-
-      try {
-        const stats = fs.statSync(realFilePath);
-        if (!stats.isFile()) {
-          continue;
-        }
-
-        const content = fs.readFileSync(realFilePath, "utf-8");
-        files.push({
-          content,
-          name: fileName,
-          ext: ext,
-        });
-      } catch {
-        continue;
-      }
-    }
-  } finally {
-    dir.closeSync();
-  }
-
-  return files;
 }
 
 /**
@@ -291,45 +189,6 @@ export async function parseFolderData(
     return {
       success: false,
       message,
-    };
-  }
-}
-
-/**
- * Get file contents from multiple files in a folder for parsing.
- * Reads up to MAX_FILES_TO_SCAN files of the same type.
- */
-export async function parseMultipleFolderData(
-  folderPath: string
-): Promise<ParseMultipleFilesResult> {
-  try {
-    const validatedPath = validateFolderPath(folderPath);
-    const files = readMultipleDataFiles(validatedPath);
-
-    if (files.length === 0) {
-      return {
-        success: false,
-        message: `No supported data files found in ${escapeHtml(
-          folderPath
-        )}. Supported formats: JSON, CSV, XML`,
-        files: [],
-      };
-    }
-
-    return {
-      success: true,
-      message: `Successfully read ${files.length} file(s)`,
-      files,
-      fileExtension: files[0].ext,
-    };
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Internal server error";
-    console.error("Error in parseMultipleFolderData:", message);
-    return {
-      success: false,
-      message,
-      files: [],
     };
   }
 }
