@@ -43,7 +43,7 @@ class MiabisBlazeService(BlazeServiceInterface):
         self.sample_service = sample_service
         self.sample_collection_repository = sample_collection_repository
         self.biobank_repository = biobank_repository
-        self.metrics = get_metrics_for_service('miabis-blaze')
+        self.metrics = get_metrics_for_service('miabis_blaze')
         self._scheduler_thread = None
 
     def _refresh_services(self) -> bool:
@@ -308,9 +308,6 @@ class MiabisBlazeService(BlazeServiceInterface):
 
                         logger.debug(f"MIABIS on FHIR: Successfully uploaded sample with id {sample.identifier}")
                         patient_fhir_id = self.blaze_client.get_fhir_id("Patient", sample.donor_identifier)
-
-                        if self.metrics:
-                            self.metrics.increment_sync_progress('conditions')
                         if not self.blaze_client.is_resource_present_in_blaze("Condition", patient_fhir_id,
                                                                               "subject"):
                             logger.debug(
