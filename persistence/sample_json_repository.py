@@ -89,12 +89,12 @@ class SampleJsonRepository(SampleRepository):
 
                 # Sample map must be correct
                 except WrongSampleMapException:
-                    errors.append(f"File {dir_entry.name} - Given Sample map has a bad format, cannot parse the file")
+                    errors.append("Given Sample map has a bad format, cannot parse the file")
                     return errors
                 
                 # Format must be correct
                 except JSONDecodeError:
-                    errors.append(f"File {dir_entry.name} - does not have a correct JSON format. Exiting...")
+                    errors.append("Biobank file does not have a correct JSON format. Exiting...")
                     return errors
             
                 sample_index = 0  # Start from 0 for JSON array index
@@ -103,9 +103,9 @@ class SampleJsonRepository(SampleRepository):
                         _ = self.__build_sample(sample_json, is_validation=True)
                     except ExceptionGroup as eg:
                         for exc in eg.exceptions:
-                            errors.append(f"File {dir_entry.name} - Sample (index {sample_index}): {exc}")
+                            errors.append(f"Sample (index {sample_index}): {exc}")
                     except (ValueError, TypeError, KeyError) as err:
-                        errors.append(f"File {dir_entry.name} - Sample (index {sample_index}): {err}")
+                        errors.append(f"Sample (index {sample_index}): {err}")
                     finally:
                         sample_index += 1
 

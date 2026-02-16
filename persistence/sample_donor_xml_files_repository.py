@@ -69,13 +69,13 @@ class SampleDonorXMLFilesRepository(SampleDonorRepository):
             donor = self.__build_donor(contents, is_validation=True)
         except ExceptionGroup as eg:
             for exc in eg.exceptions:
-                errors.append(f"File {dir_entry.name} - Sample Donor: {exc}")
+                errors.append(f"Sample Donor: {exc}")
             return errors
         except WrongXMLFormatError:
-            errors.append(f"File {dir_entry.name} - Wrong XML format [Skipping...]")
+            errors.append(f"Wrong XML format of file: {dir_entry.name} [Skipping...]")
             return errors
         except (ValueError, TypeError, KeyError) as err:
-            errors.append(f"File {dir_entry.name} - Sample Donor: {err}")
+            errors.append(f"Sample Donor: {err}")
         if donor is not None and donor.identifier not in self._ids:
             self._ids.add(donor.identifier)
         return errors

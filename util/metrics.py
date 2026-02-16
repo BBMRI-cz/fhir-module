@@ -49,12 +49,6 @@ class MetricsService:
         except Exception as e:
             logger.error(f"Error setting sync progress: {e}")
     
-    def increment_sync_progress(self, resource_type: str) -> None:
-        try:
-            sync_progress_current.labels(service=self.service_name, resource_type=resource_type).inc()
-        except Exception as e:
-            logger.error(f"Error incrementing sync progress: {e}")
-    
     def reset_sync_progress(self) -> None:
         try:
             resource_types = ['organizations', 'patients', 'conditions', 'specimens', 'biobank', 'collections']

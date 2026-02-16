@@ -7,11 +7,10 @@ import logging
 from model.interface.sample_interface import SampleInterface
 from exception.wrong_parsing_map import WrongParsingMapException
 from util.custom_logger import setup_logger
-from util.config import get_records_dir_path, get_parsing_map, get_type_to_collection_map, get_storage_temp_map, get_material_type_map, get_miabis_storage_temp_map, get_miabis_material_type_map, MAX_VALIDATION_FILES
+from util.config import get_records_dir_path, get_parsing_map, get_type_to_collection_map, get_storage_temp_map, get_material_type_map, get_miabis_storage_temp_map, get_miabis_material_type_map
 
 setup_logger()
 logger = logging.getLogger()
-
 class SampleRepository:
     """Class for interacting with Sample storage"""
 
@@ -61,16 +60,7 @@ class SampleRepository:
         ext, validation_method = self._get_supported_extensions()
         
         with os.scandir(self._dir_path) as entries:
-            if validate_all:
-                files_to_validate = []
-                count = 0
-                for entry in entries:
-                    files_to_validate.append(entry)
-                    count += 1
-                    if count >= MAX_VALIDATION_FILES:
-                        break
-            else:
-                files_to_validate = [next(entries, None)]
+            files_to_validate = list(entries) if validate_all else [next(entries, None)]
         
         if not files_to_validate or files_to_validate[0] is None:
             error_message = f"No files found in directory {self._dir_path}"
@@ -78,11 +68,8 @@ class SampleRepository:
         
         for file_entry in files_to_validate:
             if file_entry and file_entry.name.lower().endswith(ext):
-                try:
-                    errors = validation_method(file_entry)
-                    all_errors.extend(errors)
-                except Exception as e:
-                    all_errors.append(f"Error validating file {file_entry.name}: {str(e)}")
+                errors = validation_method(file_entry)
+                all_errors.extend(errors)
         
         return all_errors
 
