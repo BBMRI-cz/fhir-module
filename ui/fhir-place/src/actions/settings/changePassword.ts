@@ -13,7 +13,7 @@ export async function changePassword(
   userDetails: UserDetails
 ) {
   try {
-    const validatedData = await ChangePasswordSchema.parseAsync(formData);
+    const validatedData = ChangePasswordSchema.parse(formData);
 
     const user = await db.query.users.findFirst({
       where: eq(users.id, userDetails.id),

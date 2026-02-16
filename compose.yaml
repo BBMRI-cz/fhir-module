@@ -1,4 +1,16 @@
 services:
+  config-generator:
+    image: alpine:latest
+    entrypoint: /bin/sh
+    command: -c "apk add --no-cache gettext && envsubst < /templates/prometheus.template.yml > /prometheus-config/prometheus.yml && envsubst < /templates/promtail-config.template.yaml > /promtail-config/promtail-config.yaml"
+    volumes:
+      - ./config/prometheus.template.yml:/templates/prometheus.template.yml:ro
+      - ./config/promtail-config.template.yaml:/templates/promtail-config.template.yaml:ro
+      - prometheus-config:/prometheus-config
+      - promtail-config:/promtail-config
+    env_file:
+      - .env
+
   fhir-module:
     image: ghcr.io/bbmri-cz/fhir-module:latest
     container_name: fhir-module
@@ -10,7 +22,7 @@ services:
       - monitoring
     restart: no
     ports:
-      - "5000:5000"
+      - "5001:5000"
     environment:
       BLAZE_URL: "http://test-blaze:8080/fhir"
       MIABIS_BLAZE_URL: "http://miabis-blaze:8080/fhir"
@@ -45,6 +57,10 @@ services:
     image: prom/prometheus:latest
     profiles:
       - monitoring
+    depends_on:
+      config-generator:
+        condition: service_completed_successfully
+        required: false
     networks:
       - monitoring
     ports:
@@ -102,6 +118,10 @@ services:
     container_name: promtail
     profiles:
       - monitoring
+    depends_on:
+      config-generator:
+        condition: service_completed_successfully
+        required: false
     networks:
       - monitoring
     volumes:

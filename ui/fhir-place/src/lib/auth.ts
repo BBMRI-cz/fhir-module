@@ -120,7 +120,8 @@ export async function authenticateUser(
       throw new InvalidCredentialsError();
     }
 
-    return user;
+    const { ...userWithoutPassword } = user;
+    return userWithoutPassword;
   } catch (error) {
     if (error instanceof InvalidCredentialsError) {
       throw error;

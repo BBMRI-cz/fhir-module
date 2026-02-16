@@ -5,11 +5,10 @@ import z from "zod";
 import { toast } from "sonner";
 import { ConfirmDeleteSchema } from "@/app/(authorized)/backend-control/form/schema";
 
-export function useConfirmationDialog(
-  confirmationMessage: string,
-  onConfirmedAction: () => void
-) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+const deleteAllConfirmMessage = "DELETE ALL";
+
+export function useDeleteDialog(onConfirmedDelete: () => void) {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const form = useForm<z.infer<typeof ConfirmDeleteSchema>>({
     resolver: zodResolver(ConfirmDeleteSchema),
@@ -18,28 +17,28 @@ export function useConfirmationDialog(
     },
   });
 
-  const handleConfirm = (data: z.infer<typeof ConfirmDeleteSchema>) => {
-    if (data.confirmInput !== confirmationMessage) {
+  const handleDelete = (data: z.infer<typeof ConfirmDeleteSchema>) => {
+    if (data.confirmInput !== deleteAllConfirmMessage) {
       toast.error("Confirmation is incorrect");
       return;
     }
 
-    setIsDialogOpen(false);
-    onConfirmedAction();
+    setIsDeleteDialogOpen(false);
+    onConfirmedDelete();
   };
 
   const handleDialogChange = (open: boolean) => {
-    setIsDialogOpen(open);
+    setIsDeleteDialogOpen(open);
     if (!open) {
       form.reset();
     }
   };
 
   return {
-    isDialogOpen,
+    isDeleteDialogOpen,
     form,
-    confirmationMessage,
-    handleConfirm,
+    deleteAllConfirmMessage,
+    handleDelete,
     handleDialogChange,
   };
 }
