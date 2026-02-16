@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SystemStatus } from "@/hooks/useSystemStatus";
-import { StatusIndicator } from "@/components/dashboard/StatusIndicator";
+import { StatusIndicator } from "./StatusIndicator";
 
 interface SystemHealthCardProps {
   systemStatus: SystemStatus;
