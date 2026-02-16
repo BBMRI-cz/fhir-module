@@ -21,12 +21,11 @@ export default function WizardProgressIndicator() {
       <div className="hidden 2xl:flex items-center justify-center flex-wrap gap-x-1.5 gap-y-2 max-w-8xl mx-auto">
         {visibleSteps.map((step, index) => {
           let stepIndicatorClass: string;
-
+          
           if (step.stepNumber > currentStep.stepNumber) {
             stepIndicatorClass = "border-2 border-gray-300";
           } else if (step.stepNumber < currentStep.stepNumber) {
-            stepIndicatorClass =
-              "border-2 border-green-500 bg-green-500 text-white";
+            stepIndicatorClass = "border-2 border-green-500 bg-green-500 text-white";
           } else {
             stepIndicatorClass = "bg-blue-500 text-white";
           }
@@ -57,9 +56,7 @@ export default function WizardProgressIndicator() {
           <CardContent className="flex items-center justify-center px-2">
             <div className="flex items-center space-x-1.5">
               <div className="w-6 xl:w-8 h-6 xl:h-8 rounded-full flex items-center justify-center text-md font-medium flex-shrink-0 bg-blue-500">
-                {visibleSteps.findIndex(
-                  (step) => step.stepNumber === currentStep.stepNumber
-                ) + 1}
+                {currentStep.stepNumber + 1}
               </div>
               <span className="text-sm xl:text-md font-medium leading-tight">
                 {currentStep.stepTitle}

@@ -11,25 +11,15 @@ jest.mock("../mappingChangeHelper", () => ({
 
 describe("writeAndSynchronize", () => {
   const mockMappings: WizardState = {
-    syncTarget: "blaze",
-    sharedMappings: {
-      donorMapping: {},
-      sampleMapping: {},
-      conditionMapping: {},
-      typeToCollectionMapping: [],
-    },
-    blazeConfig: {
-      temperatureMapping: [],
-      materialMapping: [],
-      allowCustomTemperatureValues: false,
-      allowCustomMaterialValues: false,
-    },
-    miabisConfig: {
-      temperatureMapping: [],
-      materialMapping: [],
-      allowCustomTemperatureValues: false,
-      allowCustomMaterialValues: false,
-    },
+    temperatureMapping: [],
+    materialMapping: [],
+    donorMapping: {},
+    sampleMapping: {},
+    conditionMapping: {},
+    typeToCollectionMapping: [],
+    allowCustomMaterialValues: false,
+    allowCustomTemperatureValues: false,
+    allowCustomTypeToCollectionValues: false,
   };
 
   beforeEach(() => {
