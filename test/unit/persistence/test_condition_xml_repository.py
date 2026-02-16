@@ -153,33 +153,33 @@ class TestConditionXMLRepository(unittest.TestCase):
         dir_entry = list(os.scandir(self.dir_path))[0]
         errors = self.condition_repository._ConditionXMLRepository__validate_conditions_from_xml_file(dir_entry)
         self.assertGreater(len(errors), 0)
-        self.assertTrue(any("Wrong XML format" in error for error in errors))
+        self.assertTrue(any("Wrong XLM format" in error for error in errors))
 
     def test_validate_xml_diagnosis_path_missing(self):
         errors = []
         self.condition_repository._sample_parsing_map = {"patient_id": "patient.@id"}
-        result = self.condition_repository._ConditionXMLRepository__validate_xml_diagnosis_path(errors, "test_file.xml")
+        result = self.condition_repository._ConditionXMLRepository__validate_xml_diagnosis_path(errors)
         self.assertIsNone(result)
         self.assertEqual(1, len(errors))
         self.assertTrue(any("No ICD-10 code field found" in error for error in errors))
 
     def test_validate_xml_diagnosis_path_present(self):
         errors = []
-        result = self.condition_repository._ConditionXMLRepository__validate_xml_diagnosis_path(errors, "test_file.xml")
+        result = self.condition_repository._ConditionXMLRepository__validate_xml_diagnosis_path(errors)
         self.assertEqual("**.diagnosis", result)
         self.assertEqual(0, len(errors))
 
     def test_validate_xml_patient_id_path_missing(self):
         errors = []
         self.condition_repository._sample_parsing_map = {"icd-10_code": "**.diagnosis"}
-        result = self.condition_repository._ConditionXMLRepository__validate_xml_patient_id_path(errors, "test_file.xml")
+        result = self.condition_repository._ConditionXMLRepository__validate_xml_patient_id_path(errors)
         self.assertIsNone(result)
         self.assertEqual(1, len(errors))
         self.assertTrue(any("No patient ID field found" in error for error in errors))
 
     def test_validate_xml_patient_id_path_present(self):
         errors = []
-        result = self.condition_repository._ConditionXMLRepository__validate_xml_patient_id_path(errors, "test_file.xml")
+        result = self.condition_repository._ConditionXMLRepository__validate_xml_patient_id_path(errors)
         self.assertEqual("patient.@id", result)
         self.assertEqual(0, len(errors))
 

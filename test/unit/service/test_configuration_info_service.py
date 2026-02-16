@@ -80,6 +80,48 @@ class TestConfigurationInfoService(unittest.TestCase):
         for temp in StorageTemperature:
             self.assertIn(temp.name, data['storage_temperature'])
 
+    @patch('service.configuration_info_service.get')
+    def test_get_material_types_success(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "concept": [
+                {"code": "tissue-ffpe"},
+                {"code": "whole-blood"},
+                {"code": "plasma"}
+            ]
+        }
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+        
+        response = self.client.get('/material-types')
+        self.assertEqual(200, response.status_code)
+        
+        data = json.loads(response.data)
+        self.assertIn('material_type', data)
+
+    @patch('service.configuration_info_service.get')
+    def test_get_material_types_api_failure(self, mock_get):
+        from requests import HTTPError
+        mock_get.side_effect = HTTPError("API Error")
+        
+        response = self.client.get('/material-types')
+        self.assertEqual(200, response.status_code)
+        
+        data = json.loads(response.data)
+        self.assertIn('material_type', data)
+        self.assertIsNone(data['material_type'])
+
+    @patch('service.configuration_info_service.get_miabis_on_fhir')
+    def test_get_configuration_info(self, mock_get_miabis):
+        mock_get_miabis.return_value = True
+        
+        response = self.client.get('/configuration-info')
+        self.assertEqual(200, response.status_code)
+        
+        data = json.loads(response.data)
+        self.assertIn('miabis_on_fhir', data)
+        self.assertTrue(data['miabis_on_fhir'])
+
     @patch('service.configuration_info_service.get_config_value')
     def test_get_setup_status(self, mock_get_config):
         mock_get_config.return_value = True
@@ -122,6 +164,139 @@ class TestConfigurationInfoService(unittest.TestCase):
             content_type='application/json'
         )
         self.assertIn(response.status_code, [400, 500])
+
+    @patch('service.configuration_info_service.os.environ.get')
+    @patch('service.configuration_info_service.os.path.realpath')
+    @patch('service.configuration_info_service.os.path.exists')
+    @patch('service.configuration_info_service.os.path.isdir')
+    @patch('service.configuration_info_service.os.listdir')
+    def test_list_directories_root(self, mock_listdir, mock_isdir, mock_exists, 
+                                   mock_realpath, mock_env_get):
+        mock_env_get.return_value = '/test/base'
+        mock_realpath.return_value = '/test/base'
+        mock_exists.return_value = True
+        mock_isdir.return_value = True
+        mock_listdir.return_value = []
+        
+        response = self.client.get('/list-directories?path=/')
+        self.assertEqual(200, response.status_code)
+        
+        data = json.loads(response.data)
+        self.assertIn('path', data)
+        self.assertIn('entries', data)
+
+    @patch('service.configuration_info_service.os.environ.get')
+    @patch('service.configuration_info_service.os.path.realpath')
+    @patch('service.configuration_info_service.os.path.exists')
+    def test_list_directories_path_not_exists(self, mock_exists, mock_realpath, mock_env_get):
+        mock_env_get.return_value = '/test/base'
+        mock_realpath.return_value = '/test/base/nonexistent'
+        mock_exists.return_value = False
+        
+        response = self.client.get('/list-directories?path=/nonexistent')
+        self.assertEqual(404, response.status_code)
+
+    @patch('service.configuration_info_service.os.environ.get')
+    @patch('service.configuration_info_service.os.path.realpath')
+    @patch('service.configuration_info_service.os.path.exists')
+    @patch('service.configuration_info_service.os.path.isdir')
+    def test_list_directories_path_not_directory(self, mock_isdir, mock_exists, 
+                                                 mock_realpath, mock_env_get):
+        mock_env_get.return_value = '/test/base'
+        mock_realpath.return_value = '/test/base/file.txt'
+        mock_exists.return_value = True
+        mock_isdir.return_value = False
+        
+        response = self.client.get('/list-directories?path=/file.txt')
+        self.assertEqual(400, response.status_code)
+
+    @patch('service.configuration_info_service.os.environ.get')
+    @patch('service.configuration_info_service.os.path.realpath')
+    def test_list_directories_access_denied(self, mock_realpath, mock_env_get):
+        mock_env_get.return_value = '/test/base'
+        mock_realpath.side_effect = lambda x: x if x == '/test/base' else '/other/path'
+        
+        response = self.client.get('/list-directories?path=/../../../other')
+        self.assertEqual(403, response.status_code)
+
+
+    def test_parse_folder_data_success(self):
+        with patch('service.configuration_info_service.SAFE_ROOT_FOLDER', tempfile.gettempdir()):
+            test_file = os.path.join(self.test_dir, 'test.json')
+            test_content = '{"test": "data"}'
+            with open(test_file, 'w') as f:
+                f.write(test_content)
+            
+            payload = {'folderPath': self.test_dir}
+            
+            response = self.client.post(
+                '/parse-folder-data',
+                data=json.dumps(payload),
+                content_type='application/json'
+            )
+            
+            self.assertEqual(200, response.status_code)
+            data = json.loads(response.data)
+            self.assertTrue(data['success'])
+            self.assertIn('fileContent', data)
+            self.assertIn('fileName', data)
+            self.assertEqual('test.json', data['fileName'])
+
+    def test_parse_folder_data_no_folder_path(self):
+        response = self.client.post(
+            '/parse-folder-data',
+            data=json.dumps({}),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(400, response.status_code)
+        data = json.loads(response.data)
+        self.assertFalse(data['success'])
+
+    def test_parse_folder_data_nonexistent_folder(self):
+        payload = {'folderPath': '/nonexistent/path'}
+        
+        response = self.client.post(
+            '/parse-folder-data',
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(400, response.status_code)
+        data = json.loads(response.data)
+        self.assertFalse(data['success'])
+
+    def test_parse_folder_data_not_directory(self):
+        test_file = os.path.join(self.test_dir, 'test.txt')
+        with open(test_file, 'w') as f:
+            f.write('test')
+        
+        payload = {'folderPath': test_file}
+        
+        response = self.client.post(
+            '/parse-folder-data',
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(400, response.status_code)
+
+    def test_parse_folder_data_no_supported_files(self):
+        test_file = os.path.join(self.test_dir, 'test.txt')
+        with open(test_file, 'w') as f:
+            f.write('test')
+        
+        payload = {'folderPath': self.test_dir}
+        
+        response = self.client.post(
+            '/parse-folder-data',
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(400, response.status_code)
+        data = json.loads(response.data)
+        self.assertFalse(data['success'])
 
     def test_validate_mappings_missing_file_type(self):
         payload = {
@@ -588,6 +763,212 @@ class TestConfigurationInfoService(unittest.TestCase):
         self.assertEqual(400, response.status_code)
         data = json.loads(response.data)
         self.assertIn('No JSON content', data['message'])
+
+    # Tests for __fetch_material_types_from_api caching
+    @patch('service.configuration_info_service.get')
+    @patch('service.configuration_info_service._cache_timestamp', None)
+    @patch('service.configuration_info_service._material_types_cache', None)
+    def test_get_material_types_caching(self, mock_get):
+        from datetime import datetime, timedelta
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"concept": [{"code": "test"}]}
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+        
+        # First call should fetch from API
+        response1 = self.client.get('/material-types')
+        self.assertEqual(200, response1.status_code)
+        
+        # Second call should use cache (within cache duration)
+        with patch('service.configuration_info_service._cache_timestamp', datetime.now()):
+            with patch('service.configuration_info_service._material_types_cache', ["test"]):
+                response2 = self.client.get('/material-types')
+                self.assertEqual(200, response2.status_code)
+
+    # Tests for folder path validation edge cases
+    def test_parse_folder_data_folder_path_not_string(self):
+        payload = {'folderPath': 123}
+        
+        response = self.client.post(
+            '/parse-folder-data',
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(400, response.status_code)
+        data = json.loads(response.data)
+        self.assertFalse(data['success'])
+        self.assertIn('must be a string', data['message'])
+
+    def test_parse_folder_data_outside_safe_root(self):
+        with patch('service.configuration_info_service.SAFE_ROOT_FOLDER', '/safe/root'):
+            with patch('service.configuration_info_service.os.path.realpath') as mock_realpath:
+                mock_realpath.side_effect = lambda x: x
+                with patch('service.configuration_info_service.os.path.commonpath') as mock_commonpath:
+                    mock_commonpath.side_effect = ValueError("Paths on different drives")
+                    
+                    payload = {'folderPath': 'C:\\different\\drive'}
+                    
+                    response = self.client.post(
+                        '/parse-folder-data',
+                        data=json.dumps(payload),
+                        content_type='application/json'
+                    )
+                    
+                    self.assertEqual(400, response.status_code)
+                    data = json.loads(response.data)
+                    self.assertFalse(data['success'])
+
+    # Tests for list_directories with include_files parameter
+    @patch('service.configuration_info_service.os.environ.get')
+    @patch('service.configuration_info_service.os.path.realpath')
+    @patch('service.configuration_info_service.os.path.exists')
+    @patch('service.configuration_info_service.os.path.isdir')
+    @patch('service.configuration_info_service.os.listdir')
+    @patch('service.configuration_info_service.os.path.join')
+    def test_list_directories_with_files(self, mock_join, mock_listdir, mock_isdir,
+                                        mock_exists, mock_realpath, mock_env_get):
+        mock_env_get.return_value = '/test/base'
+        mock_realpath.return_value = '/test/base/subdir'
+        mock_exists.return_value = True
+        mock_isdir.side_effect = lambda x: x.endswith('subdir') or x.endswith('folder')
+        mock_listdir.return_value = ['file.txt', 'folder']
+        mock_join.side_effect = lambda a, b: f"{a}/{b}"
+        
+        response = self.client.get('/list-directories?path=/subdir&include_files=true')
+        self.assertEqual(200, response.status_code)
+        
+        data = json.loads(response.data)
+        self.assertIn('entries', data)
+
+    @patch('service.configuration_info_service.os.environ.get')
+    @patch('service.configuration_info_service.os.path.realpath')
+    @patch('service.configuration_info_service.os.path.exists')
+    @patch('service.configuration_info_service.os.path.isdir')
+    @patch('service.configuration_info_service.os.listdir')
+    def test_list_directories_permission_error(self, mock_listdir, mock_isdir,
+                                               mock_exists, mock_realpath, mock_env_get):
+        mock_env_get.return_value = '/test/base'
+        mock_realpath.return_value = '/test/base/restricted'
+        mock_exists.return_value = True
+        mock_isdir.return_value = True
+        mock_listdir.side_effect = PermissionError("Access denied")
+        
+        response = self.client.get('/list-directories?path=/restricted')
+        self.assertEqual(403, response.status_code)
+
+    @patch('service.configuration_info_service.os.environ.get')
+    @patch('service.configuration_info_service.os.path.realpath')
+    @patch('service.configuration_info_service.os.path.exists')
+    @patch('service.configuration_info_service.os.path.isdir')
+    @patch('service.configuration_info_service.os.listdir')
+    def test_list_directories_generic_error(self, mock_listdir, mock_isdir,
+                                           mock_exists, mock_realpath, mock_env_get):
+        mock_env_get.return_value = '/test/base'
+        mock_realpath.return_value = '/test/base/error'
+        mock_exists.return_value = True
+        mock_isdir.return_value = True
+        mock_listdir.side_effect = Exception("Generic error")
+        
+        response = self.client.get('/list-directories?path=/error')
+        self.assertEqual(500, response.status_code)
+
+    @patch('service.configuration_info_service.os.environ.get')
+    def test_list_directories_top_level_exception(self, mock_env_get):
+        mock_env_get.side_effect = Exception("Config error")
+        
+        response = self.client.get('/list-directories')
+        self.assertEqual(500, response.status_code)
+
+    # Tests for file finding with security checks
+    def test_parse_folder_data_permission_error_reading(self):
+        with patch('service.configuration_info_service.SAFE_ROOT_FOLDER', tempfile.gettempdir()):
+            test_file = os.path.join(self.test_dir, 'test.json')
+            with open(test_file, 'w') as f:
+                f.write('{}')
+            
+            payload = {'folderPath': self.test_dir}
+            
+            with patch('builtins.open', side_effect=PermissionError("No access")):
+                response = self.client.post(
+                    '/parse-folder-data',
+                    data=json.dumps(payload),
+                    content_type='application/json'
+                )
+                
+                self.assertEqual(500, response.status_code)
+
+    def test_parse_folder_data_generic_error_reading(self):
+        with patch('service.configuration_info_service.SAFE_ROOT_FOLDER', tempfile.gettempdir()):
+            test_file = os.path.join(self.test_dir, 'test.json')
+            with open(test_file, 'w') as f:
+                f.write('{}')
+            
+            payload = {'folderPath': self.test_dir}
+            
+            with patch('builtins.open', side_effect=Exception("Read error")):
+                response = self.client.post(
+                    '/parse-folder-data',
+                    data=json.dumps(payload),
+                    content_type='application/json'
+                )
+                
+                self.assertEqual(500, response.status_code)
+
+    def test_parse_folder_data_csv_file(self):
+        with patch('service.configuration_info_service.SAFE_ROOT_FOLDER', tempfile.gettempdir()):
+            test_file = os.path.join(self.test_dir, 'test.csv')
+            test_content = 'col1,col2\nval1,val2'
+            with open(test_file, 'w') as f:
+                f.write(test_content)
+            
+            payload = {'folderPath': self.test_dir}
+            
+            response = self.client.post(
+                '/parse-folder-data',
+                data=json.dumps(payload),
+                content_type='application/json'
+            )
+            
+            self.assertEqual(200, response.status_code)
+            data = json.loads(response.data)
+            self.assertTrue(data['success'])
+            self.assertEqual('test.csv', data['fileName'])
+            self.assertEqual('.csv', data['fileExtension'])
+
+    def test_parse_folder_data_xml_file(self):
+        with patch('service.configuration_info_service.SAFE_ROOT_FOLDER', tempfile.gettempdir()):
+            test_file = os.path.join(self.test_dir, 'test.xml')
+            test_content = '<root><item>test</item></root>'
+            with open(test_file, 'w') as f:
+                f.write(test_content)
+            
+            payload = {'folderPath': self.test_dir}
+            
+            response = self.client.post(
+                '/parse-folder-data',
+                data=json.dumps(payload),
+                content_type='application/json'
+            )
+            
+            self.assertEqual(200, response.status_code)
+            data = json.loads(response.data)
+            self.assertTrue(data['success'])
+            self.assertEqual('test.xml', data['fileName'])
+            self.assertEqual('.xml', data['fileExtension'])
+
+    def test_parse_folder_data_top_level_exception(self):
+        with patch('service.configuration_info_service.SAFE_ROOT_FOLDER', '/test/root'):
+            with patch('service.configuration_info_service.os.path.realpath', side_effect=Exception("Error")):
+                payload = {'folderPath': self.test_dir}
+                
+                response = self.client.post(
+                    '/parse-folder-data',
+                    data=json.dumps(payload),
+                    content_type='application/json'
+                )
+                
+                self.assertEqual(500, response.status_code)
 
     # Tests for validation with sync test
     @patch('service.configuration_info_service.shutil.rmtree')

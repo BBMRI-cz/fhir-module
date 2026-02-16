@@ -64,31 +64,26 @@ const config = {
       return token;
     },
     async session({ session, token }: { session: Session; token: JWT }) {
-      if (!token?.id) {
-        session.user.isActive = false;
-        return session;
-      }
+      if (token?.id) {
+        session.user.id = token.id as string;
 
-      session.user.id = token.id as string;
+        try {
+          const user = await getUserById(token.id as string);
+          if (!user.isActive) {
+            throw new Error("User is inactive");
+          }
 
-      try {
-        const user = await getUserById(token.id as string);
-        if (!user || !user.isActive) {
-          session.user.isActive = false;
-          return session;
+          session.user.name = user.username;
+          session.user.email = user.email || "";
+          session.user.firstName = user.firstName || "";
+          session.user.lastName = user.lastName || "";
+          session.user.username = user.username;
+          session.user.isActive = !!user.isActive;
+          session.user.mustChangePassword = !!user.mustChangePassword;
+        } catch {
+          throw new Error("User not found or inactive");
         }
-
-        session.user.name = user.username;
-        session.user.email = user.email || "";
-        session.user.firstName = user.firstName || "";
-        session.user.lastName = user.lastName || "";
-        session.user.username = user.username;
-        session.user.isActive = true;
-        session.user.mustChangePassword = !!user.mustChangePassword;
-      } catch {
-        session.user.isActive = false;
       }
-
       return session;
     },
   },

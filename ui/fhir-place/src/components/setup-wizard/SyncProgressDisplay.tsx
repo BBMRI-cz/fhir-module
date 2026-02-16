@@ -5,10 +5,8 @@ import {
   Users,
   FileText,
   TestTube,
-  Check,
-  Clock,
-  Loader2,
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import {
   getSyncProgress,
   getMiabisSyncProgress,
@@ -20,7 +18,6 @@ import {
   useCallback,
   forwardRef,
   useImperativeHandle,
-  useRef,
 } from "react";
 
 const RESOURCE_ICONS = {
@@ -58,65 +55,6 @@ const RESOURCE_ORDER = [
   "specimens",
 ] as const;
 
-const RESOURCE_PHASE: Record<string, number> = {
-  organizations: 1,
-  biobank: 1,
-  collections: 1,
-  patients: 2,
-  conditions: 3,
-  specimens: 4,
-};
-
-type SyncStatus = "pending" | "in_progress" | "completed";
-
-function getResourceStatus(
-  resourceType: string,
-  currentPhase: number,
-  isCompleting: boolean
-): SyncStatus {
-  const resourcePhase = RESOURCE_PHASE[resourceType] || 0;
-
-  if (isCompleting) {
-    return "completed";
-  }
-
-  if (currentPhase > resourcePhase) {
-    return "completed";
-  } else if (currentPhase === resourcePhase) {
-    return "in_progress";
-  }
-  return "pending";
-}
-
-interface SyncState {
-  progress: SyncProgressResponse | null;
-  isPolling: boolean;
-  isCompleting: boolean;
-  shouldRender: boolean;
-}
-
-const initialSyncState: SyncState = {
-  progress: null,
-  isPolling: false,
-  isCompleting: false,
-  shouldRender: false,
-};
-
-const isIdleProgress = (progress: SyncProgressResponse) => {
-  if (!progress.in_progress) return true;
-
-  const hasWork = Object.values(progress.resources || {}).some(
-    (res) => (res?.current ?? 0) > 0
-  );
-
-  return !hasWork;
-};
-
-export interface SyncRunningStatus {
-  blazeSyncRunning: boolean;
-  miabisSyncRunning: boolean;
-}
-
 export interface SyncProgressDisplayHandle {
   start: (isMiabisMode: boolean) => void;
   stop: () => void;
@@ -125,20 +63,115 @@ export interface SyncProgressDisplayHandle {
 
 interface SyncProgressDisplayProps {
   onComplete?: () => void;
-  onSyncStatusChange?: (status: SyncRunningStatus) => void;
 }
 
-interface SingleSyncProgressProps {
-  title: string;
-  progress: SyncProgressResponse | null;
-  isCompleting: boolean;
-}
+const SyncProgressDisplay = forwardRef<
+  SyncProgressDisplayHandle,
+  SyncProgressDisplayProps
+>(({ onComplete }, ref) => {
+  const [syncProgress, setSyncProgress] = useState<SyncProgressResponse | null>(
+    null
+  );
+  const [isPolling, setIsPolling] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
+  const [currentIsMiabisMode, setCurrentIsMiabisMode] = useState(false);
 
-function SingleSyncProgress({
-  title,
-  progress,
-  isCompleting,
-}: SingleSyncProgressProps) {
+  const fetchProgress = useCallback(async () => {
+    try {
+      const progress = currentIsMiabisMode
+        ? await getMiabisSyncProgress()
+        : await getSyncProgress();
+      setSyncProgress(progress);
+
+      if (!progress.in_progress) {
+        setIsPolling(false);
+        setIsCompleting(true);
+
+        setTimeout(() => {
+          setShouldRender(false);
+          setIsCompleting(false);
+          if (onComplete) {
+            onComplete();
+          }
+        }, 2000);
+      }
+    } catch (error) {
+      console.error("Error fetching sync progress:", error);
+      setIsPolling(false);
+    }
+  }, [onComplete, currentIsMiabisMode]);
+
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+
+    if (isPolling) {
+      fetchProgress();
+
+      intervalId = setInterval(fetchProgress, 1000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isPolling, fetchProgress]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      start: (isMiabisMode: boolean) => {
+        setCurrentIsMiabisMode(isMiabisMode);
+        setSyncProgress(null);
+        setIsCompleting(false);
+        setShouldRender(true);
+
+        setTimeout(() => {
+          const initialResources: Record<
+            string,
+            { current: number; total: number; percentage: number }
+          > = isMiabisMode
+            ? {
+                biobank: { current: 0, total: 0, percentage: 0 },
+                collections: { current: 0, total: 0, percentage: 0 },
+                patients: { current: 0, total: 0, percentage: 0 },
+                specimens: { current: 0, total: 0, percentage: 0 },
+              }
+            : {
+                organizations: { current: 0, total: 0, percentage: 0 },
+                patients: { current: 0, total: 0, percentage: 0 },
+                conditions: { current: 0, total: 0, percentage: 0 },
+                specimens: { current: 0, total: 0, percentage: 0 },
+              };
+
+          setSyncProgress({
+            in_progress: true,
+            current_phase: 0,
+            resources: initialResources,
+          });
+
+          setIsPolling(true);
+        }, 100);
+      },
+      stop: () => {
+        setIsPolling(false);
+      },
+      reset: () => {
+        setCurrentIsMiabisMode(false);
+        setSyncProgress(null);
+        setIsPolling(false);
+        setIsCompleting(false);
+        setShouldRender(false);
+      },
+    }),
+    []
+  );
+
+  if (!shouldRender) {
+    return null;
+  }
+
   return (
     <div
       className={`space-y-4 pt-4 transition-opacity duration-[2000ms] ${
@@ -150,293 +183,42 @@ function SingleSyncProgress({
           className={`w-4 h-4 ${isCompleting ? "" : "animate-spin"}`}
         />
         <span className="text-sm font-medium">
-          {title} - Phase: {PHASE_NAMES[progress?.current_phase || 0]}
+          Syncing - Phase: {PHASE_NAMES[syncProgress?.current_phase || 0]}
         </span>
       </div>
 
       <div className="space-y-3">
         {RESOURCE_ORDER.map((resourceType) => {
-          const data = progress?.resources[resourceType];
+          const data = syncProgress?.resources[resourceType];
           if (!data) return null;
 
           const Icon = RESOURCE_ICONS[resourceType] || Database;
           const label = RESOURCE_LABELS[resourceType] || resourceType;
-          const status = getResourceStatus(
-            resourceType,
-            progress?.current_phase || 0,
-            isCompleting
-          );
-
-          const statusStyles = {
-            pending: "bg-muted/30 text-muted-foreground",
-            in_progress: "bg-blue-500/10 border border-blue-500/30",
-            completed: "bg-green-500/10 border border-green-500/30",
-          };
-
-          const StatusIcon = {
-            pending: Clock,
-            in_progress: Loader2,
-            completed: Check,
-          }[status];
 
           return (
             <div
               key={resourceType}
-              className={`flex items-center justify-between p-3 rounded-lg transition-all duration-300 ${statusStyles[status]}`}
+              className="space-y-2 p-3 bg-muted/50 rounded-lg"
             >
-              <div className="flex items-center space-x-2">
-                <Icon className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-medium">{label}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-semibold tabular-nums">
-                  {data.current.toLocaleString()} processed
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Icon className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{label}</span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {data.current} / {data.total}
                 </span>
-                <StatusIcon
-                  className={`w-4 h-4 ${
-                    status === "completed"
-                      ? "text-green-500"
-                      : status === "in_progress"
-                      ? "text-blue-500 animate-spin"
-                      : "text-muted-foreground"
-                  }`}
-                />
+              </div>
+              <div className="space-y-1">
+                <Progress value={data.percentage} className="h-2" />
+                <div className="text-xs text-right text-muted-foreground">
+                  {data.percentage.toFixed(1)}%
+                </div>
               </div>
             </div>
           );
         })}
       </div>
-    </div>
-  );
-}
-
-const SyncProgressDisplay = forwardRef<
-  SyncProgressDisplayHandle,
-  SyncProgressDisplayProps
->(({ onComplete, onSyncStatusChange }, ref) => {
-  const [blazeState, setBlazeState] = useState<SyncState>(initialSyncState);
-  const [miabisState, setMiabisState] = useState<SyncState>(initialSyncState);
-
-  const onCompleteRef = useRef(onComplete);
-  const onSyncStatusChangeRef = useRef(onSyncStatusChange);
-
-  useEffect(() => {
-    onCompleteRef.current = onComplete;
-    onSyncStatusChangeRef.current = onSyncStatusChange;
-  });
-
-  useEffect(() => {
-    onSyncStatusChangeRef.current?.({
-      blazeSyncRunning: blazeState.shouldRender && !blazeState.isCompleting,
-      miabisSyncRunning: miabisState.shouldRender && !miabisState.isCompleting,
-    });
-  }, [
-    blazeState.shouldRender,
-    blazeState.isCompleting,
-    miabisState.shouldRender,
-    miabisState.isCompleting,
-  ]);
-
-  const fetchBlazeProgress = useCallback(async () => {
-    try {
-      const progress = await getSyncProgress();
-
-      setBlazeState((prev) => {
-        if (!prev.shouldRender && isIdleProgress(progress)) {
-          return initialSyncState;
-        }
-        return { ...prev, progress };
-      });
-
-      if (!progress.in_progress) {
-        setBlazeState((prev) => ({
-          ...prev,
-          isPolling: false,
-          isCompleting: true,
-        }));
-
-        setTimeout(() => {
-          setBlazeState((prev) => ({
-            ...prev,
-            shouldRender: false,
-            isCompleting: false,
-          }));
-          setMiabisState((current) => {
-            if (!current.shouldRender) {
-              onCompleteRef.current?.();
-            }
-            return current;
-          });
-        }, 2000);
-      }
-    } catch (error) {
-      console.error("Error fetching blaze sync progress:", error);
-      setBlazeState(() => ({
-        ...initialSyncState,
-      }));
-    }
-  }, []);
-
-  const fetchMiabisProgress = useCallback(async () => {
-    try {
-      const progress = await getMiabisSyncProgress();
-
-      setMiabisState((prev) => {
-        if (!prev.shouldRender && isIdleProgress(progress)) {
-          return initialSyncState;
-        }
-        return { ...prev, progress };
-      });
-
-      if (!progress.in_progress) {
-        setMiabisState((prev) => ({
-          ...prev,
-          isPolling: false,
-          isCompleting: true,
-        }));
-
-        setTimeout(() => {
-          setMiabisState((prev) => ({
-            ...prev,
-            shouldRender: false,
-            isCompleting: false,
-          }));
-          setBlazeState((current) => {
-            if (!current.shouldRender) {
-              onCompleteRef.current?.();
-            }
-            return current;
-          });
-        }, 2000);
-      }
-    } catch (error) {
-      console.error("Error fetching miabis sync progress:", error);
-      setMiabisState(() => ({
-        ...initialSyncState,
-      }));
-    }
-  }, []);
-
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout | null = null;
-
-    if (blazeState.isPolling) {
-      fetchBlazeProgress();
-      intervalId = setInterval(fetchBlazeProgress, 1000);
-    }
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [blazeState.isPolling, fetchBlazeProgress]);
-
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout | null = null;
-
-    if (miabisState.isPolling) {
-      fetchMiabisProgress();
-      intervalId = setInterval(fetchMiabisProgress, 1000);
-    }
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [miabisState.isPolling, fetchMiabisProgress]);
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      start: (isMiabisMode: boolean) => {
-        if (isMiabisMode) {
-          setMiabisState({
-            progress: null,
-            isPolling: false,
-            isCompleting: false,
-            shouldRender: true,
-          });
-
-          setTimeout(() => {
-            const initialResources: Record<string, { current: number }> = {
-              biobank: { current: 0 },
-              collections: { current: 0 },
-              patients: { current: 0 },
-              specimens: { current: 0 },
-            };
-
-            setMiabisState((prev) => ({
-              ...prev,
-              progress: {
-                in_progress: true,
-                current_phase: 0,
-                resources: initialResources,
-              },
-              isPolling: true,
-            }));
-          }, 100);
-        } else {
-          setBlazeState({
-            progress: null,
-            isPolling: false,
-            isCompleting: false,
-            shouldRender: true,
-          });
-
-          setTimeout(() => {
-            const initialResources: Record<string, { current: number }> = {
-              organizations: { current: 0 },
-              patients: { current: 0 },
-              conditions: { current: 0 },
-              specimens: { current: 0 },
-            };
-
-            setBlazeState((prev) => ({
-              ...prev,
-              progress: {
-                in_progress: true,
-                current_phase: 0,
-                resources: initialResources,
-              },
-              isPolling: true,
-            }));
-          }, 100);
-        }
-      },
-      stop: () => {
-        setBlazeState((prev) => ({ ...prev, isPolling: false }));
-        setMiabisState((prev) => ({ ...prev, isPolling: false }));
-      },
-      reset: () => {
-        setBlazeState(initialSyncState);
-        setMiabisState(initialSyncState);
-      },
-    }),
-    []
-  );
-
-  if (!blazeState.shouldRender && !miabisState.shouldRender) {
-    return null;
-  }
-
-  return (
-    <div className="space-y-6">
-      {blazeState.shouldRender && (
-        <SingleSyncProgress
-          title="Syncing BLAZE"
-          progress={blazeState.progress}
-          isCompleting={blazeState.isCompleting}
-        />
-      )}
-      {miabisState.shouldRender && (
-        <SingleSyncProgress
-          title="Syncing MIABIS"
-          progress={miabisState.progress}
-          isCompleting={miabisState.isCompleting}
-        />
-      )}
     </div>
   );
 });
