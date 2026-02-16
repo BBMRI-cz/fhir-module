@@ -1,10 +1,10 @@
 "use server";
 
 import { z } from "zod";
-import { createUser } from "@/lib/auth/auth";
+import { createUser } from "@/lib/auth";
 import { UserCreationError } from "@/lib/errors";
+import { RegisterFormSchema } from "../../app/login/form/schema";
 import { signIn } from "../../../auth";
-import { RegisterFormSchema } from "@/app/login/form/schema";
 
 export interface RegisterResult {
   success: boolean;
@@ -18,13 +18,6 @@ export interface RegisterResult {
 export async function registerAction(
   formData: z.infer<typeof RegisterFormSchema>
 ): Promise<RegisterResult> {
-  if (process.env.REGISTER_ALLOWED !== "true") {
-    return {
-      success: false,
-      message: "Registration is not allowed.",
-    };
-  }
-
   try {
     const validatedData = await RegisterFormSchema.safeParseAsync(formData);
 

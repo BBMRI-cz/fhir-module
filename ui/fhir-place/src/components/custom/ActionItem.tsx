@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { ActionButton } from "@/components/custom/ActionButton";
+import { ActionButton } from "./ActionButton";
 import { LucideIcon } from "lucide-react";
 
 export interface ActionResult {

@@ -1,10 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* NOSONAR - Tailwind custom variant syntax requires this format */
+/* NOSONAR */
 @custom-variant dark (&:is(.dark *));
 
-/* NOSONAR - Custom theme block for Tailwind; required project-specific syntax */
+/* NOSONAR */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -120,29 +120,6 @@
   }
   body {
     @apply bg-background text-foreground;
-  }
-
-  /* Improve scaling behavior */
-  html {
-    overflow-x: hidden;
-  }
-
-  /* Prevent horizontal overflow on scaled content */
-  .container,
-  .max-w-2xl,
-  .max-w-4xl,
-  .max-w-6xl {
-    max-width: 100%;
-  }
-
-  /* Ensure flex containers handle scaling properly */
-  .flex {
-    min-width: 0;
-  }
-
-  /* Improve text scaling */
-  .text-responsive {
-    font-size: clamp(0.875rem, 2.5vw, 1rem);
   }
 
   /* Font size variants */

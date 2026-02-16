@@ -1,4 +1,5 @@
-import type { PasswordRequirements } from "@/lib/auth/password-validation";
+// src/app/api/password/password-config.ts
+import type { PasswordRequirements } from "@/lib/password-validation";
 
 let configCache: PasswordRequirements | null = null;
 let cacheTime = 0;
@@ -9,8 +10,8 @@ export async function GET() {
 
   if (!configCache || now - cacheTime > CACHE_DURATION) {
     configCache = {
-      minLength: Number.parseInt(process.env.PASSWORD_MIN_LENGTH || "8"),
-      maxLength: Number.parseInt(process.env.PASSWORD_MAX_LENGTH || "128"),
+      minLength: parseInt(process.env.PASSWORD_MIN_LENGTH || "8"),
+      maxLength: parseInt(process.env.PASSWORD_MAX_LENGTH || "128"),
       requireUppercase: process.env.PASSWORD_REQUIRE_UPPERCASE === "true",
       requireLowercase: process.env.PASSWORD_REQUIRE_LOWERCASE === "true",
       requireNumbers: process.env.PASSWORD_REQUIRE_NUMBERS === "true",

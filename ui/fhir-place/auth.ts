@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import type { Session, User } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { authenticateUser, getUserById } from "@/lib/auth/auth";
+import { authenticateUser, getUserById } from "@/lib/auth";
 import { InvalidCredentialsError, AuthenticationError } from "@/lib/errors";
 import { LoginFormSchema } from "@/app/login/form/schema";
 
@@ -38,7 +38,6 @@ const config = {
               firstName: user.firstName || "",
               lastName: user.lastName || "",
               isActive: !!user.isActive,
-              mustChangePassword: !!user.mustChangePassword,
             };
           }
 
@@ -59,7 +58,6 @@ const config = {
     async jwt({ token, user }: { token: JWT; user: User | null }) {
       if (user) {
         token.id = user.id;
-        token.mustChangePassword = user.mustChangePassword;
       }
       return token;
     },
@@ -79,7 +77,6 @@ const config = {
           session.user.lastName = user.lastName || "";
           session.user.username = user.username;
           session.user.isActive = !!user.isActive;
-          session.user.mustChangePassword = !!user.mustChangePassword;
         } catch {
           throw new Error("User not found or inactive");
         }

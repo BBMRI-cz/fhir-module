@@ -1,12 +1,9 @@
-import { redirect } from "next/navigation";
-import RegisterForm from "@/app/login/form/RegisterForm";
+"use client";
+
+import RegisterForm from "../login/form/RegisterForm";
 import Link from "next/link";
 
 export default function Register() {
-  if (process.env.REGISTER_ALLOWED !== "true") {
-    redirect("/");
-  }
-
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-4 sm:p-8 pb-20 gap-8 sm:gap-16 font-[family-name:var(--font-roboto)]">
       <div className="flex flex-col row-start-2 items-center w-full max-w-sm sm:max-w-md px-4">

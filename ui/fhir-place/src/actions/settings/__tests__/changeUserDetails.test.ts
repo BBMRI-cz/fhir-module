@@ -1,14 +1,14 @@
 import { changeUserDetails } from "../changeUserDetails";
 import { ChangeUserDetailsSchema } from "@/app/(authorized)/settings/schema/ChangeUserDetailsSchema";
-import { UserDetails } from "@/lib/auth/auth-utils";
-import { db } from "@/lib/db/db";
+import { UserDetails } from "@/lib/auth-utils";
+import { db } from "@/lib/db";
 import { z } from "zod";
 
 // Mock the dependencies
 jest.mock("@/app/(authorized)/settings/schema/ChangeUserDetailsSchema");
-jest.mock("@/lib/db/schema");
+jest.mock("@/lib/schema");
 jest.mock("drizzle-orm");
-jest.mock("@/lib/db/db");
+jest.mock("@/lib/db");
 
 // Type for partial db mock
 type PartialDbQuery = {
@@ -32,7 +32,6 @@ describe("changeUserDetails", () => {
     isActive: true,
     createdAt: "2024-01-01T00:00:00.000Z",
     updatedAt: "2024-01-01T00:00:00.000Z",
-    mustChangePassword: false,
   };
 
   const mockUser = {

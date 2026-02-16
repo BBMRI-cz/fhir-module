@@ -1,4 +1,4 @@
-import { createUser, getUserByUsername } from "@/lib/auth/auth";
+import { createUser, getUserByUsername } from "./auth";
 
 export async function seedUsers() {
   try {
@@ -8,14 +8,22 @@ export async function seedUsers() {
       return;
     } catch {}
 
+    // TODO move the password for admin to env, remove the testing user for production
     await createUser({
       username: "admin",
       password: "Admin123!", // NOSONAR
       firstName: "Admin",
       lastName: "User",
       email: "admin@example.com",
-      mustChangePassword: true,
-    }, true);
+    });
+
+    await createUser({
+      username: "testuser",
+      password: "Test123!", // NOSONAR
+      firstName: "Test",
+      lastName: "User",
+      email: "test@example.com",
+    });
 
     console.log("Seed users created successfully");
   } catch (error) {

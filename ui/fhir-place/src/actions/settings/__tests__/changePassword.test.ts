@@ -1,17 +1,17 @@
-import { changePassword } from "@/actions/settings/changePassword";
+import { changePassword } from "../changePassword";
 import bcrypt from "bcryptjs";
 import { ChangePasswordSchema } from "@/app/(authorized)/settings/schema/ChangePasswordSchema";
-import { UserDetails } from "@/lib/auth/auth-utils";
-import { users } from "@/lib/db/schema";
-import { db } from "@/lib/db/db";
+import { UserDetails } from "@/lib/auth-utils";
+import { users } from "@/lib/schema";
+import { db } from "@/lib/db";
 import { z } from "zod";
 
 // Mock the dependencies
 jest.mock("bcryptjs");
 jest.mock("@/app/(authorized)/settings/schema/ChangePasswordSchema");
-jest.mock("@/lib/db/schema");
+jest.mock("@/lib/schema");
 jest.mock("drizzle-orm");
-jest.mock("@/lib/db/db");
+jest.mock("@/lib/db");
 
 // Type for partial db mock
 type PartialDbQuery = {
@@ -36,7 +36,6 @@ describe("changePassword", () => {
     isActive: true,
     createdAt: "2024-01-01T00:00:00.000Z",
     updatedAt: "2024-01-01T00:00:00.000Z",
-    mustChangePassword: false,
   };
 
   const mockFormData = {
