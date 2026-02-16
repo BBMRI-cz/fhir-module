@@ -1,12 +1,24 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { RotateCcw, Trash2, RefreshCw } from "lucide-react";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { CheckedFormInput } from "@/components/custom/form/CheckedFormInput";
+import { Form } from "@/components/ui/form";
 import { OperationCard } from "@/components/custom/OperationCard";
 import { ActionItem } from "@/components/custom/ActionItem";
 import { ActionButton } from "@/components/custom/ActionButton";
-import { ConfirmationDialog } from "@/components/custom/ConfirmationDialog";
 import { useBackendControl } from "@/hooks/useBackendControl";
-import { useConfirmationDialog } from "@/hooks/useConfirmationDialog";
+import { useDeleteDialog } from "@/hooks/useDeleteDialog";
 
 export default function BackendControlPage() {
   const {
@@ -20,20 +32,12 @@ export default function BackendControlPage() {
   } = useBackendControl();
 
   const {
-    isDialogOpen: isDeleteAllDialogOpen,
-    form: deleteAllForm,
-    confirmationMessage: deleteAllConfirmMessage,
-    handleConfirm: handleDeleteAllConfirm,
-    handleDialogChange: handleDeleteAllDialogChange,
-  } = useConfirmationDialog("DELETE ALL", handleDeleteAll);
-
-  const {
-    isDialogOpen: isMiabisDeleteDialogOpen,
-    form: miabisDeleteForm,
-    confirmationMessage: miabisDeleteConfirmMessage,
-    handleConfirm: handleMiabisDeleteConfirm,
-    handleDialogChange: handleMiabisDeleteDialogChange,
-  } = useConfirmationDialog("DELETE ALL", handleMiabisDelete);
+    isDeleteDialogOpen,
+    form,
+    deleteAllConfirmMessage,
+    handleDelete,
+    handleDialogChange,
+  } = useDeleteDialog(handleDeleteAll);
 
   return (
     <main className="flex-1 p-6">
@@ -96,61 +100,71 @@ export default function BackendControlPage() {
               isFading={fadingBadges["Delete All"]}
               disabled={isLoading !== null}
             >
-              <ConfirmationDialog
-                isOpen={isDeleteAllDialogOpen}
-                onOpenChange={handleDeleteAllDialogChange}
-                title="Are you sure?"
-                description="This action will delete all data from the FHIR server. This action cannot be undone."
-                confirmationMessage={deleteAllConfirmMessage}
-                confirmButtonText="Delete All"
-                form={deleteAllForm}
-                onConfirm={handleDeleteAllConfirm}
-                isLoading={isLoading !== null}
+              <Dialog
+                open={isDeleteDialogOpen}
+                onOpenChange={handleDialogChange}
               >
-                <ActionButton
-                  onClick={() => {}}
-                  disabled={isLoading !== null}
-                  loading={isLoading === "Delete All"}
-                  icon={Trash2}
-                  variant="destructive"
-                >
-                  Delete All
-                </ActionButton>
-              </ConfirmationDialog>
+                <DialogTrigger asChild>
+                  <ActionButton
+                    onClick={() => {}}
+                    disabled={isLoading !== null}
+                    loading={isLoading === "Delete All"}
+                    icon={Trash2}
+                    variant="destructive"
+                  >
+                    Delete All
+                  </ActionButton>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Are you sure?</DialogTitle>
+                    <DialogDescription>
+                      This action will delete all data from the FHIR server.
+                      This action cannot be undone. To proceed, please type
+                      &quot;{deleteAllConfirmMessage}&quot; in the input field
+                      below.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(handleDelete)}>
+                      <CheckedFormInput
+                        control={form.control}
+                        type="text"
+                        name="confirmInput"
+                        placeholder={deleteAllConfirmMessage}
+                        errors={form.formState.errors}
+                      />
+                      <DialogFooter className="flex justify-end pt-4">
+                        <DialogClose asChild>
+                          <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button
+                          type="submit"
+                          disabled={isLoading !== null}
+                          variant="destructive"
+                          className="min-w-[100px]"
+                        >
+                          Delete All
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
             </ActionItem>
 
             <ActionItem
               title="Delete MIABIS Data"
               description="Remove all MIABIS on FHIR resources"
               buttonText="Delete MIABIS"
-              onAction={() => {}}
+              onAction={handleMiabisDelete}
               isLoading={isLoading === "MIABIS Delete"}
               result={lastResults["MIABIS Delete"]}
               isFading={fadingBadges["MIABIS Delete"]}
+              icon={Trash2}
+              variant="destructive"
               disabled={isLoading !== null}
-            >
-              <ConfirmationDialog
-                isOpen={isMiabisDeleteDialogOpen}
-                onOpenChange={handleMiabisDeleteDialogChange}
-                title="Are you sure?"
-                description="This action will delete all MIABIS data from the FHIR server. This action cannot be undone."
-                confirmationMessage={miabisDeleteConfirmMessage}
-                confirmButtonText="Delete MIABIS"
-                form={miabisDeleteForm}
-                onConfirm={handleMiabisDeleteConfirm}
-                isLoading={isLoading !== null}
-              >
-                <ActionButton
-                  onClick={() => {}}
-                  disabled={isLoading !== null}
-                  loading={isLoading === "MIABIS Delete"}
-                  icon={Trash2}
-                  variant="destructive"
-                >
-                  Delete MIABIS
-                </ActionButton>
-              </ConfirmationDialog>
-            </ActionItem>
+            />
           </OperationCard>
         </div>
       </div>

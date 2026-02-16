@@ -58,7 +58,7 @@ describe("changePassword", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockChangePasswordSchema.parseAsync = jest
+    mockChangePasswordSchema.parse = jest
       .fn()
       .mockImplementation((data) => data);
 
@@ -95,9 +95,7 @@ describe("changePassword", () => {
       const result = await changePassword(mockFormData, mockUserDetails);
 
       expect(result).toBe(true);
-      expect(mockChangePasswordSchema.parseAsync).toHaveBeenCalledWith(
-        mockFormData
-      );
+      expect(mockChangePasswordSchema.parse).toHaveBeenCalledWith(mockFormData);
       expect(mockBcrypt.compare).toHaveBeenCalledWith(
         "OldPass123!",
         "old-hashed-password"
@@ -144,7 +142,7 @@ describe("changePassword", () => {
           message: "Current password is required",
         },
       ]);
-      mockChangePasswordSchema.parseAsync.mockImplementation(() => {
+      mockChangePasswordSchema.parse.mockImplementation(() => {
         throw zodError;
       });
 
