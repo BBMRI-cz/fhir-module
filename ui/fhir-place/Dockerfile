@@ -62,4 +62,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["sh", "-c", "echo 'Starting Next.js application...' && exec node server.js"]
+# Start the application with database initialization
+CMD ["/app/start.sh"] 
