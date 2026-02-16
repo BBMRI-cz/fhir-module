@@ -44,8 +44,6 @@ class MiabisBlazeService(BlazeServiceInterface):
         self.biobank_repository = biobank_repository
         self.metrics = get_metrics_for_service('miabis-blaze')
         self._scheduler_thread = None
-        self._sync_lock = threading.Lock()
-        self._scheduler = schedule.Scheduler()
 
     def _refresh_services(self) -> bool:
         """
@@ -67,13 +65,11 @@ class MiabisBlazeService(BlazeServiceInterface):
             return False
         
         logger.debug("MIABIS on FHIR: Services refreshed successfully.")
+        # Ensure scheduler is still running after refresh
+        self.ensure_scheduler_running()
         return True
 
     def sync(self):
-        if not self._sync_lock.acquire(blocking=False):
-            logger.warning("MIABIS on FHIR: Sync already in progress, skipping duplicate invocation.")
-            return
-
         if self.metrics:
             self.metrics.start_sync()
         
@@ -138,7 +134,6 @@ class MiabisBlazeService(BlazeServiceInterface):
             # Always ensure sync state is cleaned up
             if self.metrics:
                 self.metrics.end_sync()
-            self._sync_lock.release()
 
     def __create_sync_summary(self) -> dict:
         """Create empty sync summary structure for biobank and collections."""
@@ -390,16 +385,15 @@ class MiabisBlazeService(BlazeServiceInterface):
         return True
 
     def __initialize_scheduler(self):
-        logger.info("Initializing MIABIS scheduler....")
-        self._scheduler.clear()
-        self._scheduler.every().week.do(self.sync)
-        logger.info("MIABIS scheduler initialized.")
+        logger.info("Initializing scheduler....")
+        schedule.every().week.do(self.sync)
+        logger.info("Scheduler initialized.")
 
     def run_scheduler(self):
         self.__initialize_scheduler()
         logger.info("Running Scheduler.")
         while True:
-            self._scheduler.run_pending()
+            schedule.run_pending()
             time.sleep(1)
 
     def start_scheduler(self):

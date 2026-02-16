@@ -1,4 +1,3 @@
-import json
 import logging
 import logging.config
 import os
@@ -8,34 +7,6 @@ import yaml
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 logger = logging.getLogger(__name__)
-
-
-class JsonFormatter(logging.Formatter):
-    """JSON log formatter for structured logging.
-
-    If the log message is a valid JSON object, its fields are merged into
-    the top-level log entry (e.g. sync_summary becomes a direct field).
-    Otherwise the message is stored under the "message" key.
-    """
-
-    def format(self, record):
-        log_entry = {
-            "timestamp": self.formatTime(record, self.datefmt),
-            "logger": record.name,
-            "level": record.levelname,
-        }
-
-        message = record.getMessage()
-        try:
-            parsed = json.loads(message)
-            if isinstance(parsed, dict):
-                log_entry.update(parsed)
-            else:
-                log_entry["message"] = message
-        except (json.JSONDecodeError, TypeError):
-            log_entry["message"] = message
-
-        return json.dumps(log_entry)
 
 
 def is_running_tests():

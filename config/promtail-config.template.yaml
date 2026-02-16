@@ -20,16 +20,11 @@ scrape_configs:
           environment: "${ENVIRONMENT}"
           __path__: /var/log/fhir-module/sync.log
     pipeline_stages:
+      - regex:
+          expression: "({.*})$"
       - json:
           expressions:
-            timestamp: timestamp
-            level: level
             sync_summary: sync_summary
-      - timestamp:
-          source: timestamp
-          format: "2006-01-02 15:04:05,000"
-      - labels:
-          level:
 
   - job_name: fhir-module-miabis-sync
     static_configs:
@@ -39,13 +34,8 @@ scrape_configs:
           environment: "${ENVIRONMENT}"
           __path__: /var/log/fhir-module/miabis_sync.log
     pipeline_stages:
+      - regex:
+          expression: "({.*})$"
       - json:
           expressions:
-            timestamp: timestamp
-            level: level
             sync_summary: sync_summary
-      - timestamp:
-          source: timestamp
-          format: "2006-01-02 15:04:05,000"
-      - labels:
-          level:
