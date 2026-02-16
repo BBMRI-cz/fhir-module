@@ -17,12 +17,9 @@ part of BBMRI-ERIC. This tool should support ETL processes by providing the foll
 
 
 ## Glossary
-- [Deployment Guide](/docs/DEPLOYMENT.md) 
-- [User Interface (UI)](/docs/UI.md)
-- [Data Model](/docs/DATA_MODEL.md)
-- [Security](/docs/SECURITY.md)
-- [Monitoring](/docs/MONITORING.md)
-- [Maps Documentation](/docs/MAPS.md)
+- [Deployment](/docs/DEPLOYMENT.md) 
+- [Data model](/docs/DATA_MODEL.md)
+- [Maps](/docs/MAPS.md)
 - [Contributing](/docs/CONTRIBUTING.md)
 
 ## State
