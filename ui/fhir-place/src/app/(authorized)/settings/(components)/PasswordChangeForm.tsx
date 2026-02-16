@@ -7,9 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useSession } from "next-auth/react";
 
-import { z } from "zod";
-import { UserDetails } from "@/lib/auth/auth-utils";
-import { ChangePasswordSchema } from "@/app/(authorized)/settings/schema/ChangePasswordSchema";
+import z from "zod";
+import { UserDetails } from "@/lib/auth-utils";
+import { ChangePasswordSchema } from "../schema/ChangePasswordSchema";
 import { changePassword } from "@/actions/settings/changePassword";
 import { toast } from "sonner";
 import { useEffect } from "react";
