@@ -516,7 +516,8 @@ def __list_directories(request):
     Supports optional 'path' query parameter to list subdirectories.
     """
     try:
-        base_dir = os.path.realpath(get_root_dir())
+        base_dir = get_root_dir()
+        base_dir = os.path.realpath(base_dir)
         
         relative_path = request.args.get('path', '/')
         include_files = request.args.get('include_files', 'false').lower() == 'true'
