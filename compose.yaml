@@ -23,14 +23,28 @@ services:
         target: "/opt/records"
       - fhir-logs:/var/log/fhir-module
 
+  fhir-ui:
+    image: ghcr.io/bbmri-cz/fhir-ui:latest
+    container_name: fhir-ui
+    profiles:
+      - ui
+    networks:
+      - fhir-integration
+      - monitoring
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - ui-data:/app/data
+    depends_on:
+      - fhir-module
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus:latest
     profiles:
       - monitoring
-    depends_on:
-      config-generator:
-        condition: service_completed_successfully
-        required: false
     networks:
       - monitoring
     ports:
@@ -88,18 +102,12 @@ services:
     container_name: promtail
     profiles:
       - monitoring
-    depends_on:
-      config-generator:
-        condition: service_completed_successfully
-        required: false
     networks:
       - monitoring
     volumes:
       - fhir-logs:/var/log/fhir-module:ro
       - promtail-config:/etc/promtail
-      - promtail-positions:/etc/promtail/positions
     command: -config.file=/etc/promtail/promtail-config.yaml
-    restart: unless-stopped
 
 networks:
   fhir-integration:
@@ -110,4 +118,4 @@ volumes:
   prometheus-config:
   fhir-logs:
   promtail-config:
-  promtail-positions:
+  ui-data:
