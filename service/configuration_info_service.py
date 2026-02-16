@@ -55,10 +55,6 @@ def register_details_routes(flask_app):
     def update_setup_status():
         return __update_setup_status(request)
 
-    @flask_app.route('/config-value', methods=['GET'])
-    def get_config_value_endpoint():
-        return __get_config_value_endpoint(request)
-
 
 # Based on the validate value temporary changes the configuration and validates the mapping correctness,
 # or permanently changes the configuration to prepare for actual data synchronization
@@ -550,18 +546,4 @@ def __update_setup_status(request):
             'success': False,
             'message': str(e)
         }), 500)
-
-
-def __get_config_value_endpoint(request):
-    """
-    Get a configuration value by key.
-    Query parameter: key - the configuration key to retrieve
-    """
-    key = request.args.get('key')
-    
-    if not key:
-        return make_response(jsonify({'message': 'Missing required query parameter: key'}), 400)
-    
-    value = get_config_value(key)
-    return jsonify({'value': value})
 

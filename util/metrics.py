@@ -8,17 +8,16 @@ from util.custom_logger import setup_logger
 
 from prometheus_client import Gauge
 
-
-last_sync_timestamp = Gauge('fhir_last_sync_timestamp', 'Timestamp of the last sync', ['service'], multiprocess_mode='liveall')
+last_sync_timestamp = Gauge('fhir_last_sync_timestamp', 'Timestamp of the last sync', ['service'])
 
 # Progress tracking metrics
-sync_progress_total = Gauge('fhir_sync_progress_total', 'Total items to sync', ['service', 'resource_type'], multiprocess_mode='liveall')
-sync_progress_current = Gauge('fhir_sync_progress_current', 'Current items processed', ['service', 'resource_type'], multiprocess_mode='liveall')
-sync_in_progress = Gauge('fhir_sync_in_progress', 'Whether sync is currently running', ['service'], multiprocess_mode='liveall')
-sync_current_phase = Gauge('fhir_sync_current_phase', 'Current sync phase (0=idle, 1=organizations, 2=patients, 3=conditions, 4=specimens)', ['service'], multiprocess_mode='liveall')
+sync_progress_total = Gauge('fhir_sync_progress_total', 'Total items to sync', ['service', 'resource_type'])
+sync_progress_current = Gauge('fhir_sync_progress_current', 'Current items processed', ['service', 'resource_type'])
+sync_in_progress = Gauge('fhir_sync_in_progress', 'Whether sync is currently running', ['service'])
+sync_current_phase = Gauge('fhir_sync_current_phase', 'Current sync phase (0=idle, 1=organizations, 2=patients, 3=conditions, 4=specimens)', ['service'])
 
 # FHIR resource count metrics
-fhir_resource_count = Gauge('fhir_resource_count', 'Total count of FHIR resources', ['service', 'resource_type'], multiprocess_mode='liveall')
+fhir_resource_count = Gauge('fhir_resource_count', 'Total count of FHIR resources', ['service', 'resource_type'])
 
 # Metric registry for generic access
 METRIC_REGISTRY = {

@@ -3,7 +3,7 @@ import logging
 import sys
 import threading
 
-from prometheus_flask_exporter.multiprocess import GunicornPrometheusMetrics
+from prometheus_flask_exporter import PrometheusMetrics
 from service.blaze_service import BlazeService
 from service.mail_service import MailService
 from service.manual_run_service import create_api
@@ -13,16 +13,11 @@ from util.custom_logger import setup_logger
 from util.http_util import is_endpoint_available
 from service.configuration_info_service import register_details_routes
 from util.service_preparation_utils import prepare_services, prepare_services_miabis
-from util.metrics import start_resource_count_scheduler, sync_in_progress
+from util.metrics import start_resource_count_scheduler
 
 BLAZE_URL = get_blaze_url()
 MIABIS_BLAZE_URL = get_miabis_blaze_url()
 MIABIS_ON_FHIR = get_miabis_on_fhir()
-
-sync_in_progress.labels(service='blaze').set(0)
-if MIABIS_ON_FHIR:
-    sync_in_progress.labels(service='miabis').set(0)
-
 setup_logger()
 logger = logging.getLogger(__name__)
 logger.info("Starting FHIR_Module...")
@@ -74,7 +69,7 @@ else:
 
 register_details_routes(app)
 
-metrics = GunicornPrometheusMetrics(app)
+metrics = PrometheusMetrics(app)
 metrics.info('app_info', 'Application info', version='1.0.0')
 
 if is_endpoint_available(endpoint_url=BLAZE_URL, wait_time=10, max_attempts=5):

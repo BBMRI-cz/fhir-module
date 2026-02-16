@@ -36,10 +36,10 @@ export default function WizardCompleteComponent() {
         </CardHeader>
         <CardContent className="text-center space-y-6">
           <div className="space-y-2">
-            <p className="text-lg font-semibold">🎉 Setup Complete!</p>
+            <p className="text-lg font-semibold">🎉 Sync Successful!</p>
             <p className="text-muted-foreground">
-              Your FHIR module configuration has been saved successfully. You
-              can now use the dashboard to manage and monitor your data.
+              Your FHIR module configuration has been set up successfully. All
+              settings have been synchronized and are ready to use.
             </p>
           </div>
 
