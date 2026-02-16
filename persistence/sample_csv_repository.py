@@ -93,7 +93,7 @@ class SampleCsvRepository(SampleRepository):
                 try:
                     check_sample_map_format(self._sample_parsing_map)
                 except WrongSampleMapException:
-                    errors.append(f"File {dir_entry.name} - Given Sample map has a bad format, cannot parse the file")
+                    errors.append("Given Sample map has a bad format, cannot parse the file")
                     return errors
 
                 row_index = 1  # Start from 1 since we skip header row
@@ -102,9 +102,9 @@ class SampleCsvRepository(SampleRepository):
                         _ = self.__build_sample(row, is_validation=True)
                     except ExceptionGroup as eg:
                         for exc in eg.exceptions:
-                            errors.append(f"File {dir_entry.name} - Sample (row {row_index}): {exc}")
+                            errors.append(f"Sample (row {row_index}): {exc}")
                     except (ValueError, TypeError, KeyError, ValueMappingRecordDoesNotExistError, NoDiagnosisFoundForSampleException) as err:
-                        errors.append(f"File {dir_entry.name} - Sample (row {row_index}): {err}")
+                        errors.append(f"Sample (row {row_index}): {err}")
                     finally:
                         row_index += 1
         except OSError as e:

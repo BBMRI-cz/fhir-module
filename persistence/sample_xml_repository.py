@@ -75,7 +75,7 @@ class SampleXMLRepository(SampleRepository):
         try:
             file_content = parse_xml_file(dir_entry)
         except WrongXMLFormatError:
-            return [f"File {dir_entry.name} - Wrong XML format"]
+            return ["Wrong XML format"]
 
         sample_index = 0  # Start from 0 for XML elements index
         for parsing_path in str(self._sample_parsing_map.get("sample")).split(" || "):
@@ -86,11 +86,11 @@ class SampleXMLRepository(SampleRepository):
             
             except ExceptionGroup as eg:
                 for exc in eg.exceptions:
-                    errors.append(f"File {dir_entry.name} - Sample (index {sample_index}): {exc}")
+                    errors.append(f"Sample (index {sample_index}): {exc}")
             except (ValueError, TypeError, KeyError) as err:
-                errors.append(f"File {dir_entry.name} - Sample (index {sample_index}): {err}")
+                errors.append(f"Sample (index {sample_index}): {err}")
             except (WrongXMLFormatError, PathAccessError, TypeError):
-                errors.append(f"File {dir_entry.name} - Sample (index {sample_index}): Error reading XML file.")
+                errors.append(f"Sample (index {sample_index}): Error reading XML file.")
                 return errors
         return errors
 

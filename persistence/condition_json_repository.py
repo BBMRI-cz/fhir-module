@@ -124,7 +124,7 @@ class ConditionJsonRepository(ConditionRepository):
                 try:
                     conditions_json = json.load(json_file)
                 except JSONDecodeError:
-                    errors.append(f"File {dir_entry.name} - does not have a correct JSON format. Exiting...")
+                    errors.append("Biobank file does not have a correct JSON format. Exiting...")
                     return errors
 
                 condition_index = 0
@@ -144,7 +144,7 @@ class ConditionJsonRepository(ConditionRepository):
                     # If there are validation errors, add them all together
                     if validation_errors:
                         for exc in validation_errors:
-                            errors.append(f"File {dir_entry.name} - Condition (index {condition_index}): {exc}")
+                            errors.append(f"Condition (index {condition_index}): {exc}")
                     
                     condition_index += 1
         except OSError as e:

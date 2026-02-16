@@ -2,6 +2,9 @@ import logging
 import os
 import json
 import shutil
+import html
+from typing import Any, cast
+from requests import HTTPError, get
 from datetime import datetime
 from flask import Flask, jsonify, make_response, request
 from werkzeug.utils import secure_filename
@@ -16,10 +19,16 @@ from persistence.factories.factory_util import get_repository_factory
 from service.patient_service import PatientService
 from service.sample_service import SampleService
 
-from util.config import write_to_file, get_config_value, set_config_value, get_material_type_map, get_storage_temp_map, get_type_to_collection_map, reload_all_maps, get_miabis_on_fhir, get_miabis_material_type_map, get_miabis_storage_temp_map, get_records_file_type
+from util.config import write_to_file, get_config_value, set_config_value, get_material_type_map, get_storage_temp_map, get_type_to_collection_map, reload_all_maps, get_miabis_on_fhir, get_miabis_material_type_map, get_miabis_storage_temp_map, get_root_dir, get_records_file_type
 
 setup_logger()
 logger = logging.getLogger()
+
+_material_types_cache = None
+_cache_timestamp = None
+CACHE_DURATION_MINUTES = 60
+
+SAFE_ROOT_FOLDER = get_root_dir()
 
 def register_details_routes(flask_app):
     
@@ -39,6 +48,14 @@ def register_details_routes(flask_app):
     def get_storage_temperatures():
         return jsonify(__get_storage_temperatures())
     
+    @flask_app.route('/material-types', methods=['GET'])
+    def get_material_types():
+        return jsonify(__get_material_types())
+    
+    @flask_app.route('/configuration-info', methods=['GET'])
+    def get_configuration_info():
+        return jsonify(__get_configuration_info())
+
     @flask_app.route('/validate-mappings', methods=['POST'])
     def validate_mappings():
         return __change_configuration(request, validate=True)
@@ -47,6 +64,14 @@ def register_details_routes(flask_app):
     def change_mappings():
         return __change_configuration(request)
 
+    @flask_app.route('/list-directories', methods=['GET'])
+    def list_directories():
+        return __list_directories(request)
+    
+    @flask_app.route('/parse-folder-data', methods=['POST'])
+    def parse_folder_data():
+        return __parse_folder_data(request)
+    
     @flask_app.route('/setup-status', methods=['GET'])
     def get_setup_status():
         return __get_setup_status()
@@ -368,10 +393,322 @@ def __get_condition_mapping_schema():
         "diagnosis_date": {"required": False}
     }
 
+def __fetch_material_types_from_api():
+    """
+    Fetch material types from BBMRI.de Simplifier API with caching.
+    Returns a list of material type codes or fallback values if API call fails.
+    """
+    global _material_types_cache, _cache_timestamp
+    
+    if (_material_types_cache is not None and 
+        _cache_timestamp is not None and 
+        (datetime.now() - _cache_timestamp).total_seconds() < CACHE_DURATION_MINUTES * 60):
+        return _material_types_cache
+    
+    try:
+        url = "https://simplifier.net/bbmri.de/samplematerialtype/$download?format=json"
+        response = get(url, timeout=10)
+        response.raise_for_status()
+        
+        data = response.json()
+        material_types = __extract_concepts_from_fetch(data)
+
+
+        return material_types
+    
+    except HTTPError as http_err:
+        logger.error(f"HTTP error occurred while fetching material types: {http_err}")
+        return None
+
 def __get_storage_temperatures():
         return {
         "storage_temperature": [temp.name for temp in StorageTemperature],
     }
+
+def __get_material_types():
+    return {
+        "material_type": __fetch_material_types_from_api()
+    }
+
+def __get_configuration_info():
+    return {
+        "miabis_on_fhir": get_miabis_on_fhir()
+    }
+
+
+def __extract_concepts_from_fetch(data: dict[str, Any]) -> list[str]:
+    concepts = []
+    
+    if isinstance(data, dict):
+        code = data.get("code", None)
+        if code:
+            concepts.append(code)
+
+        concept = data.get("concept", None)
+        if concept is None:
+            return concepts
+        
+        concept = cast(dict[str, Any], concept)
+        concepts.extend(__extract_concepts_from_fetch(concept))
+
+    if isinstance(data, list):
+        for item in cast(list[dict[str, Any]], data):
+            concepts.extend(__extract_concepts_from_fetch(item))
+
+
+    return concepts
+
+
+def __validate_directory_path(base_dir: str, relative_path: str) -> tuple[str, dict | None]:
+    """
+    Validate and resolve directory path.
+    Returns (resolved_path, error_response) where error_response is None if validation succeeds.
+    """
+    if relative_path == '/':
+        path = base_dir
+    else:
+        path = relative_path
+    
+    path = os.path.realpath(path)
+    
+    if not path.startswith(base_dir):
+        logger.warning(f"Attempted access outside base directory: {path} (base: {base_dir})")
+        return path, make_response(jsonify({'error': 'Access denied: path outside allowed directory'}), 403)
+    
+    if not os.path.exists(path):
+        return path, make_response(jsonify({'error': 'Path does not exist'}), 404)
+    
+    if not os.path.isdir(path):
+        return path, make_response(jsonify({'error': 'Path is not a directory'}), 400)
+    
+    return path, None
+
+
+def __build_directory_entries(path: str, relative_path: str, base_dir: str, include_files: bool) -> list[dict]:
+    """Build list of directory entries with metadata."""
+    entries = []
+    
+    if relative_path == '/':
+        entries.append({
+            'name': os.path.basename(base_dir) or 'root',
+            'path': base_dir,
+            'isDirectory': True
+        })
+    else:
+        for entry_name in os.listdir(path):
+            entry_path = os.path.join(path, entry_name)
+            is_directory = os.path.isdir(entry_path)
+            
+            if is_directory or include_files:
+                entries.append({
+                    'name': entry_name,
+                    'path': entry_path,
+                    'isDirectory': is_directory
+                })
+    
+    entries.sort(key=lambda x: (not x['isDirectory'], x['name'].lower()))
+    return entries
+
+
+def __list_directories(request):
+    """
+    List directories inside the container.
+    Supports optional 'path' query parameter to list subdirectories.
+    """
+    try:
+        base_dir = os.path.realpath(get_root_dir())
+        
+        relative_path = request.args.get('path', '/')
+        include_files = request.args.get('include_files', 'false').lower() == 'true'
+        
+        path, error_response = __validate_directory_path(base_dir, relative_path)
+        if error_response:
+            return error_response
+        
+        try:
+            entries = __build_directory_entries(path, relative_path, base_dir, include_files)
+            return jsonify({'path': path, 'entries': entries})
+            
+        except PermissionError:
+            return make_response(jsonify({'error': 'Permission denied'}), 403)
+        except Exception as e:
+            logger.error(f"Error listing directory {path}: {str(e)}")
+            return make_response(jsonify({'error': 'Error listing directory'}), 500)
+            
+    except Exception as e:
+        logger.error(f"Error in list_directories: {str(e)}")
+        return make_response(jsonify({'error': 'Internal server error'}), 500)
+
+
+access_not_allowed_error = 'Access to the requested folder is not allowed'
+
+def __validate_folder_path_request(content: dict) -> tuple[str, dict | None]:
+    """
+    Validate folder path from request content.
+    Returns (folder_path, error_response) where error_response is None if validation succeeds.
+    Limits access to a safe root directory.
+    """
+    if not content or 'folderPath' not in content:
+        return '', make_response(jsonify({
+            'success': False,
+            'message': 'folderPath parameter is required'
+        }), 400)
+
+    folder_path_input = content['folderPath']
+    if not isinstance(folder_path_input, str):
+        return '', make_response(jsonify({
+            'success': False,
+            'message': 'folderPath must be a string'
+        }), 400)
+
+
+    safe_root_real = os.path.realpath(SAFE_ROOT_FOLDER)
+    candidate_real = os.path.realpath(folder_path_input)
+    try:
+        if os.path.commonpath([safe_root_real, candidate_real]) != safe_root_real:
+            return candidate_real, make_response(jsonify({
+                'success': False,
+                'message': access_not_allowed_error
+            }), 400)
+    except ValueError:
+        return candidate_real, make_response(jsonify({
+            'success': False,
+            'message': access_not_allowed_error
+        }), 400)
+
+    if not os.path.exists(candidate_real):
+        return candidate_real, make_response(jsonify({
+            'success': False,
+            'message': f'Folder path does not exist: {html.escape(candidate_real)}'
+        }), 400)
+
+    if not os.path.isdir(candidate_real):
+        return candidate_real, make_response(jsonify({
+            'success': False,
+            'message': f'Path is not a directory: {html.escape(candidate_real)}'
+        }), 400)
+
+    return candidate_real, None
+
+
+def __find_supported_data_files(folder_path: str) -> tuple[list[dict], dict | None]:
+    """
+    Find supported data files in folder.
+    Returns (data_files, error_response) where error_response is None if successful.
+    """
+    # Security check: ensure folder_path is within SAFE_ROOT_FOLDER
+    try:
+        normalized_root = os.path.realpath(SAFE_ROOT_FOLDER)
+        normalized_path = os.path.realpath(folder_path)
+        
+        if os.path.commonpath([normalized_root, normalized_path]) != normalized_root:
+            return [], make_response(jsonify({
+                'success': False,
+                'message': access_not_allowed_error
+            }), 400)
+    except (ValueError, OSError):
+        # ValueError: paths on different drives on Windows
+        # OSError: invalid path
+        return [], make_response(jsonify({
+            'success': False,
+            'message': access_not_allowed_error
+        }), 400)
+    
+    supported_extensions = ['.json', '.csv', '.xml']
+    data_files = []
+    
+    try:
+        files = os.listdir(folder_path)
+        for file_name in files:
+            file_path = os.path.join(folder_path, file_name)
+            real_file_path = os.path.realpath(file_path)
+            
+            real_file_path = os.path.normpath(os.path.abspath(file_path))
+            if os.path.commonpath([normalized_path, real_file_path]) != normalized_path:
+                continue
+
+            if os.path.isfile(real_file_path):
+                ext = os.path.splitext(file_name.lower())[1]
+                if ext in supported_extensions:
+                    data_files.append({'path': real_file_path, 'ext': ext, 'name': file_name})
+    except PermissionError:
+        return [], make_response(jsonify({
+            'success': False,
+            'message': 'Permission denied accessing folder'
+        }), 400)
+    
+    if not data_files:
+        return [], make_response(jsonify({
+            'success': False,
+            'message': f'No supported data files found in {html.escape(folder_path)}. Supported formats: JSON, CSV, XML'
+        }), 400)
+    
+    return data_files, None
+
+
+def __read_first_data_file(data_files: list[dict]) -> tuple[str, str, str, dict | None]:
+    """
+    Read the first data file from the list.
+    Returns (file_content, file_name, file_ext, error_response) where error_response is None if successful.
+    """
+    file_info = data_files[0]
+    file_path = file_info['path']
+    file_ext = file_info['ext']
+    file_name = file_info['name']
+    
+    real_file_path = os.path.realpath(file_path)
+    safe_root_real = os.path.realpath(SAFE_ROOT_FOLDER)
+    if os.path.commonpath([safe_root_real, real_file_path]) != safe_root_real:
+        return '', file_name, file_ext, make_response(jsonify({
+            'success': False,
+            'message': f'Access to the requested file is not allowed: {html.escape(file_name)}'
+        }), 400)
+    
+    try:
+        with open(real_file_path, 'r', encoding='utf-8') as f:
+            file_content = f.read()
+        return file_content, file_name, file_ext, None
+    except Exception:
+        return '', file_name, file_ext, make_response(jsonify({
+            'success': False,
+            'message': f'Error reading {html.escape(file_name)}'
+        }), 500)
+
+
+def __parse_folder_data(request):
+    """
+    Get file content from a folder for frontend parsing.
+    Expects JSON body with 'folderPath' parameter.
+    """
+    try:
+        content = request.get_json()
+        
+        folder_path, error_response = __validate_folder_path_request(content)
+        if error_response:
+            return error_response
+        
+        data_files, error_response = __find_supported_data_files(folder_path)
+        if error_response:
+            return error_response
+        
+        file_content, file_name, file_ext, error_response = __read_first_data_file(data_files)
+        if error_response:
+            return error_response
+        
+        return jsonify({
+            'success': True,
+            'message': f'Successfully read {file_name} (first file found)',
+            'fileContent': file_content,
+            'fileName': file_name,
+            'fileExtension': file_ext
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in parse_folder_data: {str(e)}")
+        return make_response(jsonify({
+            'success': False,
+            'message': f'Internal server error: {str(e)}'
+        }), 500)
 
 
 def __create_empty_error_dict() -> dict[str, list[str]]:
@@ -394,12 +731,8 @@ def __validate_test_records_path(test_records_path: str, errors: dict[str, list[
         return None
     
     try:
-        test_files = []
-        for f in os.listdir(test_records_path):
-            if os.path.isfile(os.path.join(test_records_path, f)):
-                test_files.append(f)
-                if len(test_files) >= 100:
-                    break
+        test_files = [f for f in os.listdir(test_records_path) 
+                     if os.path.isfile(os.path.join(test_records_path, f))]
     except Exception as e:
         errors['generic_errors'].append(f'Error accessing test records path: {str(e)}')
         return None

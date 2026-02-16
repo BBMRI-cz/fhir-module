@@ -80,7 +80,7 @@ class SampleDonorJsonRepository(SampleDonorRepository):
                 try:
                     donors_json = json.load(json_file)
                 except JSONDecodeError:
-                    errors.append(f"File {dir_entry.name} - does not have a correct JSON format. Exiting...")
+                    errors.append("Biobank file does not have a correct JSON format. Exiting...")
                     return errors
                 donor_index = 0  # Start from 0 for JSON array index
                 for donor_json in donors_json:
@@ -90,9 +90,9 @@ class SampleDonorJsonRepository(SampleDonorRepository):
                             self._ids.add(donor.identifier)
                     except ExceptionGroup as eg:
                         for exc in eg.exceptions:
-                            errors.append(f"File {dir_entry.name} - Sample Donor (index {donor_index}): {exc}")
+                            errors.append(f"Sample Donor (index {donor_index}): {exc}")
                     except (ValueError, TypeError, KeyError) as err:
-                        errors.append(f"File {dir_entry.name} - Sample Donor (index {donor_index}): {err}")
+                        errors.append(f"Sample Donor (index {donor_index}): {err}")
                     finally:
                         donor_index += 1
         except OSError as e:

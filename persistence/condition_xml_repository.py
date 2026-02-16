@@ -48,13 +48,10 @@ class ConditionXMLRepository(ConditionRepository):
             for diagnosis in glom(file_content, self._sample_parsing_map.get("icd-10_code")):
                 patient_id = glom(file_content, self._sample_parsing_map.get("patient_id"))
                 try:
-                    diagnosis_datetime_path = self._sample_parsing_map.get("diagnosis_date")
-                    if diagnosis_datetime_path is None or diagnosis_datetime_path == "":
-                        diagnosis_datetime = None
-                    else:
-                        diagnosis_datetime = glom(file_content, diagnosis_datetime_path, default=None)
+                    diagnosis_datetime = glom(file_content, self._sample_parsing_map.get("diagnosis_date"),
+                                              default=None)
 
-                    if diagnosis_datetime is not None and len(diagnosis_datetime) == 0:
+                    if len(diagnosis_datetime) == 0:
                         diagnosis_datetime = None
                     if diagnosis_datetime is not None:
                         try:
@@ -77,28 +74,24 @@ class ConditionXMLRepository(ConditionRepository):
         except WrongXMLFormatError:
             return
 
-    def __validate_xml_diagnosis_path(self, errors: list, file_name: str) -> str | None:
+    def __validate_xml_diagnosis_path(self, errors: list) -> str | None:
         """Validate that the diagnosis path exists in the parsing map."""
         diagnosis_path = self._sample_parsing_map.get("icd-10_code")
         if diagnosis_path is None:
-            errors.append(f"File {file_name} - Condition: No ICD-10 code field found in the XML file. Skipping...")
+            errors.append("Condition: No ICD-10 code field found in the XML file. Skipping...")
         return diagnosis_path
 
-    def __validate_xml_patient_id_path(self, errors: list, file_name: str) -> str | None:
+    def __validate_xml_patient_id_path(self, errors: list) -> str | None:
         """Validate that the patient ID path exists in the parsing map."""
         patient_id_path = self._sample_parsing_map.get("patient_id")
         if patient_id_path is None:
-            errors.append(f"File {file_name} - Condition: No patient ID field found in the XML file. Skipping...")
+            errors.append("Condition: No patient ID field found in the XML file. Skipping...")
         return patient_id_path
 
     def __parse_xml_diagnosis_datetime(self, file_content, validation_errors: list):
         """Parse the optional diagnosis datetime field from XML."""
-        diagnosis_datetime_path = self._sample_parsing_map.get("diagnosis_date")
-        if diagnosis_datetime_path is None or diagnosis_datetime_path == "":
-            return None
-
-        diagnosis_datetime = glom(file_content, diagnosis_datetime_path, default=None)
-
+        diagnosis_datetime = glom(file_content, self._sample_parsing_map.get("diagnosis_date"),
+                                  default=None)
         if len(diagnosis_datetime) == 0:
             diagnosis_datetime = None
         
@@ -123,12 +116,12 @@ class ConditionXMLRepository(ConditionRepository):
         try:
             file_content = parse_xml_file(dir_entry)
         except WrongXMLFormatError:
-            errors.append(f"File {dir_entry.name} - Wrong XML format [Skipping...]")
+            errors.append(f"Wrong XLM format of file: {dir_entry.name} [Skipping...]")
             return errors
         
         # Validate mandatory paths
-        diagnosis_path = self.__validate_xml_diagnosis_path(errors, dir_entry.name)
-        patient_id_path = self.__validate_xml_patient_id_path(errors, dir_entry.name)
+        diagnosis_path = self.__validate_xml_diagnosis_path(errors)
+        patient_id_path = self.__validate_xml_patient_id_path(errors)
         
         if diagnosis_path is None or patient_id_path is None:
             return errors
@@ -148,11 +141,11 @@ class ConditionXMLRepository(ConditionRepository):
                 # If there are validation errors, add them all together
                 if validation_errors:
                     for exc in validation_errors:
-                        errors.append(f"File {dir_entry.name} - Condition (index {condition_index}): {exc}")
+                        errors.append(f"Condition (index {condition_index}): {exc}")
                 
                 condition_index += 1
                 
         except WrongXMLFormatError:
-            errors.append(f"File {dir_entry.name} - Wrong XML format [Skipping...]")
+            errors.append(f"Wrong XLM format of file: {dir_entry.name} [Skipping...]")
             return errors
         return errors

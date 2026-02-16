@@ -93,9 +93,9 @@ class SampleDonorCsvRepository(SampleDonorRepository):
                             self._ids.add(donor.identifier)
                     except ExceptionGroup as eg:
                         for exc in eg.exceptions:
-                            errors.append(f"File {dir_entry.name} - Sample Donor (row {row_index}): {exc}")
+                            errors.append(f"Sample Donor (row {row_index}): {exc}")
                     except (ValueError, TypeError, KeyError) as err:
-                        errors.append(f"File {dir_entry.name} - Sample Donor (row {row_index}): {err}")
+                        errors.append(f"Sample Donor (row {row_index}): {err}")
                     finally:
                         row_index += 1
         except OSError as e:
