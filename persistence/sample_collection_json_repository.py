@@ -8,7 +8,7 @@ from model.interface.collection_interface import CollectionInterface
 from model.miabis.collection_miabis import CollectionMiabis
 from model.sample_collection import SampleCollection
 from persistence.sample_collection_repository import SampleCollectionRepository
-from util.config import get_sample_collections_path
+from util.config import SAMPLE_COLLECTIONS_PATH
 from util.custom_logger import setup_logger, logger
 
 
@@ -21,7 +21,7 @@ class SampleCollectionJSONRepository(SampleCollectionRepository):
         self._miabis_on_fhir_model = miabis_on_fhir_model
 
     def get_all(self) -> Generator[CollectionInterface, None, None]:
-        with open(get_sample_collections_path()) as json_file:
+        with open(SAMPLE_COLLECTIONS_PATH) as json_file:
             try:
                 collections_json = json.load(json_file)
                 for entry in collections_json:

@@ -3,7 +3,7 @@ import time
 
 import requests
 
-from util.config import get_blaze_auth
+from util.config import BLAZE_AUTH
 from util.custom_logger import setup_logger
 
 setup_logger()
@@ -22,13 +22,13 @@ def is_endpoint_available(endpoint_url, max_attempts=10, wait_time=60) -> bool:
     logger.info(f"Attempting to reach endpoint: '{endpoint_url}'.")
     while attempts < max_attempts:
         try:
-            response = requests.get(endpoint_url, verify=False, auth=get_blaze_auth())
+            response = requests.get(endpoint_url, verify=False, auth=BLAZE_AUTH)
             response.raise_for_status()
             logger.info(f"Endpoint '{endpoint_url}' is available.")
             return True
         except requests.exceptions.RequestException as e:
             logger.info(
-                f"Attempt {attempts + 1}/{max_attempts} on endpoint {endpoint_url} : Endpoint not available yet. Retrying in {wait_time} seconds.")
+                f"Attempt {attempts + 1}/{max_attempts} on endpoint {endpoint_url}: Endpoint not available yet. Retrying in {wait_time} seconds.")
             attempts += 1
             time.sleep(wait_time)
 

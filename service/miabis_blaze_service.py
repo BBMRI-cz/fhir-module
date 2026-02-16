@@ -1,4 +1,3 @@
-import threading
 import time
 from typing import cast
 
@@ -10,7 +9,6 @@ import json
 
 from requests import HTTPError
 
-from exception.wrong_parsing_map import WrongParsingMapException
 from model.miabis.collection_miabis import CollectionMiabis
 from model.miabis.sample_donor_miabis import SampleDonorMiabis
 from model.miabis.sample_miabis import SampleMiabis
@@ -20,10 +18,9 @@ from service.blaze_service_interface import BlazeServiceInterface
 
 from service.patient_service import PatientService
 from service.sample_service import SampleService
-from util.config import get_miabis_blaze_auth
+from util.config import MIABIS_BLAZE_AUTH
 from util.custom_logger import setup_logger
 from util.metrics import get_metrics_for_service
-from util.service_preparation_utils import prepare_services_miabis
 
 setup_logger()
 logger = logging.getLogger()
@@ -38,73 +35,28 @@ class MiabisBlazeService(BlazeServiceInterface):
                  sample_collection_repository: SampleCollectionRepository,
                  biobank_repository: BiobankRepository
                  ):
-        self.blaze_client = BlazeClient(blaze_url=blaze_url, blaze_username=get_miabis_blaze_auth()[0], blaze_password=get_miabis_blaze_auth()[1])
+        self.blaze_client = BlazeClient(blaze_url=blaze_url, blaze_username=MIABIS_BLAZE_AUTH[0], blaze_password=MIABIS_BLAZE_AUTH[1])
         self.patient_service = patient_service
         self.sample_service = sample_service
         self.sample_collection_repository = sample_collection_repository
         self.biobank_repository = biobank_repository
         self.metrics = get_metrics_for_service('miabis_blaze')
-        self._scheduler_thread = None
-
-    def _refresh_services(self) -> bool:
-        """
-        Refresh services and repositories to handle file format changes.
-        This allows the sync to adapt to changes in data source format (CSV, JSON, XML).
-        
-        Returns:
-            bool: True if services were successfully refreshed, False otherwise
-        """
-        logger.info("MIABIS on FHIR: Refreshing services to detect any file format changes...")
-        services = prepare_services_miabis()
-        self.patient_service = services.patient_service
-        self.sample_service = services.sample_service
-        self.sample_collection_repository = services.sample_collection_repository
-        self.biobank_repository = services.biobank_repository
-        
-        if self.patient_service is None:
-            logger.warning("MIABIS services not initialized: parsing map configuration is missing or invalid.")
-            return False
-        
-        logger.debug("MIABIS on FHIR: Services refreshed successfully.")
-        # Ensure scheduler is still running after refresh
-        self.ensure_scheduler_running()
-        return True
 
     def sync(self):
-        if self.metrics:
-            self.metrics.start_sync()
-        
-        if not self._refresh_services():
-            error_msg = "MIABIS sync failed: Mapping files are misconfigured. Please check your parsing map configuration."
-            sync_logger.error(error_msg)
-            if self.metrics:
-                self.metrics.set_metric('last_sync_error', error_msg)
-                self.metrics.end_sync()
-            return
-
         biobank_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
         collection_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
         pat_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
         samp_summary = {'processed': 0, 'failed': 0, 'skipped': 0}
 
         try:
-            if self.metrics:
-                self.metrics.set_sync_phase(1)  # Phase 1: Biobank and Collections
             biobank_collection_summary = self.sync_biobank_and_collections()
             biobank_summary = biobank_collection_summary['biobank']
             collection_summary = biobank_collection_summary['collections']
-            
-            if self.metrics:
-                self.metrics.set_sync_phase(2)  # Phase 2: Patients
             pat_summary = self.upload_patients()
-            
-            if self.metrics:
-                self.metrics.set_sync_phase(4)  # Phase 4: Specimens (skipping 3 as MIABIS handles conditions differently)
             samp_summary = self.upload_samples()
 
             if self.metrics:
                 self.metrics.set_metric('last_sync_timestamp', time.time())
-                self.metrics.end_sync()
 
             sync_summary_obj = {
                 'patients': pat_summary,
@@ -120,9 +72,6 @@ class MiabisBlazeService(BlazeServiceInterface):
         except Exception as e:
             logger.error(f"MIABIS on FHIR: Sync failed: {e}")
             
-            if self.metrics:
-                self.metrics.end_sync()
-            
             sync_summary_obj = {
                 'patients': pat_summary,
                 'specimens': samp_summary,
@@ -134,96 +83,68 @@ class MiabisBlazeService(BlazeServiceInterface):
             }
             sync_logger.info(json.dumps({'sync_summary': sync_summary_obj}))
 
-    def __create_sync_summary(self) -> dict:
-        """Create empty sync summary structure for biobank and collections."""
-        return {
-            'biobank': {'processed': 0, 'failed': 0, 'skipped': 0},
-            'collections': {'processed': 0, 'failed': 0, 'skipped': 0}
-        }
-
-    def __upload_biobank(self, biobank, summary: dict) -> bool:
-        """
-        Upload or skip biobank based on its presence in Blaze.
-        Returns True if successful, False if error occurred.
-        """
+    def sync_biobank_and_collections(self):
+        biobank_processed = 0
+        biobank_failed = 0
+        biobank_skipped = 0
+        
+        collection_processed = 0
+        collection_failed = 0
+        collection_skipped = 0
+        
+        biobank = self.biobank_repository.get_biobank()
         try:
             if not self.blaze_client.is_resource_present_in_blaze("Organization", biobank.identifier, "identifier"):
-                logger.info(f"MIABIS on FHIR: Biobank with identifier {biobank.identifier} not present in blaze. uploading...")
+                logger.info(
+                    f"MIABIS on FHIR: Biobank with identifier {biobank.identifier} not present in blaze. uploading...")
+
                 self.blaze_client.upload_biobank(biobank)
-                summary['biobank']['processed'] += 1
+                biobank_processed += 1
+
                 logger.info(f"MIABIS on FHIR: Successfully uploaded biobank.")
             else:
                 logger.info(f"MIABIS on FHIR: Biobank with identifier {biobank} is already present in blaze.")
-                summary['biobank']['skipped'] += 1
-            return True
+                biobank_skipped += 1
+                
+            logger.info(f"MIABIS on FHIR: Starting upload of collections")
+            for collection in self.sample_collection_repository.get_all():
+                if not isinstance(collection, CollectionMiabis):
+                    logger.error(
+                        f"MIABIS ON FHIR: collection is not instance of MIABIS on FHIR model, but rather its type is {type(collection)} Skipping...")
+                    collection_skipped += 1
+                    continue
+
+                collection = cast(CollectionMiabis, collection)
+
+                if self.blaze_client.is_resource_present_in_blaze("Organization", collection.identifier,
+                                                                      "identifier"):
+                    collection_skipped += 1
+                    continue
+
+                try:
+                    logger.debug(
+                        f"MIABIS on FHIR: Collection with identifier {collection.identifier} is not present. Uploading...")
+                    self.blaze_client.upload_collection(collection)
+                    collection_processed += 1
+                    logger.debug(
+                        f"MIABIS on FHIR: Successfully uploaded collection with identifier {collection.identifier}")
+                except Exception as e:
+                    logger.error(f"MIABIS on FHIR: Error uploading collection {collection.identifier}: {e}")
+                    collection_failed += 1
+
         except requests.exceptions.ConnectionError:
             logger.error(f"Cannot connect to the blaze server!")
-            summary['biobank']['failed'] += 1
-            return False
+            biobank_failed += 1
         except (ValueError, KeyError, TypeError, HTTPError) as err:
             logger.error(f"{err}")
-            summary['biobank']['failed'] += 1
-            return False
+            biobank_failed += 1
 
-    def __validate_collection_type(self, collection) -> CollectionMiabis | None:
-        """Validate that collection is of correct type and return cast collection or None if invalid."""
-        if not isinstance(collection, CollectionMiabis):
-            logger.error(
-                f"MIABIS ON FHIR: collection is not instance of MIABIS on FHIR model, but rather its type is {type(collection)} Skipping...")
-            return None
-        return cast(CollectionMiabis, collection)
-
-    def __process_single_collection(self, collection: CollectionMiabis, summary: dict) -> None:
-        """Process upload of a single collection and update summary."""
-        if self.blaze_client.is_resource_present_in_blaze("Organization", collection.identifier, "identifier"):
-            summary['collections']['skipped'] += 1
-            return
-
-        try:
-            logger.debug(f"MIABIS on FHIR: Collection with identifier {collection.identifier} is not present. Uploading...")
-            self.blaze_client.upload_collection(collection)
-            summary['collections']['processed'] += 1
-            logger.debug(f"MIABIS on FHIR: Successfully uploaded collection with identifier {collection.identifier}")
-        except Exception as e:
-            logger.error(f"MIABIS on FHIR: Error uploading collection {collection.identifier}: {e}")
-            summary['collections']['failed'] += 1
-
-    def __upload_collections(self, summary: dict) -> None:
-        """Upload all collections from repository."""
-        logger.info(f"MIABIS on FHIR: Starting upload of collections")
-        all_collections = list(self.sample_collection_repository.get_all())
-        total_collections = len(all_collections)
-        
-        if self.metrics:
-            self.metrics.set_sync_progress('collections', 0, total_collections)
-        
-        for idx, collection in enumerate(all_collections):
-            validated_collection = self.__validate_collection_type(collection)
-            if validated_collection is None:
-                summary['collections']['skipped'] += 1
-            else:
-                self.__process_single_collection(validated_collection, summary)
-            
-            if self.metrics:
-                self.metrics.set_sync_progress('collections', idx + 1, total_collections)
-
-    def sync_biobank_and_collections(self):
-        summary = self.__create_sync_summary()
-        biobank = self.biobank_repository.get_biobank()
-        
-        if self.metrics:
-            self.metrics.set_sync_progress('biobank', 0, 1)
-        
-        biobank_success = self.__upload_biobank(biobank, summary)
-        
-        if self.metrics:
-            self.metrics.set_sync_progress('biobank', 1, 1)
-        
-        if biobank_success:
-            self.__upload_collections(summary)
-        
         logger.info(f"MIABIS on FHIR: Sync of biobank and collection resources is done.")
-        return summary
+
+        return {
+            'biobank': {'processed': biobank_processed, 'failed': biobank_failed, 'skipped': biobank_skipped},
+            'collections': {'processed': collection_processed, 'failed': collection_failed, 'skipped': collection_skipped}
+        }
 
     def __validate_donor_type(self, donor) -> SampleDonorMiabis | None:
         """Validate that donor is of correct type and return cast donor or None if invalid."""
@@ -271,18 +192,10 @@ class MiabisBlazeService(BlazeServiceInterface):
         failed = 0
         skipped = 0
         
-        all_donors = list(self.patient_service.get_all())
-        total = len(all_donors)
-        
-        if self.metrics:
-            self.metrics.set_sync_progress('patients', 0, total)
-        
-        for idx, donor in enumerate(all_donors):
+        for donor in self.patient_service.get_all():
             validated_donor = self.__validate_donor_type(donor)
             if validated_donor is None:
                 skipped += 1
-                if self.metrics:
-                    self.metrics.set_sync_progress('patients', idx + 1, total)
                 continue
                 
             if not self.blaze_client.is_resource_present_in_blaze("Patient", validated_donor.identifier, "identifier"):
@@ -294,9 +207,6 @@ class MiabisBlazeService(BlazeServiceInterface):
                 processed += new_processed
                 failed += new_failed
                 skipped += new_skipped
-            
-            if self.metrics:
-                self.metrics.set_sync_progress('patients', idx + 1, total)
                 
         logger.info(f"MIABIS on FHIR: Upload of donor resources is done.")
         return {'processed': processed, 'failed': failed, 'skipped': skipped}
@@ -307,20 +217,12 @@ class MiabisBlazeService(BlazeServiceInterface):
         failed = 0
         skipped = 0
         
-        all_samples = list(self.sample_service.get_all())
-        total = len(all_samples)
-        
-        if self.metrics:
-            self.metrics.set_sync_progress('specimens', 0, total)
-        
         collection_with_new_samples_map = {}
-        for idx, sample in enumerate(all_samples):
+        for sample in self.sample_service.get_all():
             if not isinstance(sample, SampleMiabis):
                 logger.error(f"MIABIS on FHIR: sample is not instance of MIABIS on FHIR model, "
                              f"but rather its type is {type(sample)}. Skipping....")
                 skipped += 1
-                if self.metrics:
-                    self.metrics.set_sync_progress('specimens', idx + 1, total)
                 continue
             sample = cast(SampleMiabis, sample)
             try:
@@ -366,9 +268,6 @@ class MiabisBlazeService(BlazeServiceInterface):
             except (NonExistentResourceException, HTTPError) as err:
                 logger.error(f"MIABIS on FHIR: {err}")
                 failed += 1
-            
-            if self.metrics:
-                self.metrics.set_sync_progress('specimens', idx + 1, total)
 
         for collection_id, sample_fhir_ids in collection_with_new_samples_map.items():
             logger.info(f"MIABIS on FHIR: adding samples to the respective collection with identifier {collection_id}")
@@ -401,17 +300,3 @@ class MiabisBlazeService(BlazeServiceInterface):
         while True:
             schedule.run_pending()
             time.sleep(1)
-
-    def start_scheduler(self):
-        """Start the scheduler in a daemon thread if not already running."""
-        if self._scheduler_thread is None or not self._scheduler_thread.is_alive():
-            logger.info("Starting MIABIS scheduler thread...")
-            self._scheduler_thread = threading.Thread(target=self.run_scheduler, daemon=True)
-            self._scheduler_thread.start()
-            logger.info("MIABIS scheduler thread started.")
-        else:
-            logger.debug("MIABIS scheduler thread is already running.")
-
-    def ensure_scheduler_running(self):
-        """Ensure scheduler is running, start it if needed."""
-        self.start_scheduler()
