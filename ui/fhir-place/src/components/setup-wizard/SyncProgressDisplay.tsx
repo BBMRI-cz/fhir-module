@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   getMiabisSyncProgress,
   getSyncProgress,
@@ -108,16 +108,20 @@ export default function SyncProgressDisplay({
   // Determine which sync types should be enabled based on syncTargets
   const enabledSyncTypes = useMemo(() => {
     const types: SyncType[] = [];
-    if (syncTargets.includes("blaze") || syncTargets.includes("both")) {
+    if (
+      syncTargets.includes("blaze") ||
+      syncTargets.includes("both")
+    ) {
       types.push("blaze");
     }
-    if (syncTargets.includes("miabis") || syncTargets.includes("both")) {
+    if (
+      syncTargets.includes("miabis") ||
+      syncTargets.includes("both")
+    ) {
       types.push("miabis");
     }
     return types;
   }, [syncTargets]);
-
-  const anySyncRunningRef = useRef(false);
 
   useEffect(() => {
     // Don't poll if no sync types are enabled
@@ -126,30 +130,25 @@ export default function SyncProgressDisplay({
     }
 
     let isMounted = true;
-    let pollTimeout: NodeJS.Timeout | null = null;
     const fadeOutTimeouts: Record<SyncType, NodeJS.Timeout | null> = {
       blaze: null,
       miabis: null,
     };
 
-    const POLL_INTERVAL = 1000;
-
     const fetchProgress = async () => {
       const fetchers = enabledSyncTypes.map((type) =>
-        SYNC_CONFIG[type].fetcher(),
+        SYNC_CONFIG[type].fetcher()
       );
       const results = await Promise.allSettled(fetchers);
 
       if (!isMounted) return;
-
-      let anyRunning = false;
 
       setSyncState((prev) => {
         const next = { ...prev };
 
         const handleResult = (
           type: SyncType,
-          result: PromiseSettledResult<SyncProgressResponse>,
+          result: PromiseSettledResult<SyncProgressResponse>
         ) => {
           if (result.status !== "fulfilled") {
             return;
@@ -160,10 +159,6 @@ export default function SyncProgressDisplay({
           const wasRunning = Boolean(prev[type].data?.in_progress);
           const isRunning = Boolean(data.in_progress);
           const hasError = Boolean(data.error);
-
-          if (isRunning) {
-            anyRunning = true;
-          }
 
           // Sync just completed - start fade out
           if (wasRunning && !isRunning && !hasError) {
@@ -205,38 +200,14 @@ export default function SyncProgressDisplay({
 
         return next;
       });
-
-      anySyncRunningRef.current = anyRunning;
-
-      if (isMounted) {
-        scheduleNextPoll();
-      }
     };
-
-    const scheduleNextPoll = () => {
-      if (pollTimeout) clearTimeout(pollTimeout);
-
-      if (document.visibilityState === "hidden") return;
-
-      const interval = POLL_INTERVAL;
-
-      pollTimeout = setTimeout(fetchProgress, interval);
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        fetchProgress();
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     fetchProgress();
+    const intervalId = setInterval(fetchProgress, 1000);
 
     return () => {
       isMounted = false;
-      if (pollTimeout) clearTimeout(pollTimeout);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      clearInterval(intervalId);
       Object.values(fadeOutTimeouts).forEach((timeout) => {
         if (timeout) clearTimeout(timeout);
       });
@@ -246,7 +217,7 @@ export default function SyncProgressDisplay({
   const visibleEntries = (
     Object.entries(syncState) as [SyncType, SyncState][]
   ).filter(
-    ([type, state]) => enabledSyncTypes.includes(type) && state.isVisible,
+    ([type, state]) => enabledSyncTypes.includes(type) && state.isVisible
   );
 
   if (visibleEntries.length === 0) {
@@ -292,10 +263,10 @@ export default function SyncProgressDisplay({
                       {isRunning
                         ? "Sync in progress..."
                         : hasError
-                          ? "Sync status unavailable"
-                          : isFadingOut
-                            ? "Sync complete!"
-                            : "Sync just finished"}
+                        ? "Sync status unavailable"
+                        : isFadingOut
+                        ? "Sync complete!"
+                        : "Sync just finished"}
                     </p>
                   </div>
                 </div>

@@ -1,16 +1,46 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { getSetupStatus } from "@/actions/setup-wizard/setup-status";
 import { getViableSyncTargets } from "@/actions/setup-wizard/getSystemSetup";
 import ResourceCountsDisplay from "@/components/dashboard/ResourceCountsDisplay";
+import type { SyncTarget } from "@/types/setup-wizard/types";
 
-export default async function DashboardPage() {
-  const [status, syncTargets] = await Promise.all([
-    getSetupStatus(),
-    getViableSyncTargets(),
-  ]);
+export default function DashboardPage() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSetupComplete, setIsSetupComplete] = useState(false);
+  const [syncTargets, setSyncTargets] = useState<SyncTarget[]>([]);
 
-  if (status.initialSetupComplete) {
+  useEffect(() => {
+    const checkSetupStatus = async () => {
+      const [status, targets] = await Promise.all([
+        getSetupStatus(),
+        getViableSyncTargets(),
+      ]);
+
+      setIsSetupComplete(status.initialSetupComplete);
+      setSyncTargets(targets);
+      setIsLoading(false);
+    };
+
+    checkSetupStatus();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <main className="flex-1 p-6 h-full">
+        <div className="flex flex-col items-center justify-center h-full">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      </main>
+    );
+  }
+
+  if (isSetupComplete) {
+    // Determine which displays to show based on sync targets
     const showBlaze =
       syncTargets.includes("blaze") || syncTargets.includes("both");
     const showMiabis =

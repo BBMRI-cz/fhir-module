@@ -2,12 +2,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import {
-  MAX_FILES_TO_SCAN,
-  MAX_FILES_FOR_SCHEMA,
-  MAX_TOTAL_READ_BYTES,
-  SUPPORTED_EXTENSIONS,
-} from "@/lib/folder-constants";
+import { MAX_FILES_TO_SCAN, SUPPORTED_EXTENSIONS } from "@/lib/folder-constants";
 
 const SAFE_ROOT_FOLDER = process.env.ROOT_DIR || "./../../";
 
@@ -97,7 +92,7 @@ function getCommonPath(path1: string, path2: string): string {
 /**
  * Find and read the first supported data file from a folder.
  * Uses opendirSync to iterate without loading all entries into memory.
- * Limited to scanning MAX_FILES_TO_SCAN entries to prevent performance issues.
+ * Limited to scanning MAX_FILES_TO_SCAN files to prevent performance issues.
  */
 function readFirstDataFile(folderPath: string): {
   content: string;
@@ -177,21 +172,11 @@ function readFirstDataFile(folderPath: string): {
 }
 
 /**
- * Find and read supported data files from a folder.
+ * Find and read up to MAX_FILES_TO_SCAN supported data files from a folder.
  * Uses opendirSync to iterate without loading all entries into memory.
  * All files must be of the same type (extension).
- *
- * Stops when either limit is reached first:
- * - File count reaches maxFiles
- * - Cumulative bytes read reaches MAX_TOTAL_READ_BYTES
- *
- * @param folderPath - Validated absolute folder path
- * @param maxFiles - Maximum number of files to read (defaults to MAX_FILES_TO_SCAN)
  */
-function readMultipleDataFiles(
-  folderPath: string,
-  maxFiles: number = MAX_FILES_TO_SCAN
-): DataFileInfo[] {
+function readMultipleDataFiles(folderPath: string): DataFileInfo[] {
   const safeRootReal = fs.realpathSync(SAFE_ROOT_FOLDER);
   const normalizedPath = fs.realpathSync(folderPath);
 
@@ -209,7 +194,6 @@ function readMultipleDataFiles(
 
   const files: DataFileInfo[] = [];
   let scannedCount = 0;
-  let totalBytesRead = 0;
   let targetExt: string | null = null;
 
   try {
@@ -219,11 +203,6 @@ function readMultipleDataFiles(
         break;
       }
       scannedCount++;
-
-      // Stop collecting once we have enough files
-      if (files.length >= maxFiles) {
-        break;
-      }
 
       const fileName = dirent.name;
       const ext = path.extname(fileName).toLowerCase();
@@ -258,13 +237,7 @@ function readMultipleDataFiles(
           continue;
         }
 
-        // Stop if this file would push us over the cumulative memory budget
-        if (totalBytesRead + stats.size > MAX_TOTAL_READ_BYTES) {
-          break;
-        }
-
         const content = fs.readFileSync(realFilePath, "utf-8");
-        totalBytesRead += stats.size;
         files.push({
           content,
           name: fileName,
@@ -323,16 +296,15 @@ export async function parseFolderData(
 }
 
 /**
- * Get file contents from multiple files in a folder for schema discovery.
- * Reads only a small sample (MAX_FILES_FOR_SCHEMA) since we only need field names,
- * not every record. Skips files larger than MAX_FILE_SIZE_BYTES.
+ * Get file contents from multiple files in a folder for parsing.
+ * Reads up to MAX_FILES_TO_SCAN files of the same type.
  */
 export async function parseMultipleFolderData(
   folderPath: string
 ): Promise<ParseMultipleFilesResult> {
   try {
     const validatedPath = validateFolderPath(folderPath);
-    const files = readMultipleDataFiles(validatedPath, MAX_FILES_FOR_SCHEMA);
+    const files = readMultipleDataFiles(validatedPath);
 
     if (files.length === 0) {
       return {

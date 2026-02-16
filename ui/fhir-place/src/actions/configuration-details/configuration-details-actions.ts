@@ -13,33 +13,6 @@ import {
 import { parseMultipleFolderData } from "@/actions/folder/parse-folder-data";
 const BASE_URL = process.env.BACKEND_API_URL || "http://localhost:5001";
 
-// ---------------------------------------------------------------------------
-// Generic in-memory cache (module-level, persists for the process lifetime)
-// ---------------------------------------------------------------------------
-const CACHE_DURATION_MINUTES = 60;
-
-interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
-}
-
-const cache = new Map<string, CacheEntry<unknown>>();
-
-function getCached<T>(key: string): T | null {
-  const entry = cache.get(key);
-  if (
-    entry &&
-    (Date.now() - entry.timestamp) / 1000 < CACHE_DURATION_MINUTES * 60
-  ) {
-    return entry.data as T;
-  }
-  return null;
-}
-
-function setCache<T>(key: string, data: T): void {
-  cache.set(key, { data, timestamp: Date.now() });
-}
-
 function normalizeKey(raw: any, saveToPath?: string): SimpleKeyInfo {
   return {
     required: raw.required ?? false,
@@ -52,9 +25,6 @@ function normalizeKey(raw: any, saveToPath?: string): SimpleKeyInfo {
 }
 
 export async function getDonorMappingSchema(): Promise<DonorMap> {
-  const cached = getCached<DonorMap>("donorMappingSchema");
-  if (cached) return cached;
-
   try {
     const response = await fetch(`${BASE_URL}/donor-mapping-schema`, {
       method: "GET",
@@ -76,7 +46,6 @@ export async function getDonorMappingSchema(): Promise<DonorMap> {
       birthDate: normalizeKey(data.birth_date),
     };
 
-    setCache("donorMappingSchema", mappedData);
     return mappedData;
   } catch (error) {
     console.error("Error fetching donor mapping schema:", error);
@@ -85,9 +54,6 @@ export async function getDonorMappingSchema(): Promise<DonorMap> {
 }
 
 export async function getSampleMappingSchema(): Promise<SampleMap> {
-  const cached = getCached<SampleMap>("sampleMappingSchema");
-  if (cached) return cached;
-
   try {
     const response = await fetch(`${BASE_URL}/sample-mapping-schema`, {
       method: "GET",
@@ -119,7 +85,6 @@ export async function getSampleMappingSchema(): Promise<SampleMap> {
       sample: normalizeKey(data.sample),
     };
 
-    setCache("sampleMappingSchema", mappedData);
     return mappedData;
   } catch (error) {
     console.error("Error fetching sample mapping schema:", error);
@@ -128,9 +93,6 @@ export async function getSampleMappingSchema(): Promise<SampleMap> {
 }
 
 export async function getConditionMappingSchema(): Promise<ConditionMap> {
-  const cached = getCached<ConditionMap>("conditionMappingSchema");
-  if (cached) return cached;
-
   try {
     const response = await fetch(`${BASE_URL}/condition-mapping-schema`, {
       method: "GET",
@@ -152,7 +114,6 @@ export async function getConditionMappingSchema(): Promise<ConditionMap> {
       diagnosis_date: normalizeKey(data.diagnosis_date),
     };
 
-    setCache("conditionMappingSchema", mapped);
     return mapped;
   } catch (error) {
     console.error("Error fetching condition mapping schema:", error);
@@ -161,9 +122,6 @@ export async function getConditionMappingSchema(): Promise<ConditionMap> {
 }
 
 export async function getTemperatureValues(): Promise<string[]> {
-  const cached = getCached<string[]>("temperatureValues");
-  if (cached) return cached;
-
   try {
     const response = await fetch(`${BASE_URL}/storage-temperatures`, {
       method: "GET",
@@ -179,10 +137,7 @@ export async function getTemperatureValues(): Promise<string[]> {
     }
 
     const data = await response.json();
-    const values: string[] = data.storage_temperature;
-
-    setCache("temperatureValues", values);
-    return values;
+    return data.storage_temperature;
   } catch (error) {
     console.error("Error fetching storage temperatures:", error);
     throw error;
