@@ -144,6 +144,9 @@ jobs:
       - name: Create .env file
         run: touch .env
 
+      - name: Update shared_config.json for XML test
+        run: .github/scripts/update-shared-config-xml.sh util/shared_config.json
+
       - name: Run sandbox in dev env
         run: docker compose -f compose.yaml -f .github/comp_override/compose.override-xml.yaml --profile dev up -d
 
@@ -195,6 +198,9 @@ jobs:
       - name: Create .env file
         run: touch .env
 
+      - name: Update shared_config.json for CSV test
+        run: .github/scripts/update-shared-config.sh util/shared_config.json
+
       - name: Run sandbox in dev env (use compose.override.yaml  to work with csv files)
         run: docker compose -f compose.yaml -f .github/comp_override/compose.override.yaml --profile dev up -d
 
@@ -245,6 +251,9 @@ jobs:
 
       - name: Create .env file
         run: touch .env
+
+      - name: Update shared_config.json for JSON test
+        run: .github/scripts/update-shared-config-json.sh util/shared_config.json
 
       - name: Run sandbox in dev env (use compose.override.yaml  to work with csv files)
         run: docker compose -f compose.yaml -f .github/comp_override/compose.override2.yaml --profile dev up -d

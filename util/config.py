@@ -33,21 +33,6 @@ class ConfigLoader:
 
         self._loaded_maps = {}
         
-        # Mapping between config keys and their fallback (env_var_key, default_value)
-        self._fallback_map = {
-            'RECORDS_DIR_PATH': ('DIR_PATH', '/mock_dir/'),
-            'PARSING_MAP_PATH': ('PARSING_MAP_PATH', lambda: os.path.join(self.root_dir, 'default_map.json')),
-            'MATERIAL_TYPE_MAP_PATH': ('MATERIAL_TYPE_MAP_PATH', lambda: os.path.join(self.root_dir, 'default_material_type_map.json')),
-            'MIABIS_MATERIAL_TYPE_MAP_PATH': ('MIABIS_MATERIAL_TYPE_MAP_PATH', lambda: os.path.join(self.root_dir, 'default_miabis_material_type_map.json')),
-            'SAMPLE_COLLECTIONS_PATH': ('SAMPLE_COLLECTIONS_PATH', lambda: os.path.join(self.root_dir, 'default_sample_collection.json')),
-            'BIOBANK_PATH': ('BIOBANK_PATH', lambda: os.path.join(self.root_dir, 'default_biobank.json')),
-            'TYPE_TO_COLLECTION_MAP_PATH': ('TYPE_TO_COLLECTION_MAP_PATH', lambda: os.path.join(self.root_dir, 'default_type_to_collection_map.json')),
-            'STORAGE_TEMP_MAP_PATH': ('STORAGE_TEMP_MAP_PATH', lambda: os.path.join(self.root_dir, 'default_storage_temp_map.json')),
-            'MIABIS_STORAGE_TEMP_MAP_PATH': ('MIABIS_STORAGE_TEMP_MAP_PATH', lambda: os.path.join(self.root_dir, 'default_miabis_storage_temp_map.json')),
-            'CSV_SEPARATOR': ('CSV_SEPARATOR', ';'),
-            'RECORDS_FILE_TYPE': ('RECORDS_FILE_TYPE', 'xml'),
-        }
-        
     def _load_config(self) -> Dict[str, Any]:
         config = None
         try:
@@ -69,13 +54,7 @@ class ConfigLoader:
 
         # If the value is not set, try to get it from the environment variables - keep the backward compatibility
         if (value is None or value == ''):
-            if key in self._fallback_map:
-                env_var_key, fallback_default = self._fallback_map[key]
-                if callable(fallback_default):
-                    fallback_default = fallback_default()
-                value = os.getenv(env_var_key, fallback_default)
-            else:
-                value = os.getenv(key, default)
+            value = os.getenv(key, default)
         
         if key.endswith('_PATH') and value and not os.path.isabs(value):
             return os.path.join(self.root_dir, value)
@@ -155,7 +134,7 @@ def get_miabis_blaze_url():
     return os.getenv("MIABIS_BLAZE_URL", "http://localhost:5432/fhir")
 
 def get_root_dir(): 
-    return _config.get('ROOT_DIR', os.path.dirname(os.path.abspath(__file__)))
+    return _config.get('ROOT_DIR')
 
 def get_records_dir_path(): 
     return _config.get('RECORDS_DIR_PATH')

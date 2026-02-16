@@ -217,7 +217,7 @@ class TestConfigurationInfoService(unittest.TestCase):
         mock_realpath.side_effect = lambda x: x if x == '/test/base' else '/other/path'
         
         response = self.client.get('/list-directories?path=/../../../other')
-        self.assertEqual(404, response.status_code)
+        self.assertEqual(403, response.status_code)
 
 
     def test_parse_folder_data_success(self):
