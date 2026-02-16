@@ -9,7 +9,7 @@ services:
       - monitoring
     restart: no
     ports:
-      - "5001:5000"
+      - "5000:5000"
       - "5678:5678" # Debug port
     environment:
       BLAZE_URL: "${BLAZE_URL:-http://test-blaze:8080/fhir}"

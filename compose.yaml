@@ -15,7 +15,6 @@ services:
       BLAZE_URL: "${BLAZE_URL:-http://test-blaze:8080/fhir}"
       MIABIS_BLAZE_URL: "${MIABIS_BLAZE_URL:-http://miabis-blaze:8080/fhir}"
       MIABIS_ON_FHIR: "${MIABIS_ON_FHIR:-True}"
-      DIR_PATH: "/opt/records"
       PYTHONWARNINGS: "ignore:Unverified HTTPS request"
     env_file:
       - .env
@@ -63,10 +62,9 @@ services:
       - "5000:5000" # FHIR module port
       - "3000:3000" # UI port
     environment:
-      BLAZE_URL: "${BLAZE_URL:-http://test-blaze:8080/fhir}"
-      MIABIS_BLAZE_URL: "${MIABIS_BLAZE_URL:-http://miabis-blaze:8080/fhir}"
+      BLAZE_URL: "${BLAZE_URL:-http://localhost:8080/fhir}"
+      MIABIS_BLAZE_URL: "${MIABIS_BLAZE_URL:-http://localhost:5432/fhir}"
       MIABIS_ON_FHIR: "${MIABIS_ON_FHIR:-True}"
-      DIR_PATH: "/opt/records"
       PYTHONWARNINGS: "ignore:Unverified HTTPS request"
     env_file:
       - .env
