@@ -52,7 +52,7 @@ function DefineMappingInner(props: CustomMappingStepProps) {
         const field = data[key];
 
         if (field.onlyForFormats && field.onlyForFormats.length > 0) {
-          if (!field.onlyForFormats.includes(dataFormat!)) {
+          if (dataFormat && !field.onlyForFormats.includes(dataFormat)) {
             continue;
           }
         }

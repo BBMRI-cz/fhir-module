@@ -2,7 +2,7 @@ import {
   extractValuesFromPaths,
   PathExtractionOptions,
 } from "../extract-values-from-path";
-import * as fs from "fs";
+import * as fs from "node:fs";
 
 // Mock the fs module with specific implementations
 jest.mock("fs", () => ({
@@ -21,7 +21,7 @@ jest.mock("path", () => ({
   sep: "/",
   join: (...args: string[]) => args.join("/"),
   extname: (p: string) => {
-    const match = p.match(/\.[^.]+$/);
+    const match = /\.[^.]+$/.exec(p);
     return match ? match[0] : "";
   },
 }));

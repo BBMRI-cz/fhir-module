@@ -1,13 +1,15 @@
 "use server";
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { XMLParser } from "fast-xml-parser";
 import {
   MAX_FILES_TO_PROCESS,
   MAX_ENTRIES_TO_SCAN,
   MAX_TOTAL_READ_BYTES,
 } from "@/lib/folder-constants";
+
+type FileType = "json" | "csv" | "xml";
 
 const SAFE_ROOT_FOLDER = process.env.ROOT_DIR || "./../..";
 
@@ -91,16 +93,14 @@ function getValueByPath(obj: unknown, pathStr: string): unknown[] {
   for (const part of parts) {
     const next: unknown[] = [];
     for (const item of current) {
-      if (item && typeof item === "object") {
-        const record = item as Record<string, unknown>;
-        if (part in record) {
-          const value = record[part];
-          if (Array.isArray(value)) {
-            next.push(...value);
-          } else {
-            next.push(value);
-          }
-        }
+      if (!item || typeof item !== "object") continue;
+      const record = item as Record<string, unknown>;
+      if (!(part in record)) continue;
+      const value = record[part];
+      if (Array.isArray(value)) {
+        next.push(...value);
+      } else {
+        next.push(value);
       }
     }
     current = next;
@@ -112,6 +112,24 @@ function getValueByPath(obj: unknown, pathStr: string): unknown[] {
 /**
  * Extract primitive values (strings/numbers) from potentially nested structures
  */
+function extractObjectPrimitives(
+  record: Record<string, unknown>,
+): string[] {
+  if ("#text" in record) {
+    return [String(record["#text"])];
+  }
+  const results: string[] = [];
+  for (const [key, val] of Object.entries(record)) {
+    if (
+      !key.startsWith("@") &&
+      (typeof val === "string" || typeof val === "number")
+    ) {
+      results.push(String(val));
+    }
+  }
+  return results;
+}
+
 function extractPrimitiveValues(values: unknown[]): string[] {
   const results: string[] = [];
 
@@ -122,19 +140,9 @@ function extractPrimitiveValues(values: unknown[]): string[] {
     if (typeof value === "string" || typeof value === "number") {
       results.push(String(value));
     } else if (typeof value === "object") {
-      const record = value as Record<string, unknown>;
-      if ("#text" in record) {
-        results.push(String(record["#text"]));
-      } else {
-        for (const [key, val] of Object.entries(record)) {
-          if (
-            !key.startsWith("@") &&
-            (typeof val === "string" || typeof val === "number")
-          ) {
-            results.push(String(val));
-          }
-        }
-      }
+      results.push(
+        ...extractObjectPrimitives(value as Record<string, unknown>),
+      );
     }
   }
 
@@ -190,7 +198,7 @@ function parseCsvAndExtract(
       .split(separator)
       .map((v) => v.trim().replaceAll(/['"]/g, ""));
     for (const idx of columnIndices) {
-      if (row[idx] && row[idx].trim()) {
+      if (row[idx]?.trim()) {
         values.push(row[idx].trim());
       }
     }
@@ -330,7 +338,7 @@ function parseXmlAndExtract(
       let extracted: unknown[];
 
       const pathParts = opt.path.split(".");
-      const keyName = pathParts[pathParts.length - 1];
+      const keyName = pathParts.at(-1)!;
 
       if (opt.findAnywhere) {
         extracted = findValueAnywhere(item, keyName);
@@ -338,7 +346,7 @@ function parseXmlAndExtract(
         extracted = getValueByPath(item, opt.path);
       }
 
-      if (opt.selectedAttribute && opt.selectedAttribute.trim()) {
+      if (opt.selectedAttribute?.trim()) {
         values.push(
           ...extractAttributeValues(extracted, opt.selectedAttribute)
         );
@@ -373,6 +381,120 @@ function filterXmlMetadata(jsonData: unknown): unknown {
   return filtered;
 }
 
+interface CollectedFiles {
+  dataFiles: string[];
+  hasMoreFiles: boolean;
+}
+
+function collectDataFiles(
+  dirPath: string,
+  extension: string,
+): CollectedFiles {
+  const dataFiles: string[] = [];
+  let entriesScanned = 0;
+  let hasMoreFiles = false;
+
+  const dir = fs.opendirSync(dirPath);
+  try {
+    let dirent: fs.Dirent | null;
+    while ((dirent = dir.readSync()) !== null) {
+      entriesScanned++;
+      if (entriesScanned > MAX_ENTRIES_TO_SCAN) {
+        hasMoreFiles = true;
+        break;
+      }
+      if (path.extname(dirent.name).toLowerCase() !== extension) continue;
+      dataFiles.push(dirent.name);
+      if (dataFiles.length >= MAX_FILES_TO_PROCESS) {
+        hasMoreFiles = true;
+        break;
+      }
+    }
+  } finally {
+    dir.closeSync();
+  }
+
+  return { dataFiles, hasMoreFiles };
+}
+
+function extractFromFileContent(
+  content: string,
+  fileType: FileType,
+  pathOptions: PathExtractionOptions[],
+  paths: string[],
+  csvSeparator: string,
+): string[] {
+  if (fileType === "json") return parseJsonAndExtract(content, paths);
+  if (fileType === "csv")
+    return parseCsvAndExtract(content, paths, csvSeparator);
+  if (fileType === "xml") return parseXmlAndExtract(content, pathOptions);
+  return [];
+}
+
+interface FileProcessingResult {
+  values: Set<string>;
+  filesRead: number;
+  warnings: string[];
+}
+
+function processDataFiles(
+  dataFiles: string[],
+  validatedPath: string,
+  fileType: FileType,
+  pathOptions: PathExtractionOptions[],
+  csvSeparator: string,
+): FileProcessingResult {
+  const allValues = new Set<string>();
+  const paths = pathOptions.map((opt) => opt.path);
+  const safeRootReal = fs.realpathSync(SAFE_ROOT_FOLDER);
+  const warnings: string[] = [];
+  let totalBytesRead = 0;
+  let filesRead = 0;
+
+  for (const fileName of dataFiles) {
+    const filePath = path.join(validatedPath, fileName);
+
+    let realFilePath: string;
+    try {
+      realFilePath = fs.realpathSync(filePath);
+    } catch {
+      continue;
+    }
+
+    if (getCommonPath(safeRootReal, realFilePath) !== safeRootReal) continue;
+
+    try {
+      const stats = fs.statSync(realFilePath);
+      if (totalBytesRead + stats.size > MAX_TOTAL_READ_BYTES) {
+        warnings.push(
+          `Stopped after reading ${filesRead} files (cumulative size limit of ${Math.round(MAX_TOTAL_READ_BYTES / 1024 / 1024)} MB reached).`,
+        );
+        break;
+      }
+
+      const content = fs.readFileSync(realFilePath, "utf-8");
+      totalBytesRead += stats.size;
+      filesRead++;
+
+      const extractedValues = extractFromFileContent(
+        content,
+        fileType,
+        pathOptions,
+        paths,
+        csvSeparator,
+      );
+      for (const val of extractedValues) {
+        const trimmed = val?.trim();
+        if (trimmed) allValues.add(trimmed);
+      }
+    } catch (err) {
+      console.error(`Error processing file ${fileName}:`, err);
+    }
+  }
+
+  return { values: allValues, filesRead, warnings };
+}
+
 /**
  * Extract unique values from specified paths across all files in a folder.
  *
@@ -384,53 +506,19 @@ function filterXmlMetadata(jsonData: unknown): unknown {
 export async function extractValuesFromPaths(
   folderPath: string,
   pathOptions: PathExtractionOptions[],
-  fileType: "json" | "csv" | "xml",
-  csvSeparator: string = ","
+  fileType: FileType,
+  csvSeparator: string = ",",
 ): Promise<ExtractValuesResult> {
   try {
     if (!pathOptions || pathOptions.length === 0) {
-      return {
-        success: false,
-        message: "No paths specified for extraction",
-      };
+      return { success: false, message: "No paths specified for extraction" };
     }
 
     const validatedPath = validateFolderPath(folderPath);
-    const extension = `.${fileType}`;
-
-    // Use opendirSync to iterate without loading all entries into memory
-    const dataFiles: string[] = [];
-    let entriesScanned = 0;
-    let hasMoreFiles = false;
-
-    const dir = fs.opendirSync(validatedPath);
-    try {
-      let dirent: fs.Dirent | null;
-      while ((dirent = dir.readSync()) !== null) {
-        entriesScanned++;
-
-        // Stop scanning if we've hit the limit to prevent freezing on huge directories
-        if (entriesScanned > MAX_ENTRIES_TO_SCAN) {
-          hasMoreFiles = true;
-          break;
-        }
-
-        const fileName = dirent.name;
-        if (path.extname(fileName).toLowerCase() !== extension) {
-          continue;
-        }
-
-        dataFiles.push(fileName);
-
-        // Stop collecting files once we have enough
-        if (dataFiles.length >= MAX_FILES_TO_PROCESS) {
-          hasMoreFiles = true;
-          break;
-        }
-      }
-    } finally {
-      dir.closeSync();
-    }
+    const { dataFiles, hasMoreFiles } = collectDataFiles(
+      validatedPath,
+      `.${fileType}`,
+    );
 
     if (dataFiles.length === 0) {
       return {
@@ -442,83 +530,32 @@ export async function extractValuesFromPaths(
     const warnings: string[] = [];
     if (hasMoreFiles) {
       warnings.push(
-        `The folder may contain more files. Only the first ${dataFiles.length} ${fileType.toUpperCase()} files will be processed.`
+        `The folder may contain more files. Only the first ${dataFiles.length} ${fileType.toUpperCase()} files will be processed.`,
       );
     }
 
-    const allValues: Set<string> = new Set();
-    const paths = pathOptions.map((opt) => opt.path);
+    const result = processDataFiles(
+      dataFiles,
+      validatedPath,
+      fileType,
+      pathOptions,
+      csvSeparator,
+    );
+    warnings.push(...result.warnings);
 
-    // Hoist outside the loop — the safe root doesn't change between files
-    const safeRootReal = fs.realpathSync(SAFE_ROOT_FOLDER);
-
-    let totalBytesRead = 0;
-    let filesRead = 0;
-
-    for (const fileName of dataFiles) {
-      const filePath = path.join(validatedPath, fileName);
-
-      let realFilePath: string;
-      try {
-        realFilePath = fs.realpathSync(filePath);
-      } catch {
-        continue;
-      }
-
-      const commonPath = getCommonPath(safeRootReal, realFilePath);
-      if (commonPath !== safeRootReal) {
-        continue;
-      }
-
-      try {
-        const stats = fs.statSync(realFilePath);
-
-        // Stop if this file would push us over the cumulative memory budget
-        if (totalBytesRead + stats.size > MAX_TOTAL_READ_BYTES) {
-          warnings.push(
-            `Stopped after reading ${filesRead} files (cumulative size limit of ${Math.round(MAX_TOTAL_READ_BYTES / 1024 / 1024)} MB reached).`
-          );
-          break;
-        }
-
-        const content = fs.readFileSync(realFilePath, "utf-8");
-        totalBytesRead += stats.size;
-        filesRead++;
-
-        let extractedValues: string[] = [];
-
-        if (fileType === "json") {
-          extractedValues = parseJsonAndExtract(content, paths);
-        } else if (fileType === "csv") {
-          extractedValues = parseCsvAndExtract(content, paths, csvSeparator);
-        } else if (fileType === "xml") {
-          extractedValues = parseXmlAndExtract(content, pathOptions);
-        }
-
-        for (const val of extractedValues) {
-          if (val && val.trim()) {
-            allValues.add(val.trim());
-          }
-        }
-      } catch (err) {
-        console.error(`Error processing file ${fileName}:`, err);
-      }
-    }
-
-    const uniqueValues = Array.from(allValues).sort();
-
+    const uniqueValues = Array.from(result.values).sort((a, b) =>
+      a.localeCompare(b),
+    );
     return {
       success: true,
-      message: `Extracted ${uniqueValues.length} unique values from ${filesRead} files`,
+      message: `Extracted ${uniqueValues.length} unique values from ${result.filesRead} files`,
       values: uniqueValues,
       warning: warnings.length > 0 ? warnings.join(" ") : undefined,
     };
   } catch (error) {
+    const msg =
+      error instanceof Error ? error.message : "Failed to extract values";
     console.error("Error extracting values:", error);
-    return {
-      success: false,
-      message:
-        error instanceof Error ? error.message : "Failed to extract values",
-    };
+    return { success: false, message: msg };
   }
 }

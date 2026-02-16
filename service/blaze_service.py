@@ -89,12 +89,11 @@ class BlazeService:
             logger.warning("Sync already in progress, skipping duplicate invocation.")
             return
 
-        logger.info("Starting sync with Blaze 🔥!")
-
-        if self.metrics:
-            self.metrics.start_sync()
-
         try:
+            logger.info("Starting sync with Blaze 🔥!")
+
+            if self.metrics:
+                self.metrics.start_sync()
             if not self._refresh_services():
                 error_msg = "Sync failed: Mapping files are misconfigured. Please check your parsing map configuration."
                 sync_logger.error(error_msg)

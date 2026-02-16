@@ -3,7 +3,7 @@ import {
   getFolders,
   getRootFolderInfo,
 } from "../list-directories";
-import * as fs from "fs";
+import * as fs from "node:fs";
 
 // Mock the fs module with explicit opendirSync
 jest.mock("fs", () => ({
@@ -114,7 +114,7 @@ describe("list-directories", () => {
       // 1 dir + 10 files + 1 placeholder = 12
       expect(result.entries).toHaveLength(12);
       expect(result.hasMoreFiles).toBe(true);
-      expect(result.entries[result.entries.length - 1].isPlaceholder).toBe(
+      expect(result.entries.at(-1)!.isPlaceholder).toBe(
         true
       );
     });

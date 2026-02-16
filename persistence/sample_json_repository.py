@@ -65,15 +65,12 @@ class SampleJsonRepository(SampleRepository):
                 except JSONDecodeError:
                     logger.error("Biobank file does not have a correct JSON format. Exiting...")
                     return
-                sample_index = 0  # Start from 0 for JSON array index
                 for sample_json in samples_json:
                     try:
                         sample = self.__build_sample(sample_json)
                         yield sample
                     except (ValueError, TypeError, KeyError) as err:
                         logger.info(f"{err} Skipping....")
-                    finally:
-                        sample_index += 1
         except OSError as e:
             logger.debug(f"Error while opening file {dir_entry.name}: {e}")
             logger.info(f"Error while opening file {dir_entry.name} [Skipping...]")

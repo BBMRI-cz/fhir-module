@@ -8,10 +8,10 @@ import {
   AuthenticationError,
 } from "@/lib/errors";
 import { validatePassword } from "@/lib/auth/password-validation";
-import { getUserById, getUserByUsername } from "@/lib/db/user-queries";
+import { getUserByUsername } from "@/lib/db/user-queries";
 import crypto from "node:crypto";
 
-export { getUserById, getUserByUsername };
+export { getUserById, getUserByUsername } from "@/lib/db/user-queries";
 
 export interface CreateUserData {
   username: string;

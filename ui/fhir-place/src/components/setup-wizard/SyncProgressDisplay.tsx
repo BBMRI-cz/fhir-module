@@ -175,7 +175,7 @@ export default function SyncProgressDisplay({
 
             // Clear any existing timeout
             if (fadeOutTimeouts[type]) {
-              clearTimeout(fadeOutTimeouts[type]!);
+              clearTimeout(fadeOutTimeouts[type]);
             }
 
             // Hide after fade-out animation completes
@@ -272,6 +272,11 @@ export default function SyncProgressDisplay({
           const isRunning = Boolean(data?.in_progress);
           const hasError = Boolean(data?.error);
 
+          let statusMessage = "Sync just finished";
+          if (isRunning) statusMessage = "Sync in progress...";
+          else if (hasError) statusMessage = "Sync status unavailable";
+          else if (isFadingOut) statusMessage = "Sync complete!";
+
           return (
             <div
               key={type}
@@ -289,13 +294,7 @@ export default function SyncProgressDisplay({
                   <div>
                     <p className="text-sm font-medium">{label}</p>
                     <p className="text-xs text-muted-foreground">
-                      {isRunning
-                        ? "Sync in progress..."
-                        : hasError
-                          ? "Sync status unavailable"
-                          : isFadingOut
-                            ? "Sync complete!"
-                            : "Sync just finished"}
+                      {statusMessage}
                     </p>
                   </div>
                 </div>

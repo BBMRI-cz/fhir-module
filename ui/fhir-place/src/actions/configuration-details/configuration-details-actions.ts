@@ -40,11 +40,15 @@ function setCache<T>(key: string, data: T): void {
   cache.set(key, { data, timestamp: Date.now() });
 }
 
+export async function clearCache(): Promise<void> {
+  cache.clear();
+}
+
 function normalizeKey(raw: any, saveToPath?: string): SimpleKeyInfo {
   return {
     required: raw.required ?? false,
     onlyForFormats: raw.only_for_formats?.map((rec: string) =>
-      rec.toLowerCase()
+      rec.toLowerCase(),
     ),
     xmlDependsOn: raw.xml_depends_on ?? undefined,
     saveToPath: saveToPath,
@@ -65,7 +69,7 @@ export async function getDonorMappingSchema(): Promise<DonorMap> {
 
     if (!response.ok) {
       throw new Error(
-        `Failed to fetch donor mapping schema: ${response.statusText}`
+        `Failed to fetch donor mapping schema: ${response.statusText}`,
       );
     }
 
@@ -98,7 +102,7 @@ export async function getSampleMappingSchema(): Promise<SampleMap> {
 
     if (!response.ok) {
       throw new Error(
-        `Failed to fetch sample mapping schema: ${response.statusText}`
+        `Failed to fetch sample mapping schema: ${response.statusText}`,
       );
     }
 
@@ -112,7 +116,7 @@ export async function getSampleMappingSchema(): Promise<SampleMap> {
       collection_date: normalizeKey(data.collection_date, "sample_details"),
       storage_temperature: normalizeKey(
         data.storage_temperature,
-        "sample_details"
+        "sample_details",
       ),
       collection: normalizeKey(data.collection, "sample_details"),
       donor_id: normalizeKey(data.donor_id),
@@ -141,7 +145,7 @@ export async function getConditionMappingSchema(): Promise<ConditionMap> {
 
     if (!response.ok) {
       throw new Error(
-        `Failed to fetch condition mapping schema: ${response.statusText}`
+        `Failed to fetch condition mapping schema: ${response.statusText}`,
       );
     }
 
@@ -174,7 +178,7 @@ export async function getTemperatureValues(): Promise<string[]> {
 
     if (!response.ok) {
       throw new Error(
-        `Failed to fetch storage temperatures: ${response.statusText}`
+        `Failed to fetch storage temperatures: ${response.statusText}`,
       );
     }
 
@@ -198,12 +202,12 @@ export async function getConfigValue(key: string): Promise<string | null> {
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     if (!response.ok) {
       throw new Error(
-        `Failed to fetch config value for key ${key}: ${response.statusText}`
+        `Failed to fetch config value for key ${key}: ${response.statusText}`,
       );
     }
 
@@ -217,7 +221,7 @@ export async function getConfigValue(key: string): Promise<string | null> {
 
 export async function getSampleCollectionIdentifiers(): Promise<string[]> {
   try {
-    const fs = await import("fs");
+    const fs = await import("node:fs");
 
     const filePath = await getConfigValue("SAMPLE_COLLECTIONS_PATH");
     if (!filePath) {
@@ -240,7 +244,7 @@ export async function getSampleCollectionIdentifiers(): Promise<string[]> {
         (c): c is { identifier: string } =>
           typeof c === "object" &&
           c !== null &&
-          typeof c.identifier === "string"
+          typeof c.identifier === "string",
       )
       .map((c) => c.identifier);
   } catch (error) {
@@ -249,64 +253,79 @@ export async function getSampleCollectionIdentifiers(): Promise<string[]> {
   }
 }
 
+function parseFileByExtension(
+  content: string,
+  fileExtension: string,
+  csvSeparator?: string,
+): DataField[] {
+  if (fileExtension === ".json") return parseJsonFile(content);
+  if (fileExtension === ".csv") return parseCsvFile(content, csvSeparator);
+  if (fileExtension === ".xml") return parseXmlFile(content);
+  return [];
+}
+
+function mergeFieldIntoMap(
+  pathsMap: Map<string, DataField>,
+  field: DataField,
+): void {
+  const existing = pathsMap.get(field.path);
+  if (!existing) {
+    pathsMap.set(field.path, field);
+    return;
+  }
+  const hasMoreAttributes =
+    field.attributes &&
+    (!existing.attributes ||
+      field.attributes.length > existing.attributes.length);
+  if (hasMoreAttributes) {
+    pathsMap.set(field.path, field);
+  }
+}
+
+function collectFieldsFromFiles(
+  files: { name: string; content: string }[],
+  fileExtension: string,
+  csvSeparator?: string,
+): Map<string, DataField> {
+  const pathsMap = new Map<string, DataField>();
+
+  for (const file of files) {
+    try {
+      const fileFields = parseFileByExtension(
+        file.content,
+        fileExtension,
+        csvSeparator,
+      );
+      for (const field of fileFields) {
+        mergeFieldIntoMap(pathsMap, field);
+      }
+    } catch (parseError) {
+      const msg =
+        parseError instanceof Error ? parseError.message : "Unknown error";
+      console.warn(`Failed to parse ${file.name}: ${msg}`);
+    }
+  }
+
+  return pathsMap;
+}
+
 export async function parseDataFromFolder(
   folderPath: string,
-  csvSeparator?: string
+  csvSeparator?: string,
 ): Promise<ParsedDataResult> {
   try {
     const data = await parseMultipleFolderData(folderPath);
 
     if (!data.success) {
-      return {
-        success: false,
-        message: data.message,
-      };
+      return { success: false, message: data.message };
     }
 
-    const fileExtension = data.fileExtension!;
     const filesCount = data.files.length;
-
-    // Use a Map to track unique paths by their path string
-    // This allows us to keep the full DataField info while deduplicating
-    const pathsMap = new Map<string, DataField>();
-
-    for (const file of data.files) {
-      try {
-        let fileFields: DataField[] = [];
-
-        if (fileExtension === ".json") {
-          fileFields = parseJsonFile(file.content);
-        } else if (fileExtension === ".csv") {
-          fileFields = parseCsvFile(file.content, csvSeparator);
-        } else if (fileExtension === ".xml") {
-          fileFields = parseXmlFile(file.content);
-        }
-
-        // Add fields to the map, deduplicating by path
-        for (const field of fileFields) {
-          if (!pathsMap.has(field.path)) {
-            pathsMap.set(field.path, field);
-          } else {
-            // Merge attributes if the existing field has fewer
-            const existing = pathsMap.get(field.path)!;
-            if (
-              field.attributes &&
-              (!existing.attributes ||
-                field.attributes.length > existing.attributes.length)
-            ) {
-              pathsMap.set(field.path, field);
-            }
-          }
-        }
-      } catch (parseError) {
-        // Skip files that fail to parse, continue with others
-        console.warn(
-          `Failed to parse ${file.name}: ${
-            parseError instanceof Error ? parseError.message : "Unknown error"
-          }`
-        );
-      }
-    }
+    const pathsMap = collectFieldsFromFiles(
+      data.files,
+      data.fileExtension!,
+      csvSeparator,
+    );
 
     if (pathsMap.size === 0) {
       return {
@@ -316,19 +335,16 @@ export async function parseDataFromFolder(
     }
 
     const fields = Array.from(pathsMap.values());
-
     return {
       success: true,
       message: `Successfully parsed ${fields.length} unique fields from ${filesCount} file(s)`,
       fields,
     };
   } catch (error) {
+    const msg =
+      error instanceof Error ? error.message : "Failed to parse folder data";
     console.error("Error parsing folder data:", error);
-    return {
-      success: false,
-      message:
-        error instanceof Error ? error.message : "Failed to parse folder data",
-    };
+    return { success: false, message: msg };
   }
 }
 
@@ -350,7 +366,7 @@ function parseJsonFile(fileContent: string): DataField[] {
 function getJSONKeys(
   obj: any,
   path: string = "",
-  xmlMode: boolean = false
+  xmlMode: boolean = false,
 ): DataField[] {
   const result: DataField[] = [];
 
@@ -360,10 +376,10 @@ function getJSONKeys(
     if (Array.isArray(obj[key]) && obj[key].length > 0) {
       const firstElement = obj[key][0];
       const attributes = Object.keys(firstElement).filter((attr) =>
-        attr.startsWith("@")
+        attr.startsWith("@"),
       );
       const nonAttributeEntries = Object.fromEntries(
-        Object.entries(firstElement).filter(([attr]) => !attr.startsWith("@"))
+        Object.entries(firstElement).filter(([attr]) => !attr.startsWith("@")),
       );
 
       result.push(...getJSONKeys(nonAttributeEntries, currentPath, xmlMode), {
@@ -377,10 +393,10 @@ function getJSONKeys(
 
     if (obj[key] instanceof Object && !Array.isArray(obj[key])) {
       const attributes = Object.keys(obj[key]).filter((attr) =>
-        attr.startsWith("@")
+        attr.startsWith("@"),
       );
       const nonAttributeEntries = Object.fromEntries(
-        Object.entries(obj[key]).filter(([attr]) => !attr.startsWith("@"))
+        Object.entries(obj[key]).filter(([attr]) => !attr.startsWith("@")),
       );
 
       result.push(...getJSONKeys(nonAttributeEntries, currentPath, xmlMode), {
@@ -400,7 +416,7 @@ function getJSONKeys(
 
 function parseCsvFile(
   fileContent: string,
-  separator: string = ","
+  separator: string = ",",
 ): DataField[] {
   const lines = fileContent.split("\n").filter((line: string) => line.trim());
 

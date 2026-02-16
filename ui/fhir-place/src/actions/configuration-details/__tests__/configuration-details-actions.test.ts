@@ -4,6 +4,7 @@ import {
   getConditionMappingSchema,
   getTemperatureValues,
   parseDataFromFolder,
+  clearCache,
 } from "@/actions/configuration-details/configuration-details-actions";
 import { parseMultipleFolderData } from "@/actions/folder/parse-folder-data";
 
@@ -21,6 +22,7 @@ const mockParseMultipleFolderData = parseMultipleFolderData as jest.MockedFuncti
 describe("configuration-details-actions", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    clearCache();
   });
 
   describe("getDonorMappingSchema", () => {

@@ -20,10 +20,12 @@ export function FieldMappingTab({ mappingConceptName }: FieldMappingTabProps) {
   }, [data]);
 
   function mapReadyValues(data: Record<string, DataRecord>) {
+    if (!dataFormat) return;
+
     let keys = Object.keys(data);
     keys = keys.filter((key) => {
       if (data[key].onlyForFormats !== undefined) {
-        return data[key].onlyForFormats?.includes(dataFormat!);
+        return data[key].onlyForFormats?.includes(dataFormat);
       }
 
       return data[key].onlyForFormats === undefined;

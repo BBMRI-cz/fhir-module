@@ -48,34 +48,41 @@ class ConditionXMLRepository(ConditionRepository):
             for diagnosis in glom(file_content, self._sample_parsing_map.get("icd-10_code")):
                 patient_id = glom(file_content, self._sample_parsing_map.get("patient_id"))
                 try:
-                    diagnosis_datetime_path = self._sample_parsing_map.get("diagnosis_date")
-                    if diagnosis_datetime_path is None or diagnosis_datetime_path == "":
-                        diagnosis_datetime = None
-                    else:
-                        diagnosis_datetime = glom(file_content, diagnosis_datetime_path, default=None)
-
-                    if diagnosis_datetime is not None and len(diagnosis_datetime) == 0:
-                        diagnosis_datetime = None
-                    if diagnosis_datetime is not None:
-                        try:
-                            diagnosis_datetime = date_parser.parse(diagnosis_datetime[0])
-                            diagnosis_datetime = diagnosis_datetime.replace(hour=0, minute=0, second=0)
-                        except ParserError:
-                            logger.info(
-                                f"Error parsing date for condition for patient with id {patient_id} "
-                                f"while parsing diagnosis datetime with value {diagnosis}. "
-                                f"Please make sure the date is in a valid format."
-                                f"Skipping ...")
-                            return
-                    condition = Condition(patient_id=patient_id,
-                                          icd_10_code=diagnosis,
-                                          diagnosis_datetime=diagnosis_datetime)
+                    diagnosis_datetime, skip_file = self._parse_diagnosis_datetime_for_extraction(
+                        file_content, patient_id, diagnosis
+                    )
+                    if skip_file:
+                        return
+                    condition = Condition(
+                        patient_id=patient_id,
+                        icd_10_code=diagnosis,
+                        diagnosis_datetime=diagnosis_datetime,
+                    )
                     yield condition
                 except TypeError:
                     logger.info("Parsed string is not a valid ICD-10 code. Skipping...")
                     return
         except WrongXMLFormatError:
             return
+
+    def _parse_diagnosis_datetime_for_extraction(self, file_content, patient_id, diagnosis):
+        """Parse diagnosis datetime from file content. Returns (datetime_or_none, skip_file)."""
+        path = self._sample_parsing_map.get("diagnosis_date")
+        if not path:
+            return None, False
+        raw = glom(file_content, path, default=None)
+        if not raw or len(raw) == 0:
+            return None, False
+        try:
+            dt = date_parser.parse(raw[0])
+            return dt.replace(hour=0, minute=0, second=0), False
+        except ParserError:
+            logger.info(
+                f"Error parsing date for condition for patient with id {patient_id} "
+                f"while parsing diagnosis datetime with value {diagnosis}. "
+                f"Please make sure the date is in a valid format. Skipping ..."
+            )
+            return None, True
 
     def __validate_xml_diagnosis_path(self, errors: list, file_name: str) -> str | None:
         """Validate that the diagnosis path exists in the parsing map."""

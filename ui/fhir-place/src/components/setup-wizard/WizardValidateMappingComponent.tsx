@@ -143,12 +143,14 @@ export default function WizardValidateMappingComponent() {
   const showMiabisButton = syncTarget === "miabis" || syncTarget === "both";
 
   const initiateCheckBlaze = async () => {
+    if (!dataFormat || !dataFolderPath) return;
+
     setIsValidatingBlaze(true);
     try {
       const result = await validateMappings(
         wizardState,
-        dataFormat!,
-        dataFolderPath!,
+        dataFormat,
+        dataFolderPath,
         "blaze",
         csvSeparator,
         validateAllFiles
@@ -160,17 +162,18 @@ export default function WizardValidateMappingComponent() {
   };
 
   const initiateCheckMiabis = async () => {
+    if (!dataFormat || !dataFolderPath) return;
+
     setIsValidatingMiabis(true);
     try {
-      // Create a temporary wizardState with only MIABIS config
       const miabisOnlyState = {
         ...wizardState,
         syncTarget: "miabis" as const,
       };
       const result = await validateMappings(
         miabisOnlyState,
-        dataFormat!,
-        dataFolderPath!,
+        dataFormat,
+        dataFolderPath,
         "miabis",
         csvSeparator,
         validateAllFiles
@@ -388,14 +391,18 @@ export default function WizardValidateMappingComponent() {
           </div>
 
           {/* Error Details Section - Scrollable */}
-          {displayValidationResult() && !displayValidationResult()!.success && (
-            <div className="flex-1 overflow-y-auto">
-              <ErrorDetailsSection
-                validationResult={displayValidationResult()!}
-                setSelectedError={setSelectedError}
-              />
-            </div>
-          )}
+          {(() => {
+            const result = displayValidationResult();
+            if (!result || result.success) return null;
+            return (
+              <div className="flex-1 overflow-y-auto">
+                <ErrorDetailsSection
+                  validationResult={result}
+                  setSelectedError={setSelectedError}
+                />
+              </div>
+            );
+          })()}
         </CardContent>
         <CardFooter className="flex justify-between items-center gap-2 p-4 sm:p-6 2xl:py-0 sm:py-0">
           <Button

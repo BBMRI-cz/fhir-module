@@ -73,7 +73,7 @@ const config = {
 
       try {
         const user = await getUserById(token.id as string);
-        if (!user || !user.isActive) {
+        if (!user?.isActive) {
           session.user.isActive = false;
           return session;
         }
