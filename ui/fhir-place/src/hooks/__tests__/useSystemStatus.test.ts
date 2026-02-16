@@ -1,4 +1,3 @@
-// NOSONAR
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useSystemStatus } from "../useSystemStatus";
 import { queryPrometheusAction } from "@/actions/prometheus/query";
