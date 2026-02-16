@@ -17,7 +17,7 @@ To enable monitoring containers use the `monitoring` profile for docker compose 
 
 ```bash
 # Run the prod profile with the monitoring included
-docker compose --profile monitoring --profile dev up
+docker compose --profile monitoring --profile prod up
 
 ```
 
@@ -40,11 +40,28 @@ docker compose --profile monitoring --profile dev up
 Manually copy and configure the template files:
 
 1. **Copy Prometheus configuration:**
-   Populate the `prometheus.template.yml` and `promtail-config.template.yaml` with actual values, instead of the placeholders.
-2. **Rename the files**
-   `prometheus.template.yml` => `prometheus.yml`
-   `promtail-config.template.yaml` => `promtail-config.yaml` 
-3. Set up the paths in the `compose.yaml`, in case the configs are stored elsewhere than the compose expects
+
+   ```bash
+   # Copy template to Prometheus container
+   docker cp config/prometheus.template.yml <prometheus-container>:/etc/prometheus/prometheus.yml
+
+   # Manually substitute environment variables in the file as described above
+
+   # Restart Prometheus
+   docker restart <prometheus-container>
+   ```
+
+2. **Copy Promtail configuration:**
+
+   ```bash
+   # Copy template to Promtail container
+   docker cp config/promtail-config.template.yaml <promtail-container>:/etc/promtail/promtail-config.yaml
+
+   # Manually substitute environment variables in the file as described above
+
+   # Restart Promtail
+   docker restart <promtail-container>
+   ```
 
 ### Grafana cloud setup
 
