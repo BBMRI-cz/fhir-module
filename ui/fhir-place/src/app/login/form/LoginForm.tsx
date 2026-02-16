@@ -1,7 +1,8 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { LoginFormSchema } from "./schema";
+import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Form } from "@/components/ui/form";
@@ -9,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { CheckedFormInput } from "@/components/custom/form/CheckedFormInput";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { LoginFormSchema } from "@/app/login/form/schema";
 
 const LoginForm = () => {
   const router = useRouter();

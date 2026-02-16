@@ -3,10 +3,10 @@
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { ChangePasswordSchema } from "@/app/(authorized)/settings/schema/ChangePasswordSchema";
-import { UserDetails } from "@/lib/auth/auth-utils";
-import { users } from "@/lib/db/schema";
+import { UserDetails } from "@/lib/auth-utils";
+import { users } from "@/lib/schema";
 import { eq } from "drizzle-orm";
-import { db } from "@/lib/db/db";
+import { db } from "@/lib/db";
 
 export async function changePassword(
   formData: z.infer<typeof ChangePasswordSchema>,

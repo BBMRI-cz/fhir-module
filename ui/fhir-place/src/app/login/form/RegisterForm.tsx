@@ -1,8 +1,8 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { RegisterFormSchema } from "@/app/login/form/schema";
-import { z } from "zod";
+import { RegisterFormSchema } from "./schema";
+import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Form } from "@/components/ui/form";
