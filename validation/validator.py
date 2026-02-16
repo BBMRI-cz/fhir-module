@@ -4,13 +4,9 @@ import os
 
 from exception.wrong_parsing_map import WrongParsingMapException
 from util.custom_logger import setup_logger
-from util.config import MAX_VALIDATION_FILES
 
 setup_logger()
 logger = logging.getLogger()
-
-# Limit total files scanned to prevent timeout on huge directories
-MAX_FILES_TO_SCAN = 10000
 
 
 class Validator(abc.ABC):
@@ -52,25 +48,19 @@ class Validator(abc.ABC):
         pass
 
     def _validate_files_structure(self, file_type: str) -> bool:
-        """this method validates the files provided by ROOT_DIR env variable."""
+        """this method validates the files provided by ROOT_DIR env variable"""
         self._validate_files_present(file_type)
         dir_entry: os.DirEntry
-        files_validated = 0
-        files_scanned = 0
+        files_checked = 0
         
         for dir_entry in os.scandir(self._dir_path):
-            files_scanned += 1
-            if files_scanned > MAX_FILES_TO_SCAN:
-                logger.warning(f"Scanned {MAX_FILES_TO_SCAN} files, stopping scan to avoid timeout.")
-                break
-            
             if dir_entry.name.lower().endswith("." + file_type):
                 self._validate_single_file(dir_entry)
-                files_validated += 1
-                if files_validated >= MAX_VALIDATION_FILES:
-                    break
+            files_checked += 1
+            if files_checked >= 1000:
+                break
 
-        logger.info(f"Validated {files_validated} {file_type} files. All contain necessary data/attributes for transformation.")
+        logger.info("All the files contain the necessary data/attributes for data transformation.")
         return True
 
     def _validate_donor_map(self) -> bool:
