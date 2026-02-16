@@ -1,8 +1,8 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserDetailsCard } from "@/app/(authorized)/settings/(components)/UserDetailsCard";
-import { ProfileOverview } from "@/app/(authorized)/settings/(components)/ProfileOverview";
-import { PasswordChangeCard } from "@/app/(authorized)/settings/(components)/PasswordChangeCard";
+import { UserDetailsCard } from "./(components)/UserDetailsCard";
+import { ProfileOverview } from "./(components)/ProfileOverview";
+import { PasswordChangeCard } from "./(components)/PasswordChangeCard";
 import { ThemeToggle } from "@/components/custom/ThemeToggle";
 import { FontSizeToggle } from "@/components/custom/FontSizeToggle";
 
