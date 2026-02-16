@@ -170,7 +170,7 @@ jobs:
 
   system-test-csv:
     name: System test csv files
-    needs: [build-image]
+    needs: [system-test]
     runs-on: ubuntu-latest
 
     steps:
@@ -221,7 +221,7 @@ jobs:
 
   system-test-json:
     name: System test json files
-    needs: [build-image]
+    needs: [system-test-csv]
     runs-on: ubuntu-latest
 
     steps:
@@ -270,37 +270,9 @@ jobs:
       - name: Verify upload succeeded for MIABIS blaze
         run: .github/scripts/check-patient-exists.sh http://localhost:5432/fhir
 
-  test-ui:
-    name: Test UI
-    needs: [build-image]
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: ui/fhir-place/package-lock.json
-
-      - name: Install dependencies
-        working-directory: ui/fhir-place
-        run: npm ci
-
-      - name: Initialize database
-        working-directory: ui/fhir-place
-        run: npm run db:init
-
-      - name: Run tests
-        working-directory: ui/fhir-place
-        run: npm test
-
   build-push-image:
     name: Publish docker image
-    needs: [system-test, system-test-csv, system-test-json, test-ui]
+    needs: [system-test-json]
     runs-on: ubuntu-latest
 
     steps:

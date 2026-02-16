@@ -35,9 +35,6 @@ class ConfigLoader:
         
         # Mapping between config keys and their fallback (env_var_key, default_value)
         self._fallback_map = {
-            "ROOT_DIR": ('ROOT_DIR', os.path.dirname(os.path.abspath(__file__))),
-            "BLAZE_URL": ('BLAZE_URL', 'http://test-blaze:8080/fhir'),
-            "MIABIS_BLAZE_URL": ('MIABIS_BLAZE_URL', 'http://miabis-blaze:8080/fhir'),
             'RECORDS_DIR_PATH': ('DIR_PATH', '/mock_dir/'),
             'PARSING_MAP_PATH': ('PARSING_MAP_PATH', lambda: os.path.join(self.root_dir, 'default_map.json')),
             'MATERIAL_TYPE_MAP_PATH': ('MATERIAL_TYPE_MAP_PATH', lambda: os.path.join(self.root_dir, 'default_material_type_map.json')),
@@ -152,13 +149,13 @@ def set_config_value(key: str, value: Any) -> bool:
     return _config.set(key, value)
 
 def get_blaze_url(): 
-    return _config.get('BLAZE_URL')
+    return os.getenv("BLAZE_URL", "http://localhost:8080/fhir")
 
 def get_miabis_blaze_url(): 
-    return _config.get('MIABIS_BLAZE_URL')
+    return os.getenv("MIABIS_BLAZE_URL", "http://localhost:5432/fhir")
 
-def get_root_dir():
-    return _config.get('ROOT_DIR')
+def get_root_dir(): 
+    return _config.get('ROOT_DIR', os.path.dirname(os.path.abspath(__file__)))
 
 def get_records_dir_path(): 
     return _config.get('RECORDS_DIR_PATH')

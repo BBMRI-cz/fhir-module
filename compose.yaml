@@ -8,15 +8,13 @@ services:
     networks:
       - fhir-integration
       - monitoring
-    restart: unless-stopped
+    restart: no
     ports:
-      - "5000:5000" # FHIR module port
-      - "3000:3000" # UI port
+      - "5000:5000"
     environment:
       BLAZE_URL: "${BLAZE_URL:-http://test-blaze:8080/fhir}"
       MIABIS_BLAZE_URL: "${MIABIS_BLAZE_URL:-http://miabis-blaze:8080/fhir}"
       MIABIS_ON_FHIR: "${MIABIS_ON_FHIR:-True}"
-      ROOT_DIR: "/opt/test"
       DIR_PATH: "/opt/records"
       PYTHONWARNINGS: "ignore:Unverified HTTPS request"
     env_file:
@@ -28,7 +26,60 @@ services:
       - type: bind
         source: "test"
         target: "/opt/test"
-      - shared-config:/opt/fhir-module/util
+      - type: bind
+        source: "util/shared_config.json"
+        target: "/opt/fhir-module/util/shared_config.json"
+      - fhir-logs:/var/log/fhir-module
+      - config-snapshots:/opt/config-snapshots
+
+  fhir-ui:
+    image: ghcr.io/bbmri-cz/fhir-ui:latest
+    container_name: fhir-ui
+    profiles:
+      - ui
+    networks:
+      - fhir-integration
+      - monitoring
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - ui-data:/app/data
+    depends_on:
+      - fhir-module
+    restart: unless-stopped
+
+  fhir-combined:
+    image: ghcr.io/bbmri-cz/fhir-combined:latest
+    container_name: fhir-combined
+    profiles:
+      - combined
+    networks:
+      - fhir-integration
+      - monitoring
+    restart: unless-stopped
+    ports:
+      - "5000:5000" # FHIR module port
+      - "3000:3000" # UI port
+    environment:
+      BLAZE_URL: "${BLAZE_URL:-http://test-blaze:8080/fhir}"
+      MIABIS_BLAZE_URL: "${MIABIS_BLAZE_URL:-http://miabis-blaze:8080/fhir}"
+      MIABIS_ON_FHIR: "${MIABIS_ON_FHIR:-True}"
+      DIR_PATH: "/opt/records"
+      PYTHONWARNINGS: "ignore:Unverified HTTPS request"
+    env_file:
+      - .env
+    volumes:
+      - type: bind
+        source: "test/xml_data"
+        target: "/opt/records"
+      - type: bind
+        source: "test"
+        target: "/opt/test"
+      - type: bind
+        source: "util/shared_config.json"
+        target: "/opt/fhir-module/util/shared_config.json"
       - fhir-logs:/var/log/fhir-module
       - ui-data:/app/data
       - config-snapshots:/opt/config-snapshots
@@ -57,9 +108,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - type: bind
-        source: "./config/prometheus.yml"
-        target: "/etc/prometheus/prometheus.yml"
+      - prometheus-config:/etc/prometheus
       - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -76,6 +125,7 @@ services:
     profiles:
       - dev
       - prod
+      - combined
     environment:
       JAVA_TOOL_OPTIONS: "-Xmx2g"
       DB_SEARCH_PARAM_BUNDLE: "/app/searchParamBundle.json"
@@ -95,6 +145,7 @@ services:
       - monitoring
     profiles:
       - dev
+      - combined
     environment:
       JAVA_TOOL_OPTIONS: "-Xmx2g"
       DB_SEARCH_PARAM_BUNDLE: "/app/searchParamBundle.json"
@@ -115,9 +166,7 @@ services:
       - monitoring
     volumes:
       - fhir-logs:/var/log/fhir-module:ro
-      - type: bind
-        source: "./config/promtail-config.yaml"
-        target: "/etc/promtail/promtail-config.yaml"
+      - promtail-config:/etc/promtail
     command: -config.file=/etc/promtail/promtail-config.yaml
 
 networks:
@@ -126,7 +175,8 @@ networks:
 
 volumes:
   prometheus_data:
+  prometheus-config:
   fhir-logs:
+  promtail-config:
   ui-data:
   config-snapshots:
-  shared-config:
