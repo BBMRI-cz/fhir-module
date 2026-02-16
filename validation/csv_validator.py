@@ -1,9 +1,11 @@
 import csv
 import logging
 import os
+import sys
 
 from exception.no_files_provided import NoFilesProvidedException
 from exception.nonexistent_attribute_parsing_map import NonexistentAttributeParsingMapException
+from exception.wrong_parsing_map import WrongParsingMapException
 from util.custom_logger import setup_logger
 from validation.validator import Validator
 
@@ -24,10 +26,9 @@ class CsvValidator(Validator):
         for dir_entry in os.scandir(self._dir_path):
             if dir_entry.name.lower().endswith("." + file_type):
                 return True
-
-        error_message = "No CSV files are provided for data transformation. Please check that you provided correct directory in ROOT_DIR variable."
-        logger.error(error_message)
-        raise NoFilesProvidedException(error_message)
+        logger.error("No CSV files are provided for data transformation. "
+                     "Please check that you provided correct directory in DIR_PATH variable.")
+        raise NoFilesProvidedException
 
     def _validate_single_file(self, file: os.DirEntry) -> bool:
         """Validates if the fields in header of the csv file
@@ -46,19 +47,10 @@ class CsvValidator(Validator):
         for prop in properties:
             prop_value = getattr(self, prop)
             if prop_value not in fields:
-                if prop.startswith("_donor"):
-                    concept = "donor"
-                elif prop.startswith("_sample"):
-                    concept = "sample"
-                else:
-                    concept = "condition"
-                error_message = f"Provided parsing map contains the necessary name/value pairs, however, name \"{prop}\" "
-                f"does not have the corresponding pair (which based on parsing map should be \"{prop_value}\")"
-                logger.error(error_message)
-                raise NonexistentAttributeParsingMapException({
-                    "concept": concept,
-                    "error_message": error_message
-                })
+                logger.error(f"Provided parsing map contains the necessary name/value pairs, however, name \"{prop}\" "
+                             f"does not have the corresponding pair "
+                             f"(which based on parsing map should be \"{prop_value}\")")
+                raise NonexistentAttributeParsingMapException
         return True
 
     def validate(self) -> bool:

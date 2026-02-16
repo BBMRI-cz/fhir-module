@@ -28,9 +28,9 @@ class XMLValidator(Validator):
         for dir_entry in os.scandir(self._dir_path):
             if dir_entry.name.lower().endswith("." + file_type):
                 return True
-        error_message = "No XML files are provided for data transformation. Please check that you provided correct directory in RECORDS_DIR_PATH variable."
-        logger.error(error_message)
-        raise NoFilesProvidedException(error_message)
+        logger.error("No XML files are provided for data transformation. "
+                     "Please check that you provided correct directory in DIR_PATH variable.")
+        raise NoFilesProvidedException
 
     def _validate_single_file(self, file: os.DirEntry) -> bool:
         """Validates presence of xml tags which names are specified in the provided parsing_map"""
@@ -52,13 +52,9 @@ class XMLValidator(Validator):
                     # Break because we only need to test one sample
                     break
             except PathAccessError:
-                error_message = "Provided parsing map contains the necessary name/value pairs, however,"
-                error_message += " values from sample_map dont have corresponding values in the xml file."
-                logger.error(error_message)
-                raise NonexistentAttributeParsingMapException({
-                    "concept": "sample",
-                    "error_message": error_message
-                })
+                logger.error(f"Provided parsing map contains the necessary name/value pairs, however,"
+                             f" values from sample_map dont have corresponding values in the xml file.")
+                raise NonexistentAttributeParsingMapException
             return True
 
     def _validate_file_attributes(self, file_content: dict, properties: list[str]):
@@ -68,27 +64,19 @@ class XMLValidator(Validator):
             try:
                 glom(file_content, prop_value)
             except PathAccessError:
-                concept = "donor" if prop.startswith("_donor") else "condition"
-                error_message = f"Provided parsing map contains the necessary name/value pairs, however, name \"{prop}\" "
-                f"does not have the corresponding pair (which based on parsing map should be \"{prop_value}\")"
-                logger.error(error_message)
-                raise NonexistentAttributeParsingMapException({
-                    "concept": concept,
-                    "error_message": error_message
-                })
+                logger.error(f"Provided parsing map contains the necessary name/value pairs, however, name \"{prop}\" "
+                             f"does not have the corresponding pair "
+                             f"(which based on parsing map should be \"{prop_value}\")")
+                raise NonexistentAttributeParsingMapException
         return True
 
     def _validate_sample_map(self) -> bool:
         super()._validate_sample_map()
         self._sample = self._map_sample.get("sample")
         if self._sample is None:
-            error_message = "Provided parsing map does not contain the necessary name/value pairs for sample map."
-            error_message += "sample_map needs to contain the following names(attributes): \"sample\""
-            logger.error(error_message)
-            raise WrongParsingMapException({
-                "concept": "sample",
-                "error_message": error_message
-            })
+            logger.error(f"Provided parsing map does not contain the necessary name/value pairs for sample map."
+                         f"sample_map needs to contain the following names(attributes): \"sample\"")
+            raise WrongParsingMapException
         return True
 
     def flatten_list(self, nested_list):

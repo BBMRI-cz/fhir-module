@@ -7,6 +7,8 @@ from email.mime.text import MIMEText
 
 import schedule
 
+from util.config import NEW_FILE_PERIOD_DAYS,RECORDS_DIR_PATH
+
 from util.custom_logger import setup_logger
 from util.file_age_util import get_file_age
 
