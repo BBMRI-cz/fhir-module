@@ -1,7 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *)); /* NOSONAR - Tailwind custom variant syntax requires this format */
+/* NOSONAR - Tailwind custom variant syntax requires this format */
+@custom-variant dark (&:is(.dark *));
 
 /* NOSONAR - Custom theme block for Tailwind; required project-specific syntax */
 @theme inline {

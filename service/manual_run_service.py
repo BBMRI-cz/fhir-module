@@ -13,14 +13,14 @@ logger = logging.getLogger()
 
 app = Flask(__name__)
 
-not_initialized_error = "MIABIS on FHIR service is not initialized. Please check if MIABIS is enabled and mapping file configuration is correct."
+
 def create_api(blaze_service: BlazeService,miabis_blaze_service: MiabisBlazeService = None):
 
     @app.route('/miabis-sync', methods=['POST'])
     def miabis_sync():
         logger.info("MIABIS on FHIR: Manually starting sync.")
         if miabis_blaze_service is None:
-            return jsonify({"error": not_initialized_error}), 503
+            return jsonify({"error": "MIABIS on FHIR service is not initialized. Please check if MIABIS is enabled and mapping file configuration is correct."}), 503
         threading.Thread(target=miabis_blaze_service.sync).start()
         return jsonify({"message": "MIABIS sync started. see logs of fhir-module for more info"})
 
@@ -34,7 +34,7 @@ def create_api(blaze_service: BlazeService,miabis_blaze_service: MiabisBlazeServ
     def miabis_delete():
         logger.info("MIABIS on FHIR: Manually deleting every resource")
         if miabis_blaze_service is None:
-            return jsonify({"error": not_initialized_error}), 503
+            return jsonify({"error": "MIABIS on FHIR service is not initialized. Please check if MIABIS is enabled and mapping file configuration is correct."}), 503
         threading.Thread(target=miabis_blaze_service.delete_everything).start()
         return jsonify({"message": "Delete started. see logs of fhir-module for more info"})
 
@@ -54,7 +54,7 @@ def create_api(blaze_service: BlazeService,miabis_blaze_service: MiabisBlazeServ
     def get_miabis_sync_progress():
         """Get progress of the MIABIS on FHIR sync operation"""
         if miabis_blaze_service is None:
-            return jsonify({"error": not_initialized_error}), 503
+            return jsonify({"error": "MIABIS on FHIR service is not initialized. Please check if MIABIS is enabled and mapping file configuration is correct."}), 503
         progress = get_sync_progress('miabis_blaze')
         return jsonify(progress)
 
