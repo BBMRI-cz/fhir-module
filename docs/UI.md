@@ -24,12 +24,16 @@ The UI application (`fhir-place`) is a Next.js application that offers:
 ### Dashboard
 
 - Real-time system health monitoring
-- Data information
+- Synchronization status indicators
+- Prometheus metrics integration
+- System uptime and performance metrics
 
 ### Backend Control
 
-- Control FHIR module operations
+- Start/stop FHIR module operations
 - Monitor synchronization processes
+- View operation logs and status
+- Manual trigger for data synchronization
 
 ### Settings
 
@@ -84,6 +88,17 @@ The UI is built using:
 
 5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+### Available Scripts
+
+- `npm run dev`: Start development server
+- `npm run build`: Build for production
+- `npm run start`: Start production server
+- `npm run db:init`: Initialize database with seed data
+- `npm run db:generate`: Generate database schema
+- `npm run db:migrate`: Run database migrations
+- `npm run test`: Run tests
+- `npm run test:watch`: Run tests in watch mode
+
 ## Docker Deployment
 
 The UI is containerized and deployed alongside the main FHIR module using Docker Compose.
@@ -93,7 +108,14 @@ The UI is containerized and deployed alongside the main FHIR module using Docker
 From the project root directory:
 
 ```bash
-docker compose --profile dev up
+docker compose --profile ui up
+```
+
+Note that the UI container is **heavily** dependant on the prod / dev containers (best to run as combined)
+
+```bash
+# Best to the whole stack
+docker compose --profile combined up -d
 ```
 
 The UI will be available at [http://localhost:3000](http://localhost:3000).

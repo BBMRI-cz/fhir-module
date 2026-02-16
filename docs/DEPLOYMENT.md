@@ -38,14 +38,15 @@ The supported profiles are:
 
 ```shell
 --profile prod
---profile dev
+--profile combined
+--profile ui --profile prod # for separate deployment of UI & fhir-module (not recommended)
 --profile monitoring # to be added to the other profiles to enable monitoring
 ```
 
 A complete example is then:
 
 ```shell
-docker compose --profile dev --profile monitoring up -d
+docker compose --profile combined --profile monitoring up -d
 ```
 
 This will pull the latest image and start the application. To check the logs run:
@@ -70,7 +71,7 @@ On first deployment, the UI will automatically:
 
 ### Environment variables
 
-The FHIR module is configured via environment variables, all of which can be found below.
+The FHIR module is configured via environment variables, all of which can be found below. These values **MUST** be present on the .env file in the same folder as the `compose.yaml` file.
 
 | Variable name        | Required                       | Default value              | Description                                                                                                                                                                        |
 | -------------------- | ------------------------------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -84,6 +85,21 @@ The FHIR module is configured via environment variables, all of which can be fou
 | SMTP_PORT            | false                          | 1025                       | Port number sued to connect to the SMTP server for sending notification mails about fresshnes of records.                                                                          |
 | EMAIL_RECEIVER       | false                          | test@example.com           | Mail address that the notification emails will be send to.                                                                                                                         |
 | LOG_LEVEL            | false                          | INFO                       | minimum severity of logs to be recorded. values are : INFO, DEBUG,ERROR                                                                                                            |
+
+### Fhir module setup
+
+To allow the setup modification while running the subset of change-prone variables are specified in `/util/shared_config.json`. This file is pre-seeded with some default values, but to work properly, adjustments need made per-deployment.
+
+**Important**: The `shared_config.json` file is mounted as a bind mount from your host system into the container. This means:
+
+- **Directly Editable**: You can edit `util/shared_config.json` on your host machine using any text editor
+- **Immediate Updates**: The application reads directly from this bind-mounted file, so your changes are immediately available (config is reloaded on next access)
+- **No Container Rebuild**: No need to rebuild the image or exec into the container to make configuration changes
+- **UI Integration**: The web UI can also modify this file programmatically, and changes will be reflected on your host system
+- **Persistent**: Changes persist across container restarts since the file lives on your host
+
+| Variable name                 | Required                                   | Default value                                          | Description                                                                                                                                                        |
+| ----------------------------- | ------------------------------------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | PARSING_MAP_PATH              | false (can be set by the UI)               | /opt/fhir-module/default_map.json                      | Path to a JSON file containing object parsing mappings. Example [here](../util/default_map.json).                                                                  |
 | MATERIAL_TYPE_MAP_PATH        | false (can be set by the UI)               | /opt/fhir-module/default_material_type_map.json        | Path to a JSON file containing mappings between organizational and FHIR material types. Example [here](../util/default_material_type_map.json).                    |
 | MIABIS_MATERIAL_TYPE_MAP_PATH | false (can be set by the UI)               | /opt/fhir-module/default_miabis_material_type_map.json | Path to a JSON file containing mappings between organizational and MIABIS on FHIR material types. Example [here](../util/default_miabis_material_type_map.json)    |
@@ -168,6 +184,8 @@ PASSWORD_REQUIRE_SPECIAL_CHARS=true
 PASSWORD_SPECIAL_CHARS="!@#$%^&*()_+-=[]{}|;:,.<>?"
 
 ```
+
+The `/util/shared_config.json` must be modified by hand if not using UI, otherwise only the required fields must be set before start.
 
 ## Object mapping
 

@@ -32,20 +32,21 @@ In this step user must specify the **folder that contains the file for the impor
 
 ![Target Folder Page](assets/select-folder.png)
 
+### Detected files review
+After the folder is selected, user can review the detected files.
+
+![Detected Files Page](assets/found-files-review.png)
+
 ### ENUM mapping configuration
-The first part of the setup process involves setting up the Temperature and Material mappings. If multiple targets are selected in the first step of the wizard, this needs to be done for each separately. As the data might not contain material or temperature values, these steps can be skipped, if the imported data do **NOT** contain information on these.
+The first part of the setup process involves setting up the Temperature and Material mappings. If multiple targets are selected in the first step of the wizard, this needs to be done for each separately. As the data might not contain material or temperature values, these steps can be skipped, although this is **NOT** advised.
 
 The mapping definition requires the users's output in a way that they must know what values can be found in the data they import and how they map to the standardized values in the dropdowns.
 
 Both visual and manual/expert-mode approach are supported. The user can either define the mappings using the UI, or switch the tab to **JSON** and define/copy the mapping in a `JSON` format that is processed and the fields are populated from it. Combination of both approaches is also possible, however, when editing the JSON manually, it has to be valid before the user is allowed to continue further.
 
 The process of mapping the Temperature and Materials is the same, example and UI explanation is shown below.
-![Enum Mapping](assets/enum-mapping-configuration.png)
 
-#### Extract values from data
-The functionality allows the user to select one or multiple paths, from which the `Your Data Value` fields will be populated, so the user does not have to know what all values need to be mapped.
-**! IMPORTANT !**
-The extract functionality provides a best effort service. This is due to performance constraints.Only up to 1000 files from the import folder will be processed, and values from those extracted. Based on the value distribution and count, the extraction result might or might not be complete. Manual check is always required after this.
+![Enum Mapping](assets/enum-mapping-configuration.png)
 
 ### Type to collection mapping
 After the enum mappings are defined, it is needed to specify how the records are divided to defined collections. This is done in a similar way as the enum mappings, the only difference is the user must know both what value specifies the collection and the name of the collection.
@@ -150,14 +151,14 @@ See the picture below:
 
 Before the sync operation can commence, the smoke validation of the defined schemas needs to be done. the validation step checks if all required values are mapped and if the enum mappings contain the values found in the imported files.
 
-User can either perform a quick validation of only a single file, or opt for a full validation of the folder that is being imported. **IMPORTANT** same as in the case of the ENUM value export from the files, the full validation provides a best effort service. Only up to 1000 imported files will be checked, since the full check of the imported folder might not be possible (if it contains too many files). 
+User can either perform a quick validation of only a single file, or opt for a full validation of the whole folder that is being imported. The full validation can take a long time, based on the count and amount of the imported data, however, this approach is better, since it check for all the enum values found in all the files, same as the structure of all the imported files.
 
 Based on how the system is configured, both the standard blaze and MIABIS must pass co continue.
 
 ![Validation Page](assets/validation-page.png)
 
 ### Sync page
-The last step is to apply the created mappings and optionally trigger the sync process. This is done by pressing the respective button. The dashboard will now show details regarding the counts of entities in the blaze databases.
+The last step is to trigger the sync process. This is done by pressing the button. A progress bars will appear showing the sync progress per-target. When sync is done, continue to the wrap-up screen. The dashboard will now show details regarding the counts of entities in the blaze databases.
 
 ![Sync Page](assets/sync-page.png)
 
