@@ -534,9 +534,9 @@ function ErrorDetailsSection({
 
           <div className="flex-1 overflow-y-auto mt-3 sm:mt-4">
             <div className="space-y-2">
-              {selectedErrorList?.errors.map((error, index) => (
+              {selectedErrorList?.errors.map((error) => (
                 <Button
-                  key={index} // NOSONAR
+                  key={error}
                   variant="ghost"
                   className="flex items-start justify-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border hover:bg-muted/50 transition-colors w-full h-auto text-left overflow-x-hidden"
                   onClick={() => {
