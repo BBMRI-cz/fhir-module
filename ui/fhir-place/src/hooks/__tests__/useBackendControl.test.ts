@@ -1,5 +1,5 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { useBackendControl } from "@/hooks/useBackendControl";
+import { useBackendControl } from "../useBackendControl";
 import * as backendControl from "@/actions/backend/backend-control";
 import { toast } from "sonner";
 import { BackendActionResult } from "@/actions/backend/backend-control";
