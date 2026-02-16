@@ -6,7 +6,7 @@ from pyfakefs.fake_filesystem_unittest import patchfs
 from model.gender import Gender
 from model.sample_donor import SampleDonor
 from persistence.sample_donor_xml_files_repository import SampleDonorXMLFilesRepository
-from util.config import get_parsing_map
+from util.config import PARSING_MAP
 
 
 class TestDonorXMLRepo(unittest.TestCase):
@@ -16,17 +16,10 @@ class TestDonorXMLRepo(unittest.TestCase):
     wrong_format_content ="This is a wrong format for an xml file."
     dir_path = "/mock_dir/"
 
-    parsing_map = {
-        "donor_map": {
-            "id": "patient.@id",
-            "gender": "patient.@sex",
-            "birthDate": "patient.@year"
-        }
-    }
     @pytest.fixture(autouse=True)
     def run_around_tests(self):
         self.donor_repository = SampleDonorXMLFilesRepository(records_path=self.dir_path,
-                                                              donor_parsing_map=self.parsing_map['donor_map'])
+                                                              donor_parsing_map=PARSING_MAP['donor_map'])
         yield  # run test
     @patchfs
     def test_get_all_ok(self, fake_fs):

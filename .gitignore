@@ -28,9 +28,3 @@ __pycache__/
 .coverage
 .idea/
 coverage.xml
-
-node_modules/
-
-**/generated_test_data_*
-
-**/local_configs

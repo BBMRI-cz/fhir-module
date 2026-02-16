@@ -2,7 +2,7 @@ name: CI build
 
 on:
   schedule:
-    - cron: "0 10 * * *" # every day at 10am
+    - cron: '0 10 * * *' # every day at 10am
   push:
     branches:
       - main
@@ -21,8 +21,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@65d7f2d534ac1bc67fcd62888c5f4f3d2cb2b236 # v4
         with:
-          python-version: "3.11"
-          cache: "pip"
+          python-version: '3.11'
+          cache: 'pip'
 
       - name: Install python dependencies
         run: |
@@ -43,8 +43,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@65d7f2d534ac1bc67fcd62888c5f4f3d2cb2b236 # v4
         with:
-          python-version: "3.11"
-          cache: "pip"
+          python-version: '3.11'
+          cache: 'pip'
 
       - name: Create log directories
         run: |
@@ -71,8 +71,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@65d7f2d534ac1bc67fcd62888c5f4f3d2cb2b236 # v4
         with:
-          python-version: "3.11"
-          cache: "pip"
+          python-version: '3.11'
+          cache: 'pip'
 
       - name: Create log directories
         run: |
@@ -89,7 +89,7 @@ jobs:
 
   build-image:
     name: Docker image build
-    needs: [integration-tests]
+    needs: [ integration-tests ]
     runs-on: ubuntu-latest
 
     steps:
@@ -119,7 +119,7 @@ jobs:
 
   system-test:
     name: System test
-    needs: [build-image]
+    needs: [ build-image ]
     runs-on: ubuntu-latest
 
     steps:
@@ -144,11 +144,8 @@ jobs:
       - name: Create .env file
         run: touch .env
 
-      - name: Update shared_config.json for XML test
-        run: .github/scripts/update-shared-config-xml.sh util/shared_config.json
-
       - name: Run sandbox in dev env
-        run: docker compose -f compose.yaml -f .github/comp_override/compose.override-xml.yaml --profile dev up -d
+        run: docker compose --profile dev up -d
 
       - name: Wait for Blaze
         run: .github/scripts/wait-for-url.sh  http://localhost:8080/health
@@ -173,7 +170,7 @@ jobs:
 
   system-test-csv:
     name: System test csv files
-    needs: [system-test]
+    needs: [ system-test ]
     runs-on: ubuntu-latest
 
     steps:
@@ -197,9 +194,6 @@ jobs:
 
       - name: Create .env file
         run: touch .env
-
-      - name: Update shared_config.json for CSV test
-        run: .github/scripts/update-shared-config.sh util/shared_config.json
 
       - name: Run sandbox in dev env (use compose.override.yaml  to work with csv files)
         run: docker compose -f compose.yaml -f .github/comp_override/compose.override.yaml --profile dev up -d
@@ -227,7 +221,7 @@ jobs:
 
   system-test-json:
     name: System test json files
-    needs: [system-test-csv]
+    needs: [ system-test-csv ]
     runs-on: ubuntu-latest
 
     steps:
@@ -251,9 +245,6 @@ jobs:
 
       - name: Create .env file
         run: touch .env
-
-      - name: Update shared_config.json for JSON test
-        run: .github/scripts/update-shared-config-json.sh util/shared_config.json
 
       - name: Run sandbox in dev env (use compose.override.yaml  to work with csv files)
         run: docker compose -f compose.yaml -f .github/comp_override/compose.override2.yaml --profile dev up -d
@@ -281,7 +272,7 @@ jobs:
 
   build-push-image:
     name: Publish docker image
-    needs: [system-test-json]
+    needs: [ system-test-json ]
     runs-on: ubuntu-latest
 
     steps:

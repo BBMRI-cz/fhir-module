@@ -111,11 +111,11 @@ From the project root directory:
 docker compose --profile ui up
 ```
 
-Note that the UI container is **heavily** dependant on the prod / dev containers (best to run as combined)
+Note that the UI container is **heavily** dependant on the prod / dev ones and monitoring
 
 ```bash
 # Best to the whole stack
-docker compose --profile combined up -d
+docker compose --profile dev -- profile monitoring --profile ui up
 ```
 
 The UI will be available at [http://localhost:3000](http://localhost:3000).
@@ -126,7 +126,56 @@ The SQLite database is stored in the `/app/data` directory within the container 
 
 ## Environment Variables
 
-See the [Deployment Guide](DEPLOYMENT.md) for a complete list of environment variables and configuration options.
+The UI application uses the following environment variables:
+
+### Core Configuration
+
+| Variable name     | Default value | Description                                                |
+| ----------------- | ------------- | ---------------------------------------------------------- |
+| `NODE_ENV`        | `development` | Node.js environment mode (development/production)          |
+| `PORT`            | `3000`        | Port on which the application runs                         |
+| `NEXTAUTH_SECRET` | _required_    | Secret key for NextAuth.js session encryption              |
+| `AUTH_TRUST_HOST` | `false`       | Set to `true` for Docker deployment to trust proxy headers |
+
+### Backend Integration
+
+| Variable name     | Default value            | Description                          |
+| ----------------- | ------------------------ | ------------------------------------ |
+| `BACKEND_API_URL` | `http://localhost:5000`  | URL of the FHIR module backend API   |
+| `PROMETHEUS_URL`  | `http://prometheus:9090` | URL of the Prometheus metrics server |
+
+### Password Validation Configuration
+
+| Variable name                    | Default value         | Description                             |
+| -------------------------------- | --------------------- | --------------------------------------- | ---------------------------------------- |
+| `PASSWORD_MIN_LENGTH`            | `8`                   | Minimum password length requirement     |
+| `PASSWORD_MAX_LENGTH`            | `128`                 | Maximum password length requirement     |
+| `PASSWORD_REQUIRE_UPPERCASE`     | `false`               | Require uppercase letters in passwords  |
+| `PASSWORD_REQUIRE_LOWERCASE`     | `false`               | Require lowercase letters in passwords  |
+| `PASSWORD_REQUIRE_NUMBERS`       | `false`               | Require numbers in passwords            |
+| `PASSWORD_REQUIRE_SPECIAL_CHARS` | `false`               | Require special characters in passwords |
+| `PASSWORD_SPECIAL_CHARS`         | `!@#$%^&\*()\_+-=[]{} | ;:,.<>?`                                | Allowed special characters for passwords |
+
+### Example .env Configuration
+
+```bash
+# Core Configuration
+NODE_ENV=production
+PORT=3000
+NEXTAUTH_SECRET=your-secret-key-change-in-production
+AUTH_TRUST_HOST=true
+
+# Backend Integration
+BACKEND_API_URL=http://fhir-module:5000
+PROMETHEUS_URL=http://prometheus:9090
+
+# Password Requirements (optional)
+PASSWORD_MIN_LENGTH=12
+PASSWORD_REQUIRE_UPPERCASE=true
+PASSWORD_REQUIRE_LOWERCASE=true
+PASSWORD_REQUIRE_NUMBERS=true
+PASSWORD_REQUIRE_SPECIAL_CHARS=true
+```
 
 ## Security Considerations
 
@@ -143,6 +192,7 @@ The UI integrates with the monitoring stack:
 - **Prometheus Integration**: Queries metrics from the Prometheus server
 - **Health Checks**: Real-time system health monitoring
 - **Error Tracking**: Client-side error logging and reporting
+- **Performance Metrics**: Page load times and user interaction tracking
 
 ## Troubleshooting
 
@@ -187,3 +237,4 @@ When contributing to the UI:
 2. Write tests for new features
 3. Update documentation for any new environment variables
 4. Ensure responsive design works on all screen sizes
+5. Test authentication flows thoroughly

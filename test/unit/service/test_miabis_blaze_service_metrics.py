@@ -29,7 +29,7 @@ class TestMiabisBlazeServiceMetrics(unittest.TestCase):
         # Create MiabisBlazeService instance with mocked dependencies
         with patch('service.miabis_blaze_service.BlazeClient') as mock_blaze_client_class, \
              patch('service.miabis_blaze_service.setup_logger'), \
-             patch('service.miabis_blaze_service.get_miabis_blaze_auth', return_value=('user', 'pass')), \
+             patch('service.miabis_blaze_service.MIABIS_BLAZE_AUTH', ('user', 'pass')), \
              patch('service.miabis_blaze_service.get_metrics_for_service'):
             
             mock_blaze_client_class.return_value = self.mock_blaze_client
