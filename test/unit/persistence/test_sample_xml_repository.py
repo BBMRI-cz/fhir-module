@@ -9,7 +9,7 @@ from model.miabis.sample_miabis import SampleMiabis
 from model.sample import Sample
 from model.storage_temperature import StorageTemperature
 from persistence.sample_xml_repository import SampleXMLRepository
-from util.config import get_parsing_map, get_storage_temp_map
+from util.config import PARSING_MAP, STORAGE_TEMP_MAP
 
 
 class TestSampleXMLRepository(unittest.TestCase):
@@ -114,34 +114,10 @@ class TestSampleXMLRepository(unittest.TestCase):
 
     dir_path = "/mock_dir/"
 
-    parsing_map = {
-        "sample_map": {
-            "sample": "**.STS.* || **.LTS.*",
-            "sample_details": {
-            "id": "@sampleId",
-            "material_type": "materialType",
-            "diagnosis": "diagnosis",
-            "diagnosis_date": "diagnosis_date",
-            "storage_temperature": "storage_temperature",
-            "collection_date": "cutTime",
-            "collection": "materialType"
-            },
-            "donor_id": "patient.@id"
-        }
-    }
-
-    storage_temp_map = {
-        "temperatureGN": "TEMPERATURE_GN"
-    }
-
-    miabis_storage_temp_map = {
-        "temperatureGN": "TEMPERATURE_GN"
-    }
-
     @pytest.fixture(autouse=True)
     def run_around_tests(self):
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
-                                                     sample_parsing_map=self.parsing_map['sample_map'],
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
                                                      material_type_map={"S": "Urine"})
         yield  # run test
 
@@ -203,10 +179,10 @@ class TestSampleXMLRepository(unittest.TestCase):
 
     @patchfs
     def test_with_type_to_collection_map_ok(self, fake_fs):
-        spm = self.parsing_map['sample_map']
+        spm = PARSING_MAP['sample_map']
         spm['sample_details']['collection'] = "materialType"
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
-                                                     sample_parsing_map=spm,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
                                                      type_to_collection_map={"S": "test:collection:id"})
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample))
@@ -216,7 +192,7 @@ class TestSampleXMLRepository(unittest.TestCase):
     @patchfs
     def test_with_wrong_type_to_collection_map_id_is_none(self, fake_fs):
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
-                                                     sample_parsing_map=self.parsing_map['sample_map'],
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
                                                      type_to_collection_map={"not_present": "test:collection:id"})
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample))
@@ -225,7 +201,7 @@ class TestSampleXMLRepository(unittest.TestCase):
     @patchfs
     def test_multiple_diagnosis_ok(self, fake_fs):
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
-                                                     sample_parsing_map=self.parsing_map['sample_map'])
+                                                     sample_parsing_map=PARSING_MAP['sample_map'])
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample_multiple_diagnoses))
         for sample in self.sample_repository.get_all():
@@ -236,7 +212,7 @@ class TestSampleXMLRepository(unittest.TestCase):
     @patchfs
     def test_multiple_diagnosis_to_fhir_ok(self, fake_fs):
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
-                                                     sample_parsing_map=self.parsing_map['sample_map'])
+                                                     sample_parsing_map=PARSING_MAP['sample_map'])
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample_multiple_diagnoses))
         for sample in self.sample_repository.get_all():
@@ -247,8 +223,8 @@ class TestSampleXMLRepository(unittest.TestCase):
     @patchfs
     def test_storage_temperature_ok(self, fake_fs):
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
-                                                     sample_parsing_map=self.parsing_map['sample_map'],
-                                                     storage_temp_map=self.storage_temp_map)
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
+                                                     storage_temp_map=STORAGE_TEMP_MAP)
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample))
         self.assertEqual(StorageTemperature.TEMPERATURE_GN, next(self.sample_repository.get_all()).storage_temperature)
@@ -256,7 +232,7 @@ class TestSampleXMLRepository(unittest.TestCase):
     @patchfs
     def test_storage_temperature_code_not_in_map(self, fake_fs):
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
-                                                     sample_parsing_map=self.parsing_map['sample_map'],
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
                                                      storage_temp_map={"bad": "code"})
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample))
@@ -265,8 +241,8 @@ class TestSampleXMLRepository(unittest.TestCase):
     @patchfs
     def test_storage_temperature_not_in_sample(self, fake_fs):
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
-                                                     sample_parsing_map=self.parsing_map['sample_map'],
-                                                     storage_temp_map=self.storage_temp_map,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
+                                                     storage_temp_map=STORAGE_TEMP_MAP,
                                                      material_type_map={"S": "Urine"})
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample_no_storage_temperature))
@@ -279,9 +255,8 @@ class TestSampleXMLRepository(unittest.TestCase):
     @patchfs
     def test_diagnosis_not_in_sample(self, fake_fs):
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
-                                                     sample_parsing_map=self.parsing_map['sample_map'],
-                                                     storage_temp_map=self.storage_temp_map,
-                                                     material_type_map={"S": "Urine"})
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
+                                                     storage_temp_map=STORAGE_TEMP_MAP)
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample_no_diagnosis))
         for sample in self.sample_repository.get_all():
@@ -293,8 +268,8 @@ class TestSampleXMLRepository(unittest.TestCase):
     @patchfs
     def test_material_type_not_in_sample(self, fake_fs):
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
-                                                     sample_parsing_map=self.parsing_map['sample_map'],
-                                                     storage_temp_map=self.storage_temp_map)
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
+                                                     storage_temp_map=STORAGE_TEMP_MAP)
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample_no_material_type))
         for sample in self.sample_repository.get_all():
@@ -306,8 +281,8 @@ class TestSampleXMLRepository(unittest.TestCase):
     @patchfs
     def test_no_collection_date(self, fake_fs):
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
-                                                     sample_parsing_map=self.parsing_map['sample_map'],
-                                                     storage_temp_map=self.storage_temp_map,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
+                                                     storage_temp_map=STORAGE_TEMP_MAP,
                                                      material_type_map={"S": "Urine"})
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample_no_collection_date))
@@ -319,10 +294,10 @@ class TestSampleXMLRepository(unittest.TestCase):
 
     @patchfs
     def test_collection_with_correct_attribute_to_collection(self, fake_fs):
-        spm = self.parsing_map['sample_map']
+        spm = PARSING_MAP['sample_map']
         spm['sample_details']['collection'] = "diagnosis"
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
-                                                     sample_parsing_map=spm,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
                                                      type_to_collection_map={"C509": "test:collection:id"})
         fake_fs.create_file(self.dir_path + "mock_file.xml", contents=self.content
                             .format(sample=self.sample))
@@ -332,8 +307,8 @@ class TestSampleXMLRepository(unittest.TestCase):
     @patchfs
     def test_diagnosis_date_miabis_model(self, fake_fs):
         self.sample_repository = SampleXMLRepository(records_path=self.dir_path,
-                                                     sample_parsing_map=self.parsing_map['sample_map'],
-                                                     storage_temp_map=self.miabis_storage_temp_map,
+                                                     sample_parsing_map=PARSING_MAP['sample_map'],
+                                                     storage_temp_map=STORAGE_TEMP_MAP,
                                                      material_type_map={"S": "Urine"},
                                                      miabis_on_fhir_model=True)
 

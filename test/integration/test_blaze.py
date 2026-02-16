@@ -1,8 +1,7 @@
 import datetime
 import logging
 import unittest
-import os
-from typing import List, Generator, Callable
+from typing import List, Generator
 
 import pytest
 import requests
@@ -39,12 +38,6 @@ class SampleDonorRepoStub(SampleDonorRepository):
     def add(self, donor: SampleDonor):
         self.donors.append(donor)
 
-    def _get_supported_extensions(self) -> tuple[str, Callable]:
-        return ('.csv', self.smoke_validate)
-
-    def smoke_validate(self, file_entry: os.DirEntry) -> list[str]:
-        return []
-
 
 class ConditionRepoStub(ConditionRepository):
     conditions = [Condition("C504", "fakeId"), Condition("C505", "fakeId")]
@@ -54,12 +47,6 @@ class ConditionRepoStub(ConditionRepository):
 
     def add(self, condition: Condition):
         self.conditions.append(condition)
-
-    def _get_supported_extensions(self) -> tuple[str, Callable]:
-        return ('.csv', self.smoke_validate)
-
-    def smoke_validate(self, file_entry: os.DirEntry) -> list[str]:
-        return []
 
 
 class SampleRepoStub(SampleRepository):
@@ -77,12 +64,6 @@ class SampleRepoStub(SampleRepository):
     def pop(self) -> Sample:
         return self.samples.pop()
 
-    def _get_supported_extensions(self) -> tuple[str, Callable]:
-        return ('.csv', self.smoke_validate)
-
-    def smoke_validate(self, file_entry: os.DirEntry) -> list[str]:
-        return []
-
 
 class SampleCollectionRepoStub(SampleCollectionRepository):
     sample_collections = [SampleCollection(identifier="test:collection:1")]
@@ -91,36 +72,20 @@ class SampleCollectionRepoStub(SampleCollectionRepository):
         yield from self.sample_collections
 
 
-class PatientServiceStub(PatientService):
-    def update_mappings(self) -> None:
-        """Dummy implementation for tests - does nothing."""
-        pass
-
-
-class ConditionServiceStub(ConditionService):
-    def update_mappings(self) -> None:
-        """Dummy implementation for tests - does nothing."""
-        pass
-
-class SampleServiceStub(SampleService):
-    def update_mappings(self) -> None:
-        """Dummy implementation for tests - does nothing."""
-        pass
-
 class TestBlazeStore(unittest.TestCase):
 
     @pytest.fixture(autouse=True)
     def run_around_tests(self):
-        self.blaze_service = BlazeService(patient_service=PatientServiceStub(SampleDonorRepoStub("XXX")),
-                                          condition_service=ConditionServiceStub(ConditionRepoStub("XXX")),
-                                          sample_service=SampleServiceStub(SampleRepoStub("XXX")),
+        self.blaze_service = BlazeService(patient_service=PatientService(SampleDonorRepoStub()),
+                                          condition_service=ConditionService(ConditionRepoStub()),
+                                          sample_service=SampleService(SampleRepoStub()),
                                           blaze_url='http://localhost:8080/fhir',
                                           sample_collection_repository=SampleCollectionRepoStub())
         yield  # run test
         try:
-            for sample in SampleRepoStub("XXX").get_all():
+            for sample in SampleRepoStub().get_all():
                 self.blaze_service.delete_fhir_resource("Specimen", sample.identifier)
-            for donor in SampleDonorRepoStub("XXX").get_all():
+            for donor in SampleDonorRepoStub().get_all():
                 self.blaze_service.delete_fhir_resource("Patient", donor.identifier)
             for organization in SampleCollectionRepoStub().get_all():
                 self.blaze_service.delete_fhir_resource("Organization", organization.identifier)
@@ -145,10 +110,10 @@ class TestBlazeStore(unittest.TestCase):
         self.assertEqual(404, self.blaze_service.delete_fhir_resource("Patient", "newId"))
 
     def test_upload_all_patients_when_blaze_unreachable(self):
-        self.blaze_service = BlazeService(PatientServiceStub(SampleDonorRepoStub("XXX")),
+        self.blaze_service = BlazeService(PatientService(SampleDonorRepoStub()),
                                           blaze_url='http://localhost:44/wrong',
-                                          condition_service=ConditionServiceStub(ConditionRepoStub("XXX")),
-                                          sample_service=SampleServiceStub(SampleRepoStub("XXX")),
+                                          condition_service=ConditionService(ConditionRepoStub()),
+                                          sample_service=SampleService(SampleRepoStub()),
                                           sample_collection_repository=SampleCollectionRepoStub())
         self.assertEqual(404, self.blaze_service.initial_upload_of_all_patients())
 
@@ -160,27 +125,27 @@ class TestBlazeStore(unittest.TestCase):
                                                                         identifier="newId"))
 
     def test_sync_one_new_patient(self):
-        donor_repo = SampleDonorRepoStub("XXX")
+        donor_repo = SampleDonorRepoStub()
         self.blaze_service.initial_upload_of_all_patients()
         num_of_patients_before_sync = self.blaze_service.get_number_of_resources("Patient")
         donor_repo.add(SampleDonor("uniqueNewPatient5"))
-        self.blaze_service = BlazeService(PatientServiceStub(donor_repo),
+        self.blaze_service = BlazeService(PatientService(donor_repo),
                                           blaze_url='http://localhost:8080/fhir',
-                                          condition_service=ConditionServiceStub(ConditionRepoStub("XXX")),
-                                          sample_service=SampleServiceStub(SampleRepoStub("XXX")),
+                                          condition_service=ConditionService(ConditionRepoStub()),
+                                          sample_service=SampleService(SampleRepoStub()),
                                           sample_collection_repository=SampleCollectionRepoStub())
         self.blaze_service.sync_patients()
         self.assertEqual(num_of_patients_before_sync + 1, self.blaze_service.get_number_of_resources("Patient"))
 
     def test_sync_samples_one_same_sample_with_new_diagnosis(self):
-        sample_repo = SampleRepoStub("XXX")
+        sample_repo = SampleRepoStub()
         sample_repo.add(Sample(identifier="fakeId", donor_id="newId", diagnoses=["C505"], material_type="1",
                                sample_collection_id="test:collection:1",
                                collected_datetime=datetime.datetime(year=2020, month=2, day=2)))
-        self.blaze_service = BlazeService(patient_service=PatientServiceStub(SampleDonorRepoStub("XXX")),
+        self.blaze_service = BlazeService(patient_service=PatientService(SampleDonorRepoStub()),
                                           blaze_url='http://localhost:8080/fhir',
-                                          condition_service=ConditionServiceStub(ConditionRepoStub("XXX")),
-                                          sample_service=SampleServiceStub(sample_repo),
+                                          condition_service=ConditionService(ConditionRepoStub()),
+                                          sample_service=SampleService(sample_repo),
                                           sample_collection_repository=SampleCollectionRepoStub())
         self.blaze_service.initial_upload_of_all_patients()
         self.blaze_service.sync_samples()
@@ -204,15 +169,15 @@ class TestBlazeStore(unittest.TestCase):
         self.assertTrue(self.blaze_service.patient_has_condition("fakeId", "C50.4"))
 
     def test_sync_one_new_condition(self):
-        condition_repo = ConditionRepoStub("XXX")
+        condition_repo = ConditionRepoStub()
         self.blaze_service.initial_upload_of_all_patients()
         self.blaze_service.sync_conditions()
         self.assertFalse(self.blaze_service.patient_has_condition("fakeId", "C50.6"))
         condition_repo.add(Condition(patient_id="fakeId", icd_10_code="C50.6"))
-        self.blaze_service = BlazeService(PatientServiceStub(SampleDonorRepoStub("XXX")),
+        self.blaze_service = BlazeService(PatientService(SampleDonorRepoStub()),
                                           blaze_url='http://localhost:8080/fhir',
-                                          condition_service=ConditionServiceStub(condition_repo),
-                                          sample_service=SampleServiceStub(SampleRepoStub("XXX")),
+                                          condition_service=ConditionService(condition_repo),
+                                          sample_service=SampleService(SampleRepoStub()),
                                           sample_collection_repository=SampleCollectionRepoStub())
         self.blaze_service.sync_conditions()
         self.assertTrue(self.blaze_service.patient_has_condition("fakeId", "C50.6"))
@@ -226,7 +191,7 @@ class TestBlazeStore(unittest.TestCase):
     def test_delete_all_patients(self):
         self.blaze_service.initial_upload_of_all_patients()
         self.assertEqual(2, self.blaze_service.get_number_of_resources("Patient"))
-        for donor in SampleDonorRepoStub("XXX").get_all():
+        for donor in SampleDonorRepoStub().get_all():
             self.blaze_service.delete_fhir_resource("Patient", donor.identifier)
         self.assertEqual(0, self.blaze_service.get_number_of_resources("Patient"))
 
@@ -268,14 +233,14 @@ class TestBlazeStore(unittest.TestCase):
         self.assertEqual(1, self.blaze_service.get_number_of_resources("Organization"))
 
     def test_sync_samples_with_collections_add_new_diagnosis(self):
-        sample_repo = SampleRepoStub("XXX")
+        sample_repo = SampleRepoStub()
         sample_repo.add(Sample(identifier="fakeId", donor_id="newId", diagnoses=["C505"], material_type="1",
                                sample_collection_id="test:collection:1",
                                collected_datetime=datetime.datetime(year=2020, month=2, day=2)))
-        self.blaze_service = BlazeService(patient_service=PatientServiceStub(SampleDonorRepoStub("XXX")),
+        self.blaze_service = BlazeService(patient_service=PatientService(SampleDonorRepoStub()),
                                           blaze_url='http://localhost:8080/fhir',
-                                          condition_service=ConditionServiceStub(ConditionRepoStub("XXX")),
-                                          sample_service=SampleServiceStub(sample_repo),
+                                          condition_service=ConditionService(ConditionRepoStub()),
+                                          sample_service=SampleService(sample_repo),
                                           sample_collection_repository=SampleCollectionRepoStub())
         self.blaze_service.initial_upload_of_all_patients()
         self.blaze_service.upload_sample_collections()
@@ -285,14 +250,14 @@ class TestBlazeStore(unittest.TestCase):
         sample_repo.pop()
 
     def test_sync_same_sample_add_collection_id(self):
-        sample_repo = SampleRepoStub("XXX")
+        sample_repo = SampleRepoStub()
         sample_repo.add(Sample(identifier="fakeId2", donor_id="newId", diagnoses=["C505"], material_type="1",
                                sample_collection_id="test:collection:1",
                                collected_datetime=datetime.datetime(year=2020, month=2, day=2)))
-        self.blaze_service = BlazeService(patient_service=PatientServiceStub(SampleDonorRepoStub("XXX")),
+        self.blaze_service = BlazeService(patient_service=PatientService(SampleDonorRepoStub()),
                                           blaze_url='http://localhost:8080/fhir',
-                                          condition_service=ConditionServiceStub(ConditionRepoStub("XXX")),
-                                          sample_service=SampleServiceStub(sample_repo),
+                                          condition_service=ConditionService(ConditionRepoStub()),
+                                          sample_service=SampleService(sample_repo),
                                           sample_collection_repository=SampleCollectionRepoStub())
         self.blaze_service.initial_upload_of_all_patients()
         self.blaze_service.sync_samples()
@@ -303,11 +268,11 @@ class TestBlazeStore(unittest.TestCase):
         sample_repo.pop()
 
     def test_sync_sample_add_different_storage_temperature(self):
-        sample_repo = SampleRepoStub("XXX")
-        self.blaze_service = BlazeService(patient_service=PatientServiceStub(SampleDonorRepoStub("XXX")),
+        sample_repo = SampleRepoStub()
+        self.blaze_service = BlazeService(patient_service=PatientService(SampleDonorRepoStub()),
                                           blaze_url='http://localhost:8080/fhir',
-                                          condition_service=ConditionServiceStub(ConditionRepoStub("XXX")),
-                                          sample_service=SampleServiceStub(sample_repo),
+                                          condition_service=ConditionService(ConditionRepoStub()),
+                                          sample_service=SampleService(sample_repo),
                                           sample_collection_repository=SampleCollectionRepoStub())
         self.blaze_service.initial_upload_of_all_patients()
         self.blaze_service.sync_samples()

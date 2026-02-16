@@ -7,7 +7,7 @@ from pyfakefs.fake_filesystem_unittest import patchfs
 from miabis_model import Gender
 from model.sample_donor import SampleDonor
 from persistence.sample_donor_csv_repository import SampleDonorCsvRepository
-from util.config import get_parsing_map
+from util.config import PARSING_MAP_CSV
 
 
 class TestDonorCsvRepo(unittest.TestCase):
@@ -17,18 +17,10 @@ class TestDonorCsvRepo(unittest.TestCase):
 
     dir_path = "/mock_dir/"
 
-    parsing_map = {
-        "donor_map": {
-            "id": "patient_pseudonym",
-            "gender": "sex",
-            "birthDate": "birth_year"
-        }
-    }
-
     @pytest.fixture(autouse=True)
     def run_around_tests(self):
         self.donor_repository = SampleDonorCsvRepository(records_path=self.dir_path,
-                                                         donor_parsing_map=self.parsing_map['donor_map'],
+                                                         donor_parsing_map=PARSING_MAP_CSV['donor_map'],
                                                          separator=";")
 
     @patchfs
@@ -59,7 +51,6 @@ class TestDonorCsvRepo(unittest.TestCase):
         self.assertEqual(1, counter)
 
 
-    @unittest.skipIf(os.name == 'nt', "chmod doesn't work properly on Windows")
     @patchfs
     def test_file_with_no_permissions_trows_no_error(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.content)

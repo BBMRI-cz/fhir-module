@@ -31,7 +31,7 @@ class TestBlazeServiceMetrics(unittest.TestCase):
         # Create BlazeService instance with mocked dependencies
         with patch('service.blaze_service.requests.session') as mock_session_factory, \
              patch('service.blaze_service.setup_logger'), \
-             patch('service.blaze_service.get_blaze_auth', return_value=('user', 'pass')), \
+             patch('service.blaze_service.BLAZE_AUTH', ('user', 'pass')), \
              patch('service.blaze_service.get_metrics_for_service'):
             
             mock_session_factory.return_value = self.mock_session
@@ -197,7 +197,7 @@ class TestBlazeServiceMetrics(unittest.TestCase):
             
             result = self.blaze_service.upload_sample_collections()
             
-            self.assertEqual(result, {'processed': 0, 'failed': 0, 'skipped': 1})
+            self.assertEqual(result, {'processed': 0, 'failed': 0, 'skipped': 0})
 
     def test_upload_sample_collections_upload_failure_metrics(self):
         """Test sample collection upload metrics when upload fails."""

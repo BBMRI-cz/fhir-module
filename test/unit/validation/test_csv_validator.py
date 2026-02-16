@@ -5,7 +5,7 @@ from pyfakefs.fake_filesystem_unittest import patchfs
 from exception.no_files_provided import NoFilesProvidedException
 from exception.nonexistent_attribute_parsing_map import NonexistentAttributeParsingMapException
 from exception.wrong_parsing_map import WrongParsingMapException
-from util.config import get_parsing_map
+from util.config import PARSING_MAP_CSV
 from validation.csv_validator import CsvValidator
 
 
@@ -117,41 +117,16 @@ class TestCsvValidator(unittest.TestCase):
 
     dir_path = "/mock/dir/"
 
-    parsing_map = {
-        "donor_map": {
-            "id": "patient_pseudonym",
-            "gender": "sex",
-            "birthDate": "birth_year"
-        },
-        "sample_map": {
-            "sample_details": {
-            "id": "sample_ID",
-            "material_type": "sampling_type",
-            "diagnosis": "diagnosis",
-            "storage_temperature": "storage_temperature",
-            "collection_date": "sampling_date",
-            "diagnosis_date": "diagnosis_date",
-            "collection": "material_type"
-            },
-            "donor_id": "patient_pseudonym"
-        },
-        "condition_map": {
-            "icd-10_code": "diagnosis",
-            "patient_id": "patient_pseudonym",
-            "diagnosis_date": "diagnosis_date"
-        }
-    }
-
     @patchfs
     def test_csv_validator_correct_parsing_map_and_file(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header + self.samples)
-        self.validator = CsvValidator(self.parsing_map, self.dir_path, ";")
+        self.validator = CsvValidator(PARSING_MAP_CSV, self.dir_path, ";")
         self.assertTrue(self.validator.validate())
 
     @patchfs
     def test_csv_validator_no_csv_files_present_in_records_directory_throws_exception(self, fake_fs):
         fake_fs.create_file(self.dir_path+"bad_file_format.txt")
-        self.validator = CsvValidator(self.parsing_map, self.dir_path, ";")
+        self.validator = CsvValidator(PARSING_MAP_CSV, self.dir_path, ";")
         self.assertRaises(NoFilesProvidedException, self.validator.validate)
 
     @patchfs
@@ -193,5 +168,5 @@ class TestCsvValidator(unittest.TestCase):
     @patchfs
     def test_csv_actual_file_missing_defined_sample_id_field_in_header(self, fake_fs):
         fake_fs.create_file(self.dir_path + "mock_file.csv", contents=self.header_missing_sample_id_field)
-        self.validator = CsvValidator(self.parsing_map, self.dir_path, ";")
+        self.validator = CsvValidator(PARSING_MAP_CSV, self.dir_path, ";")
         self.assertRaises(NonexistentAttributeParsingMapException, self.validator.validate)
