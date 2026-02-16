@@ -1,10 +1,10 @@
 import {
   getConditionMappingSchema,
   getDonorMappingSchema,
+  getMaterialTypes,
   getTemperatureValues,
   getSampleMappingSchema,
 } from "@/actions/configuration-details/configuration-details-actions";
-import { getMaterialTypes } from "@/actions/configuration/material-types";
 import {
   CommonMappingConfig,
   CustomMappingConfig,

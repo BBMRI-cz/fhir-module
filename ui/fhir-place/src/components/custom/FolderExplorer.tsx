@@ -11,10 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FolderTreeRecord } from "@/types/actions/folder/types";
-import {
-  getFolders,
-  getRootFolderInfo,
-} from "@/actions/folder/list-directories";
+import { getFolders } from "@/actions/folder/folder-actions";
 import { Button } from "@/components/ui/button";
 
 interface FolderNodeProps {
@@ -252,14 +249,12 @@ export default function FolderExplorer({
   onFolderSelect,
   selectedPath,
 }: FolderExplorerProps) {
-  const [rootFolder, setRootFolder] = useState<FolderTreeRecord | null>(null);
-  const [rootChildren, setRootChildren] = useState<FolderTreeRecord[]>([]);
+  const [records, setRecords] = useState<FolderTreeRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [internalSelectedPath, setInternalSelectedPath] = useState<
     string | undefined
   >(selectedPath);
-  const [rootExpanded, setRootExpanded] = useState(false);
 
   useEffect(() => {
     const loadRootFolders = async () => {
@@ -267,12 +262,8 @@ export default function FolderExplorer({
         setLoading(true);
         setError(null);
 
-        const [rootInfo, children] = await Promise.all([
-          getRootFolderInfo(),
-          getFolders("", true),
-        ]);
-        setRootFolder(rootInfo);
-        setRootChildren(children);
+        const data = await getFolders("", true);
+        setRecords(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load folders");
         console.error("Error loading root folders:", err);
@@ -315,21 +306,9 @@ export default function FolderExplorer({
     );
   }
 
-  if (!rootFolder) {
+  if (records.length === 0) {
     return <div className="py-4 px-2 text-sm italic">No items found</div>;
   }
-
-  const isRootSelected = currentSelectedPath === rootFolder.path;
-
-  const handleRootClick = () => {
-    setInternalSelectedPath(rootFolder.path);
-    onFolderSelect?.(rootFolder);
-  };
-
-  const handleRootExpandClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setRootExpanded(!rootExpanded);
-  };
 
   return (
     <div className="w-full">
@@ -341,83 +320,14 @@ export default function FolderExplorer({
           </h3>
         </div>
         <div className="p-2 max-h-96 overflow-y-auto">
-          {/* Root Node */}
-          <div className="select-none">
-            <Button
-              variant="ghost"
-              className={cn(
-                "flex items-center gap-2 py-1 px-2 rounded-md transition-colors w-full justify-start h-auto font-normal text-left",
-                "hover:bg-gray-100 dark:hover:bg-gray-900",
-                "group",
-                isRootSelected &&
-                  "bg-accent dark:bg-accent border border-border"
-              )}
-              onClick={handleRootClick}
-            >
-              <span
-                className="w-4 h-4 flex items-center justify-center rounded p-0 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-                onClick={handleRootExpandClick}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setRootExpanded(!rootExpanded);
-                  }
-                }}
-                aria-label={rootExpanded ? "Collapse folder" : "Expand folder"}
-              >
-                {rootExpanded ? (
-                  <ChevronDownIcon className="w-3 h-3 text-gray-600 dark:text-gray-400" />
-                ) : (
-                  <ChevronRightIcon className="w-3 h-3 text-gray-600 dark:text-gray-400" />
-                )}
-              </span>
-
-              <div className="w-4 h-4 flex items-center justify-center">
-                {rootExpanded ? (
-                  <FolderOpenIcon className="w-4 h-4 text-primary" />
-                ) : (
-                  <FolderIcon className="w-4 h-4 text-primary" />
-                )}
-              </div>
-
-              <span
-                className={cn(
-                  "text-sm font-medium",
-                  "truncate flex-1",
-                  isRootSelected && "text-accent-foreground font-semibold"
-                )}
-              >
-                {rootFolder.name}
-              </span>
-            </Button>
-
-            {/* Root Children */}
-            {rootExpanded && (
-              <div className="transition-all duration-200 ease-in-out">
-                {rootChildren.length === 0 ? (
-                  <div
-                    className="text-xs py-1 px-2 italic text-gray-500"
-                    style={{ paddingLeft: "42px" }}
-                  >
-                    Empty folder
-                  </div>
-                ) : (
-                  rootChildren.map((record) => (
-                    <FolderNode
-                      key={record.path}
-                      record={record}
-                      level={1}
-                      selectedPath={currentSelectedPath}
-                      onSelect={handleFolderSelect}
-                    />
-                  ))
-                )}
-              </div>
-            )}
-          </div>
+          {records.map((record) => (
+            <FolderNode
+              key={record.path}
+              record={record}
+              selectedPath={currentSelectedPath}
+              onSelect={handleFolderSelect}
+            />
+          ))}
         </div>
       </div>
     </div>

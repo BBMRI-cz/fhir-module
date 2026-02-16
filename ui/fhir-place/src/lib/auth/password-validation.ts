@@ -25,6 +25,7 @@ export function resetClientCache(): void {
 
 async function getPasswordRequirements(): Promise<PasswordRequirements> {
   // Server-side: read directly from environment variables
+  // eslint-disable-next-line no-restricted-globals
   if (typeof window === "undefined") {
     return {
       minLength: Number.parseInt(process.env.PASSWORD_MIN_LENGTH || "8"),

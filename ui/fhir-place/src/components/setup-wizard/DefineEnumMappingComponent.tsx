@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { Code, Edit, ArrowLeft, AlertTriangle, FileSearch } from "lucide-react";
+import { Code, Edit, ArrowLeft, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,7 @@ import {
   HoverCardTrigger,
   HoverCardContent,
 } from "@/components/ui/hover-card";
-import { useState, useEffect, useContext, useMemo } from "react";
+import { useState, useEffect, useContext } from "react";
 import {
   DefineEnumMappingProps,
   EnumMapping,
@@ -19,7 +19,6 @@ import LoadingComponent from "@/components/setup-wizard/common/LoadingComponent"
 import ErrorComponent from "@/components/setup-wizard/common/ErrorComponent";
 import VisualEditorComponent from "@/components/setup-wizard/enum-components/VisualEditorComponent";
 import ManualEditorComponent from "@/components/setup-wizard/enum-components/ManualEditorComponent";
-import ExtractValuesDialog from "@/components/setup-wizard/enum-components/ExtractValuesDialog";
 import { SetupWizardContext } from "@/context/SetupWizardContext";
 
 export default function DefineEnumMappingComponent({
@@ -48,10 +47,7 @@ export default function DefineEnumMappingComponent({
 
   const [hasError, setHasError] = useState<boolean>(false);
 
-  const { wizardState, setWizardState, dataFormat, dataFolderPath } =
-    useContext(SetupWizardContext);
-
-  const [isExtractDialogOpen, setIsExtractDialogOpen] = useState(false);
+  const { wizardState, setWizardState } = useContext(SetupWizardContext);
 
   const allowCustomValues = allowCustomValuesGetter(wizardState, targetConfig);
 
@@ -136,19 +132,6 @@ export default function DefineEnumMappingComponent({
     nextStep();
   };
 
-  const existingUserValues = useMemo(
-    () => new Set(mappings.map((m) => m.userValue)),
-    [mappings]
-  );
-
-  const handleExtractedValues = (newValues: string[]) => {
-    const newMappings: EnumMapping[] = newValues.map((value) => ({
-      userValue: value,
-      apiValue: "",
-    }));
-    setMappings((prev) => [...prev, ...newMappings]);
-  };
-
   const handleManualJsonChange = (value: string, hasError: boolean) => {
     if (hasError) {
       setHasError(true);
@@ -181,92 +164,67 @@ export default function DefineEnumMappingComponent({
     <div className="h-full w-full flex flex-col">
       {/* Custom Values Checkbox with Warning */}
       <div className="mb-4 p-3 border rounded-lg bg-muted/30">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="allow-custom-values"
-              checked={allowCustomValues}
-              onCheckedChange={(checked) =>
-                setAllowCustomValues(checked === true)
-              }
-              disabled={hasCustomValues}
-              className="mt-0.5"
-            />
-            <div className="flex-1 flex items-center gap-2">
-              <Label
-                htmlFor="allow-custom-values"
-                className={`text-sm font-medium ${
-                  hasCustomValues
-                    ? "cursor-not-allowed opacity-60"
-                    : "cursor-pointer"
-                }`}
-              >
-                Allow custom values
-              </Label>
-              <HoverCard>
-                <HoverCardTrigger asChild>
-                  <button type="button" className="focus:outline-none">
-                    <AlertTriangle className="h-4 w-4 text-amber-500 cursor-help hover:text-amber-600 transition-colors" />
-                  </button>
-                </HoverCardTrigger>
-                <HoverCardContent className="w-80" align="start">
-                  <div className="space-y-2 text-sm">
-                    {hasCustomValues ? (
-                      <>
-                        <p className="font-medium text-amber-600 dark:text-amber-500">
-                          Custom values detected.
-                        </p>
-                        <p className="text-muted-foreground">
-                          You cannot disable custom values while custom entries
-                          exist. Remove all custom values first to disable this
-                          option.
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-muted-foreground">
-                          Enabling this allows you to enter custom values not in
-                          the predefined list.
-                        </p>
-                        <p className="font-medium text-amber-600 dark:text-amber-500">
-                          Warning:
-                        </p>
-                        <p className="text-muted-foreground">
-                          Custom values may cause validation errors or
-                          unexpected behavior if they don&apos;t match FHIR
-                          specifications.
-                        </p>
-                      </>
-                    )}
-                  </div>
-                </HoverCardContent>
-              </HoverCard>
-            </div>
-          </div>
-
-          {/* Add from Data Paths button */}
-          {dataFormat && dataFolderPath && (
-            <Button
-              onClick={() => setIsExtractDialogOpen(true)}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 shrink-0"
+        <div className="flex items-start gap-3">
+          <Checkbox
+            id="allow-custom-values"
+            checked={allowCustomValues}
+            onCheckedChange={(checked) =>
+              setAllowCustomValues(checked === true)
+            }
+            disabled={hasCustomValues}
+            className="mt-0.5"
+          />
+          <div className="flex-1 flex items-center gap-2">
+            <Label
+              htmlFor="allow-custom-values"
+              className={`text-sm font-medium ${
+                hasCustomValues
+                  ? "cursor-not-allowed opacity-60"
+                  : "cursor-pointer"
+              }`}
             >
-              <FileSearch className="h-4 w-4" />
-              <span className="hidden sm:inline">Extract from Data</span>
-              <span className="sm:hidden">Extract</span>
-            </Button>
-          )}
+              Allow custom values
+            </Label>
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <button type="button" className="focus:outline-none">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 cursor-help hover:text-amber-600 transition-colors" />
+                </button>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-80" align="start">
+                <div className="space-y-2 text-sm">
+                  {hasCustomValues ? (
+                    <>
+                      <p className="font-medium text-amber-600 dark:text-amber-500">
+                        Custom values detected.
+                      </p>
+                      <p className="text-muted-foreground">
+                        You cannot disable custom values while custom entries
+                        exist. Remove all custom values first to disable this
+                        option.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-muted-foreground">
+                        Enabling this allows you to enter custom values not in
+                        the predefined list.
+                      </p>
+                      <p className="font-medium text-amber-600 dark:text-amber-500">
+                        Warning:
+                      </p>
+                      <p className="text-muted-foreground">
+                        Custom values may cause validation errors or unexpected
+                        behavior if they don&apos;t match FHIR specifications.
+                      </p>
+                    </>
+                  )}
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+          </div>
         </div>
       </div>
-
-      {/* Data Path Selection Dialog */}
-      <ExtractValuesDialog
-        isOpen={isExtractDialogOpen}
-        onOpenChange={setIsExtractDialogOpen}
-        onExtract={handleExtractedValues}
-        existingUserValues={existingUserValues}
-      />
 
       {/* Tabs for Visual/Manual mode */}
       <Tabs
