@@ -11,11 +11,6 @@ import {
 
 type FileType = "json" | "csv" | "xml";
 
-const SAFE_ROOT_FOLDER = process.env.ROOT_DIR || "./../..";
-
-const ACCESS_NOT_ALLOWED_ERROR =
-  "Access to the requested folder is not allowed";
-
 export interface ExtractValuesResult {
   success: boolean;
   message: string;
@@ -31,25 +26,6 @@ export interface PathExtractionOptions {
 }
 
 /**
- * Get common path between two paths
- */
-function getCommonPath(path1: string, path2: string): string {
-  const parts1 = path1.split(path.sep);
-  const parts2 = path2.split(path.sep);
-  const common: string[] = [];
-
-  for (let i = 0; i < Math.min(parts1.length, parts2.length); i++) {
-    if (parts1[i] === parts2[i]) {
-      common.push(parts1[i]);
-    } else {
-      break;
-    }
-  }
-
-  return common.join(path.sep);
-}
-
-/**
  * Validate folder path
  */
 function validateFolderPath(folderPath: string): string {
@@ -57,18 +33,12 @@ function validateFolderPath(folderPath: string): string {
     throw new Error("folderPath parameter is required");
   }
 
-  const safeRootReal = fs.realpathSync(SAFE_ROOT_FOLDER);
   let candidateReal: string;
 
   try {
     candidateReal = fs.realpathSync(folderPath);
   } catch {
     throw new Error(`Folder path does not exist: ${folderPath}`);
-  }
-
-  const commonPath = getCommonPath(safeRootReal, candidateReal);
-  if (commonPath !== safeRootReal) {
-    throw new Error(ACCESS_NOT_ALLOWED_ERROR);
   }
 
   if (!fs.existsSync(candidateReal)) {
@@ -446,7 +416,6 @@ function processDataFiles(
 ): FileProcessingResult {
   const allValues = new Set<string>();
   const paths = pathOptions.map((opt) => opt.path);
-  const safeRootReal = fs.realpathSync(SAFE_ROOT_FOLDER);
   const warnings: string[] = [];
   let totalBytesRead = 0;
   let filesRead = 0;
@@ -457,11 +426,10 @@ function processDataFiles(
     let realFilePath: string;
     try {
       realFilePath = fs.realpathSync(filePath);
-    } catch {
+    } catch (err) {
+      console.error(err)
       continue;
     }
-
-    if (getCommonPath(safeRootReal, realFilePath) !== safeRootReal) continue;
 
     try {
       const stats = fs.statSync(realFilePath);

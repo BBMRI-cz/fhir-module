@@ -119,18 +119,6 @@ describe("list-directories", () => {
       );
     });
 
-    it("should throw error for path outside allowed directory", async () => {
-      mockFs.realpathSync.mockImplementation((p: fs.PathLike) => {
-        const pathStr = p.toString();
-        if (pathStr.includes("test")) return "/opt/test";
-        return "/outside/path";
-      });
-
-      await expect(listDirectories("/outside")).rejects.toThrow(
-        "Access denied"
-      );
-    });
-
     it("should throw error for non-directory path", async () => {
       mockFs.realpathSync.mockImplementation((p: fs.PathLike) => {
         const pathStr = p.toString();

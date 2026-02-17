@@ -17,13 +17,18 @@ services:
       BLAZE_URL: "${BLAZE_URL:-http://test-blaze:8080/fhir}"
       MIABIS_BLAZE_URL: "${MIABIS_BLAZE_URL:-http://miabis-blaze:8080/fhir}"
       MIABIS_ON_FHIR: "${MIABIS_ON_FHIR:-True}"
-      ROOT_DIR: "/opt/test"
       DIR_PATH: "/opt/records"
       SAMPLE_COLLECTIONS_PATH: "/opt/fhir-module/util/default_sample_collection.json"
       BIOBANK_PATH: "/opt/fhir-module/util/default_biobank.json"
       PYTHONWARNINGS: "ignore:Unverified HTTPS request"
-    env_file:
-      - .env
+      # #####################################
+      # !!!! CHANGE FOR YOUR DEPLOYMENT !!!!
+      NEXTAUTH_SECRET: "xFaG4gGhK0gB618yYiQjjOZ9jiGwh9GMvcq1EFDLrVo="
+      # !!!! CHANGE FOR YOUR DEPLOYMENT !!!!
+      # #####################################
+      AUTH_TRUST_HOST: true
+      NODE_ENV: "production"
+      PROMETHEUS_URL: "http://prometheus:9090"
     command:
       [
         "/bin/sh",
@@ -37,9 +42,6 @@ services:
       - type: bind
         source: "test"
         target: "/opt/test"
-      - type: bind
-        source: "./util/shared_config.json"
-        target: "/opt/fhir-module/util/shared_config.json"
       - type: bind
         source: "./util/default_sample_collection.json"
         target: "/opt/fhir-module/util/default_sample_collection.json"

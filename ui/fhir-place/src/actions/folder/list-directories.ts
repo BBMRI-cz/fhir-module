@@ -8,7 +8,7 @@ import {
   MAX_ENTRIES_TO_SCAN,
 } from "@/lib/folder-constants";
 
-const SAFE_ROOT_FOLDER = process.env.ROOT_DIR || "../../test/";
+const SAFE_ROOT_FOLDER = "/";
 
 interface DirectoryEntry {
   name: string;
@@ -34,14 +34,6 @@ function validateDirectoryPath(baseDir: string, relativePath: string): string {
   }
 
   const realPath = fs.realpathSync(targetPath);
-  const realBaseDir = fs.realpathSync(baseDir);
-
-  if (
-    !realPath.startsWith(realBaseDir + path.sep) &&
-    realPath !== realBaseDir
-  ) {
-    throw new Error("Access denied: path outside allowed directory");
-  }
 
   if (!fs.existsSync(realPath)) {
     throw new Error("Path does not exist");

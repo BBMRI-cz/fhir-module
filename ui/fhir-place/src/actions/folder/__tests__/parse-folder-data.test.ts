@@ -84,19 +84,6 @@ describe("parseFolderData", () => {
   });
 
   describe("security validation", () => {
-    it("should return error for path outside safe root", async () => {
-      mockFs.realpathSync.mockImplementation((p: fs.PathLike) => {
-        const pathStr = p.toString();
-        if (pathStr.includes("./../../")) return "/opt";
-        return "/outside/unsafe";
-      });
-
-      const result = await parseFolderData("/outside/unsafe");
-
-      expect(result.success).toBe(false);
-      expect(result.message).toContain("not allowed");
-    });
-
     it("should return error when path is not a directory", async () => {
       mockFs.realpathSync.mockImplementation((p: fs.PathLike) => {
         const pathStr = p.toString();
