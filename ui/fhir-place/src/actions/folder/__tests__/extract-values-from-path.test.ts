@@ -109,31 +109,6 @@ describe("extractValuesFromPaths", () => {
       expect(result.message).toContain("Folder path does not exist");
     });
 
-    it("should return error when path is outside safe root", async () => {
-      mockFs.realpathSync.mockImplementation((p: fs.PathLike) => {
-        const pathStr = p.toString();
-        if (pathStr === "./../.." || pathStr === "/opt") {
-          return "/opt";
-        }
-        if (pathStr === "/outside/data") {
-          return "/outside/data";
-        }
-        throw new Error(`Path does not exist: ${pathStr}`);
-      });
-
-      const pathOptions: PathExtractionOptions[] = [{ path: "name" }];
-      const result = await extractValuesFromPaths(
-        "/outside/data",
-        pathOptions,
-        "json"
-      );
-
-      expect(result.success).toBe(false);
-      expect(result.message).toContain(
-        "Access to the requested folder is not allowed"
-      );
-    });
-
     it("should return error when path is not a directory", async () => {
       mockFs.realpathSync.mockImplementation((p: fs.PathLike) => {
         const pathStr = p.toString();

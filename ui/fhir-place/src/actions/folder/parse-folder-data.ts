@@ -9,11 +9,6 @@ import {
   SUPPORTED_EXTENSIONS,
 } from "@/lib/folder-constants";
 
-const SAFE_ROOT_FOLDER = process.env.ROOT_DIR || "./../../";
-
-const ACCESS_NOT_ALLOWED_ERROR =
-  "Access to the requested folder is not allowed";
-
 export interface ParseFolderResult {
   success: boolean;
   message: string;
@@ -44,22 +39,12 @@ function validateFolderPath(folderPath: string): string {
     throw new Error("folderPath parameter is required");
   }
 
-  const safeRootReal = fs.realpathSync(SAFE_ROOT_FOLDER);
   let candidateReal: string;
 
   try {
     candidateReal = fs.realpathSync(folderPath);
   } catch {
     throw new Error(`Folder path does not exist: ${escapeHtml(folderPath)}`);
-  }
-
-  try {
-    const commonPath = getCommonPath(safeRootReal, candidateReal);
-    if (commonPath !== safeRootReal) {
-      throw new Error(ACCESS_NOT_ALLOWED_ERROR);
-    }
-  } catch {
-    throw new Error(ACCESS_NOT_ALLOWED_ERROR);
   }
 
   if (!fs.existsSync(candidateReal)) {
@@ -104,13 +89,7 @@ function readFirstDataFile(folderPath: string): {
   name: string;
   ext: string;
 } {
-  const safeRootReal = fs.realpathSync(SAFE_ROOT_FOLDER);
   const normalizedPath = fs.realpathSync(folderPath);
-
-  const folderCommonPath = getCommonPath(safeRootReal, normalizedPath);
-  if (folderCommonPath !== safeRootReal) {
-    throw new Error(ACCESS_NOT_ALLOWED_ERROR);
-  }
 
   let dir: fs.Dir;
   try {
@@ -285,12 +264,7 @@ function readMultipleDataFiles(
   folderPath: string,
   maxFiles: number = MAX_FILES_TO_SCAN,
 ): DataFileInfo[] {
-  const safeRootReal = fs.realpathSync(SAFE_ROOT_FOLDER);
   const normalizedPath = fs.realpathSync(folderPath);
-
-  if (getCommonPath(safeRootReal, normalizedPath) !== safeRootReal) {
-    throw new Error(ACCESS_NOT_ALLOWED_ERROR);
-  }
 
   let candidates: CandidateFile[];
   try {

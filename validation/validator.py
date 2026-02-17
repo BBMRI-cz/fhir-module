@@ -43,7 +43,7 @@ class Validator(abc.ABC):
     @abc.abstractmethod
     def _validate_files_present(self, file_type: str) -> bool:
         """Validates the presence of the files and their type (RECORDS_FILE_TYPE env var) in the
-        directory (ROOT_DIR env var)."""
+        directory."""
         pass
 
     @abc.abstractmethod

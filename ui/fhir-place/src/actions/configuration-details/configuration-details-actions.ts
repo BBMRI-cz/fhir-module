@@ -11,7 +11,7 @@ import {
   DataField,
 } from "@/types/actions/configuration-details/types";
 import { parseMultipleFolderData } from "@/actions/folder/parse-folder-data";
-const BASE_URL = process.env.BACKEND_API_URL || "http://localhost:5001";
+const BASE_URL = process.env.BACKEND_API_URL || "http://localhost:5000";
 
 // ---------------------------------------------------------------------------
 // Generic in-memory cache (module-level, persists for the process lifetime)

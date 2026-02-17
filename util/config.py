@@ -36,7 +36,6 @@ class ConfigLoader:
         
         # Mapping between config keys and their fallback (env_var_key, default_value)
         self._fallback_map = {
-            "ROOT_DIR": ('ROOT_DIR', os.path.dirname(os.path.abspath(__file__))),
             "BLAZE_URL": ('BLAZE_URL', 'http://test-blaze:8080/fhir'),
             "MIABIS_BLAZE_URL": ('MIABIS_BLAZE_URL', 'http://miabis-blaze:8080/fhir'),
             'RECORDS_DIR_PATH': ('DIR_PATH', '/mock_dir/'),
@@ -157,9 +156,6 @@ def get_blaze_url():
 def get_miabis_blaze_url(): 
     return _config.get('MIABIS_BLAZE_URL')
 
-def get_root_dir():
-    return _config.get('ROOT_DIR')
-
 def get_records_dir_path(): 
     return _config.get('RECORDS_DIR_PATH')
 
@@ -244,9 +240,6 @@ def reload_all_maps() -> None:
 
 def reload_map(map_type: str) -> Dict[str, Any]:
     return _config.reload_map(map_type)
-
-ROOT_DIR = _config.root_dir
-
 
 def write_to_file(content, map_type, mode='w', encoding='utf-8'):    
     path_mapping = {
