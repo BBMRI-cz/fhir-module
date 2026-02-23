@@ -60,4 +60,12 @@ def setup_logger():
         log_cfg = yaml.safe_load(config_file.read())
         if "root" in log_cfg:
             log_cfg["root"]["level"] = os.getenv("LOG_LEVEL","DEBUG").upper()
+
+        log_dir = os.getenv("LOG_DIR", "/var/log/fhir-module")
+        os.makedirs(log_dir, exist_ok=True)
+        for handler in log_cfg.get("handlers", {}).values():
+            if "filename" in handler:
+                filename = os.path.basename(handler["filename"])
+                handler["filename"] = os.path.join(log_dir, filename)
+
         logging.config.dictConfig(log_cfg)

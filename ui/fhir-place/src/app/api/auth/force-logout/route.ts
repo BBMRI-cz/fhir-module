@@ -11,6 +11,6 @@ export async function GET() {
   cookieStore.delete("next-auth.csrf-token");
 
   return NextResponse.redirect(
-    new URL("/login", process.env.NEXTAUTH_URL || "http://localhost:3000")
+    new URL("/login", "http://localhost:3000")
   );
 }
