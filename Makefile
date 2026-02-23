@@ -18,5 +18,7 @@ validate: setup ## Run integration test
 	.github/scripts/wait-for-url.sh  http://localhost:8080/health
 	$(PYTEST_COMMAND) $(PYTEST_ARGS) test/integration
 	docker stop blaze
+debug: ## Start backend debug container (attach debugger on port 5678)
+	docker compose --profile debug -f compose.yaml -f compose.debug.yaml up fhir-module-debug test-blaze miabis-blaze
 clean:
 	rm -rf __pycache__

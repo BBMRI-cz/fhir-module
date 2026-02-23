@@ -1,0 +1,82 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Launch (local)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "gunicorn",
+      "args": [
+        "--preload",
+        "-c", "gunicorn_config.py",
+        "-w", "1",
+        "-b", "0.0.0.0:5000",
+        "main:app"
+      ],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "Create prometheus multiproc dir",
+      "env": {
+        "BLAZE_URL": "http://localhost:8080/fhir",
+        "MIABIS_BLAZE_URL": "http://localhost:5432/fhir",
+        "MIABIS_ON_FHIR": "True",
+        "DIR_PATH": "${workspaceFolder}/test/xml_data",
+        "SAMPLE_COLLECTIONS_PATH": "${workspaceFolder}/util/default_sample_collection.json",
+        "BIOBANK_PATH": "${workspaceFolder}/util/default_biobank.json",
+        "PROMETHEUS_MULTIPROC_DIR": "${workspaceFolder}/var/prometheus_multiproc",
+        "LOG_DIR": "${workspaceFolder}/var/log/fhir-module",
+        "PYTHONWARNINGS": "ignore:Unverified HTTPS request",
+        "PYTHONUNBUFFERED": "1"
+      },
+      "justMyCode": false
+    },
+    {
+      "name": "Next.js: Launch Dev (debug)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:debug"],
+      "cwd": "${workspaceFolder}/ui/fhir-place",
+      "port": 9229,
+      "skipFiles": ["<node_internals>/**"],
+      "env": {
+        "NODE_ENV": "development",
+        "NEXTAUTH_SECRET": "xFaG4gGhK0gB618yYiQjjOZ9jiGwh9GMvcq1EFDLrVo=",
+        "AUTH_TRUST_HOST": "true",
+        "BACKEND_API_URL": "http://localhost:5000",
+        "BLAZE_URL": "http://localhost:8080/fhir",
+        "MIABIS_BLAZE_URL": "http://localhost:5432/fhir",
+        "MIABIS_ON_FHIR": "true",
+        "PROMETHEUS_URL": "http://localhost:9090",
+        "REGISTER_ALLOWED": "false"
+      },
+      "serverReadyAction": {
+        "pattern": "Local:\\s+(https?://\\S+)",
+        "uriFormat": "%s",
+        "action": "openExternally"
+      }
+    },
+    {
+      "name": "Next.js: Attach to running dev server",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "skipFiles": ["<node_internals>/**"],
+      "restart": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack Debug",
+      "configurations": [
+        "Python: Launch (local)",
+        "Next.js: Launch Dev (debug)"
+      ],
+      "presentation": {
+        "hidden": false,
+        "group": "",
+        "order": 1
+      },
+      "stopAll": true
+    }
+  ]
+}

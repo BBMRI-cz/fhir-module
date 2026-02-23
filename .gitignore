@@ -36,3 +36,5 @@ node_modules/
 **/local_configs
 
 **/deploy_folder
+
+**/var
