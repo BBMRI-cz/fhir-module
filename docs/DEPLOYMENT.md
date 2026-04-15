@@ -1,72 +1,166 @@
 # Deployment
 
-The application is meant to be deployed to a clean VM running Linux OS,
-recommended flavor is **Ubuntu**, specifically **version 22.04**.
-The main chosen method of deployment is a docker container due to its robustness.
-The app can be deployed in different configurations, specifically:
-
-- only fhir-module container responsible for the transformation
-- fhir-module + UI for setup and management in separate containers
-- fhir-module + UI in combined container
-- any of the above + monitoring functionality
-
-In theory, it is possible to run it as a standalone python package.
-
-List of supported Linux flavors:
-
-- Ubuntu 22.04
+The recommended production deployment is to run the application as a Docker container on a Linux VM that most likely 
+already has a Blaze FHIR server running in Docker. In that setup it is recommended to connect the application to the 
+same Docker network(s) as the existing Blaze container(s).
 
 ## Prerequisites:
 
 List of prerequisites for running the application on one of the supported operating systems:
-
+- Linux Ubuntu 22.04 
 - [Docker engine v24.0.0](https://docs.docker.com/engine/release-notes/24.0/#2400)
 - [Docker compose v2.20](https://docs.docker.com/compose/release-notes/#2200)
 
-## Docker deployment
+## Minimal Docker deployment
+For deploying to production, configure the application using environment variables in the `compose.yaml` file, 
+create the necessary configuration files (see documentation below) and mount the directory containing patient 
+records/data.
 
-Inside the container, the application runs under a non-root user as an additional security measure.
-For deploying to production,
-configure the application using environment variables and modify the config-file (documentation bellow),
-mount the directory containing patient records/data and run the following command:
+### Step 1: Find the Blaze Docker networks
+First, identify the running Blaze containers on your server (for example **bridgehead-bbmri-blaze**):
+```shell
+docker ps
+```
+Inspect the Blaze container to find the network it is connected to (for example **bbmri-default**):
+```shell
+docker inspect <container> --format 'Container: {{.Name}}{{"\n"}}{{range $net, $cfg := .NetworkSettings.Networks}}  └─ Network: {{$net}} {{"\n"}}{{end}}'
+```
+---
+
+### Step 2: Create the deployment directory
+```shell
+sudo mkdir -p /opt/fhir-module
+cd /opt/fhir-module
+```
+Inside this directory, you need to create the util directory for configuration files.
+```shell
+sudo mkdir -p util
+cd util
+```
+In this directory, create the `default_sample_collection.json` file. This file defines the sample collections that will  
+be uploaded into Blaze. Uploaded samples are linked to these collections during synchronization. So identifiers in this 
+file should match the collection identifiers produced by the application’s mapping configuration.
+An example of the file can be found here [default_sample_collection.json](../util/default_sample_collection.json).
+<br>
+
+Next, create the `default_biobank.json` file. This file defines the biobank that will be uploaded into Blaze. 
+It is especially important when MIABIS on FHIR is enabled, because in that model the biobank acts as the parent 
+resource for the collections.
+An example of the file can be found here [default_biobank.json](../util/default_biobank.json).
+
+Once the files are prepared, return to the main directory:
+```shell
+cd ..
+```
+At this point, the directory should look like this:
+```text
+/opt/fhir-module
+└── util/
+    ├── default_biobank.json
+    └── default_sample_collection.json
+```
+
+---
+
+### Step 3: Create Compose configuration
+Create the `compose.yaml` file with the following content and replace the placeholder values with the real values from your
+environment:
+
+```yaml
+services:
+  fhir-module:
+    image: ghcr.io/bbmri-cz/fhir-module:latest
+    container_name: fhir-module
+    profiles:
+      - dev
+      - prod
+    restart: unless-stopped
+    ports:
+      - "5000:5000" # FHIR module port
+      - "3000:3000" # UI port
+    environment:
+      BLAZE_URL: "http://blaze:8080/fhir" # replace with container name and port of Blaze
+      BLAZE_USER: "bbmri" # fill in the username here
+      BLAZE_PASS: "password" # fill in the password here
+      MIABIS_ON_FHIR: "False"
+      DIR_PATH: "/opt/records"
+      SAMPLE_COLLECTIONS_PATH: "/opt/fhir-module/util/default_sample_collection.json"
+      BIOBANK_PATH: "/opt/fhir-module/util/default_biobank.json"
+      PYTHONWARNINGS: "ignore:Unverified HTTPS request"
+      NEXTAUTH_SECRET: "YOUR_KEY"  # Fill your generated key
+      AUTH_TRUST_HOST: true
+      NODE_ENV: "production"
+    command:
+      [
+        "/bin/sh",
+        "-c",
+        "chmod 666 /opt/fhir-module/util/shared_config.json && /usr/local/bin/startup.sh",
+      ]
+    volumes:
+      - type: bind
+        source: "./records" # replace with location of your data
+        target: "/opt/records"
+      - type: bind
+        source: "./util/default_sample_collection.json"
+        target: "/opt/fhir-module/util/default_sample_collection.json"
+        read_only: true
+      - type: bind
+        source: "./util/default_biobank.json"
+        target: "/opt/fhir-module/util/default_biobank.json"
+        read_only: true
+      - fhir-logs:/var/log/fhir-module
+      - ui-data:/app/data
+      - config-snapshots:/opt/config-snapshots
+    networks:
+      - main-blaze-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "sh",
+          "-c",
+          "curl -f http://localhost:3000 && curl -f http://localhost:8080/metrics",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  
+networks:
+  main-blaze-network:
+    external: true
+    name: bbmri-default # replace with the network of your Blaze container
+volumes:
+  fhir-logs:
+  ui-data:
+  config-snapshots:
+```
+**Important**: Make sure to set the `NEXTAUTH_SECRET` environment variable to a secure random string in production environments.
+
+---
+### Step 4: Start the application
 
 ```shell
 docker compose --profile prod up -d
 ```
-
-The supported profiles are:
-
+To verify that the container is running, use the command:
 ```shell
---profile prod
---profile dev
---profile monitoring # to be added to the other profiles to enable monitoring
+docker ps
 ```
-
-A complete example is then:
-
-```shell
-docker compose --profile dev --profile monitoring up -d
-```
-
-This will pull the latest image and start the application. To check the logs run:
-
+And check the logs to see if the application started correctly:
 ```shell
 docker logs fhir-module -f
 ```
 
-if connection to the Blaze was successful, you should see the following line:
-
+if connection to Blaze was successful, you should see the following line:
 ` Starting sync with Blaze 🔥!`
 
-#### First-time Setup
+Access the UI at **http://localhost:3000** (or replace localhost with your server IP if not running locally). 
+Default login: `admin` / `Admin123!` (change immediately!)
 
-On first deployment, the UI will automatically:
 
-1. Initialize the SQLite database
-2. Create default user accounts
-3. Set up authentication system
-
-**Important**: Make sure to set the `NEXTAUTH_SECRET` environment variable to a secure random string in production environments.
+## Advanced Docker Deployment
 
 ### Environment variables
 
@@ -131,6 +225,37 @@ See [MAPS.md](MAPS.md) for detailed documentation on configuring object mappings
 This guide allows you to deploy the FHIR module from scratch. You only need Docker installed - all files can be created by copying from this documentation.
 
 ---
+
+The supported profiles are:
+
+```shell
+--profile prod
+--profile dev
+--profile monitoring # to be added to the other profiles to enable monitoring
+```
+A complete example is then:
+
+```shell
+docker compose --profile dev --profile monitoring up -d
+```
+
+This will pull the latest image and start the application. To check the logs run:
+
+```shell
+docker logs fhir-module -f
+```
+
+if connection to the Blaze was successful, you should see the following line:
+
+` Starting sync with Blaze 🔥!`
+
+#### First-time Setup
+
+On first deployment, the UI will automatically:
+
+1. Initialize the SQLite database
+2. Create default user accounts
+3. Set up authentication system
 
 ### Step 1: Create a Folder and the `compose.yaml`
 
