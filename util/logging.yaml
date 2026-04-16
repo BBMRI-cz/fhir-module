@@ -19,6 +19,13 @@ handlers:
     filename: /var/log/fhir-module/miabis_sync.log
     maxBytes: 10485760
     backupCount: 5
+  app_file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: simple
+    filename: /var/log/fhir-module/fhir-module.log
+    maxBytes: 10485760
+    backupCount: 5
   console:
     class: logging.StreamHandler
     level: DEBUG
@@ -26,18 +33,18 @@ handlers:
     stream: ext://sys.stdout
 root:
   level: DEBUG
-  handlers: [console]
+  handlers: [console, app_file]
 
 default:
   level: DEBUG
-  handlers: [console]
+  handlers: [console, app_file]
 
 loggers:
   sync_logger:
     level: INFO
-    handlers: [sync_file]
+    handlers: [sync_file, console]
     propagate: no
   miabis_sync_logger:
     level: INFO
-    handlers: [miabis_sync_file]
+    handlers: [miabis_sync_file, console]
     propagate: no
