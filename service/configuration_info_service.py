@@ -59,6 +59,10 @@ def register_details_routes(flask_app):
     def get_config_value_endpoint():
         return __get_config_value_endpoint(request)
 
+    @flask_app.route('/mappings', methods=['GET'])
+    def get_mappings():
+        return __get_mappings()
+
 
 # Based on the validate value temporary changes the configuration and validates the mapping correctness,
 # or permanently changes the configuration to prepare for actual data synchronization
@@ -558,10 +562,41 @@ def __get_config_value_endpoint(request):
     Query parameter: key - the configuration key to retrieve
     """
     key = request.args.get('key')
-    
+
     if not key:
         return make_response(jsonify({'message': 'Missing required query parameter: key'}), 400)
-    
+
     value = get_config_value(key)
     return jsonify({'value': value})
+
+
+def __get_mappings():
+    """
+    Return all currently saved mapping configurations.
+    """
+    from util.config import (
+        get_parsing_map,
+        get_material_type_map,
+        get_storage_temp_map,
+        get_miabis_material_type_map,
+        get_miabis_storage_temp_map,
+        get_type_to_collection_map,
+    )
+
+    parsing_map = get_parsing_map()
+    miabis_on_fhir = get_miabis_on_fhir()
+
+    result = {
+        'parsing_map': parsing_map,
+        'blaze_material_mapping': get_material_type_map(),
+        'blaze_temperature_mapping': get_storage_temp_map(),
+        'type_to_collection_mapping': get_type_to_collection_map(),
+        'miabis_on_fhir': miabis_on_fhir,
+    }
+
+    if miabis_on_fhir:
+        result['miabis_material_mapping'] = get_miabis_material_type_map()
+        result['miabis_temperature_mapping'] = get_miabis_storage_temp_map()
+
+    return jsonify(result)
 

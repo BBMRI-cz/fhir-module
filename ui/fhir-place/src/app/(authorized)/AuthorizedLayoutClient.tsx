@@ -10,6 +10,7 @@ import {
   Server,
   WandSparkles,
   Menu,
+  GitMerge,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -52,6 +53,12 @@ function NavigationItems() {
         <Button variant="ghost" className="w-full justify-start">
           <WandSparkles className="mr-2 h-4 w-4" />
           Setup Wizard
+        </Button>
+      </Link>
+      <Link href="/mappings">
+        <Button variant="ghost" className="w-full justify-start">
+          <GitMerge className="mr-2 h-4 w-4" />
+          Mappings
         </Button>
       </Link>
     </>
