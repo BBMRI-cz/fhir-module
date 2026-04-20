@@ -1,11 +1,13 @@
 # Gunicorn configuration file for multiprocess Prometheus metrics
+import os
 import threading
 
 from prometheus_flask_exporter.multiprocess import GunicornPrometheusMetrics
 
 
 def when_ready(_server):
-    GunicornPrometheusMetrics.start_http_server_when_ready(8080)
+    port = int(os.environ.get("METRICS_PORT", 8080))
+    GunicornPrometheusMetrics.start_http_server_when_ready(port)
 
 
 def child_exit(_server, worker):

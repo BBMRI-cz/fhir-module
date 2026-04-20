@@ -66,6 +66,15 @@ At this point, the directory should look like this:
 Create the `compose.yaml` file with the following content and replace the placeholder values with the real values from your
 environment:
 
+In the `environment` section below, `DIR_PATH`, `SAMPLE_COLLECTIONS_PATH`, and `BIOBANK_PATH` are paths inside the container.
+They must match the corresponding bind mount `target` paths.
+
+**Important**: Make sure to set the `NEXTAUTH_SECRET` environment variable to a secure random string in production environments.
+Generate a NextAuth secret for example with: 
+```shell
+openssl rand -base64 32
+```
+
 ```yaml
 services:
   fhir-module:
@@ -80,14 +89,12 @@ services:
       - "3000:3000" # UI port
     environment:
       BLAZE_URL: "http://blaze:8080/fhir" # replace with container name and port of Blaze
-      BLAZE_USER: "bbmri" # fill in the username here
-      BLAZE_PASS: "password" # fill in the password here
       MIABIS_ON_FHIR: "False"
-      DIR_PATH: "/opt/records"
-      SAMPLE_COLLECTIONS_PATH: "/opt/fhir-module/util/default_sample_collection.json"
-      BIOBANK_PATH: "/opt/fhir-module/util/default_biobank.json"
+      DIR_PATH: "/opt/records" # container path for mounted records; must match volume target
+      SAMPLE_COLLECTIONS_PATH: "/opt/fhir-module/util/default_sample_collection.json" # container path; must match volume target
+      BIOBANK_PATH: "/opt/fhir-module/util/default_biobank.json" # container path; must match volume target
       PYTHONWARNINGS: "ignore:Unverified HTTPS request"
-      NEXTAUTH_SECRET: "YOUR_KEY"  # Fill your generated key
+      NEXTAUTH_SECRET: "GENERATED_KEY"  # Fill your generated random string
       AUTH_TRUST_HOST: true
       NODE_ENV: "production"
     command:
@@ -98,14 +105,14 @@ services:
       ]
     volumes:
       - type: bind
-        source: "./records" # replace with location of your data
+        source: "./records" # host path with your data
         target: "/opt/records"
       - type: bind
-        source: "./util/default_sample_collection.json"
+        source: "./util/default_sample_collection.json" # host path to sample collections file
         target: "/opt/fhir-module/util/default_sample_collection.json"
         read_only: true
       - type: bind
-        source: "./util/default_biobank.json"
+        source: "./util/default_biobank.json" # host path to biobank file
         target: "/opt/fhir-module/util/default_biobank.json"
         read_only: true
       - fhir-logs:/var/log/fhir-module
@@ -136,7 +143,6 @@ volumes:
   ui-data:
   config-snapshots:
 ```
-**Important**: Make sure to set the `NEXTAUTH_SECRET` environment variable to a secure random string in production environments.
 
 ---
 ### Step 4: Start the application
@@ -225,30 +231,6 @@ See [MAPS.md](MAPS.md) for detailed documentation on configuring object mappings
 This guide allows you to deploy the FHIR module from scratch. You only need Docker installed - all files can be created by copying from this documentation.
 
 ---
-
-The supported profiles are:
-
-```shell
---profile prod
---profile dev
---profile monitoring # to be added to the other profiles to enable monitoring
-```
-A complete example is then:
-
-```shell
-docker compose --profile dev --profile monitoring up -d
-```
-
-This will pull the latest image and start the application. To check the logs run:
-
-```shell
-docker logs fhir-module -f
-```
-
-if connection to the Blaze was successful, you should see the following line:
-
-` Starting sync with Blaze 🔥!`
-
 #### First-time Setup
 
 On first deployment, the UI will automatically:
@@ -410,6 +392,19 @@ volumes:
   config-snapshots:
 ```
 
+The profile flags below refer to the `compose.yaml` created in Step 1.
+
+```shell
+--profile prod
+--profile dev
+--profile monitoring
+```
+
+A complete example is:
+
+```shell
+docker compose --profile dev --profile monitoring up -d
+```
 ---
 
 ### Step 2: Start the Application
