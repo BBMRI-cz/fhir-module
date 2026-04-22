@@ -61,10 +61,11 @@ def setup_logger():
         if "root" in log_cfg:
             log_cfg["root"]["level"] = os.getenv("LOG_LEVEL","DEBUG").upper()
 
-        log_dir = os.getenv("LOG_DIR", "/var/log/fhir-module")
-        os.makedirs(log_dir, exist_ok=True)
-        for handler in log_cfg.get("handlers", {}).values():
-            if "filename" in handler:
+        handlers_with_files = [h for h in log_cfg.get("handlers", {}).values() if "filename" in h]
+        if handlers_with_files:
+            log_dir = os.getenv("LOG_DIR", "/var/log/fhir-module")
+            os.makedirs(log_dir, exist_ok=True)
+            for handler in handlers_with_files:
                 filename = os.path.basename(handler["filename"])
                 handler["filename"] = os.path.join(log_dir, filename)
 
