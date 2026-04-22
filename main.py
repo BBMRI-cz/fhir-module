@@ -90,11 +90,9 @@ if is_endpoint_available(endpoint_url=BLAZE_URL, wait_time=10, max_attempts=5):
     #     logger.error("Incorrect parsing map and/or file structure. Exiting FHIR_module.")
     #     sys.exit()
     if blaze_services_initialized:
-        threading.Thread(target=blaze_service.sync).start()
         blaze_service.start_scheduler()
 
     if MIABIS_ON_FHIR and miabis_services_initialized and miabis_blaze_service is not None:
-        threading.Thread(target=miabis_blaze_service.sync).start()
         miabis_blaze_service.start_scheduler()
     
     # Start periodic FHIR resource count updates for Prometheus
