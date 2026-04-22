@@ -159,8 +159,11 @@ jobs:
       - name: Docker Logs
         run: docker logs miabis-blaze
 
+      - name: Trigger sync and wait for completion
+        run: chmod +x .github/scripts/trigger-sync-and-wait.sh && .github/scripts/trigger-sync-and-wait.sh http://localhost:5000
+
       - name: Docker Logs
-        run: sleep 20 && docker logs fhir-module
+        run: docker logs fhir-module
 
       - name: Verify upload succeeded for blaze
         run: .github/scripts/check-patient-exists.sh http://localhost:8080/fhir
@@ -210,8 +213,11 @@ jobs:
       - name: Docker Logs
         run: docker logs miabis-blaze
 
+      - name: Trigger sync and wait for completion
+        run: chmod +x .github/scripts/trigger-sync-and-wait.sh && .github/scripts/trigger-sync-and-wait.sh http://localhost:5000
+
       - name: Docker Logs
-        run: sleep 20 && docker logs fhir-module
+        run: docker logs fhir-module
 
       - name: Verify upload succeeded
         run: .github/scripts/check-patient-exists.sh http://localhost:8080/fhir
@@ -261,8 +267,11 @@ jobs:
       - name: Docker Logs
         run: docker logs miabis-blaze
 
+      - name: Trigger sync and wait for completion
+        run: chmod +x .github/scripts/trigger-sync-and-wait.sh && .github/scripts/trigger-sync-and-wait.sh http://localhost:5000
+
       - name: Docker Logs
-        run: sleep 20 && docker logs fhir-module
+        run: docker logs fhir-module
 
       - name: Verify upload succeeded
         run: .github/scripts/check-patient-exists.sh http://localhost:8080/fhir
