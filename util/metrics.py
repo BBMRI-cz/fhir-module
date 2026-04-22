@@ -113,6 +113,9 @@ def get_metrics_for_service(service_name: str) -> MetricsService:
 
 def update_fhir_resource_counts(blaze_url: str = None, miabis_blaze_url: str = None):
     """Update FHIR resource count metrics by querying the Blaze servers."""
+    from distutils.util import strtobool
+    miabis_on_fhir = bool(strtobool(os.environ.get("MIABIS_ON_FHIR", "False")))
+
     blaze_url = blaze_url or os.environ.get("BLAZE_URL", "http://test-blaze:8080/fhir")
     miabis_blaze_url = miabis_blaze_url or os.environ.get("MIABIS_BLAZE_URL", "http://miabis-blaze:8080/fhir")
     
@@ -128,12 +131,12 @@ def update_fhir_resource_counts(blaze_url: str = None, miabis_blaze_url: str = N
         except Exception as e:
             logger.debug(f"Error fetching {resource_type} count: {e}")
         return 0
-    
+
     if blaze_url:
         for res in ["Patient", "Organization", "Condition", "Specimen"]:
             fhir_resource_count.labels(service="blaze", resource_type=res).set(fetch_count(blaze_url, res))
-    
-    if miabis_blaze_url:
+
+    if miabis_on_fhir and miabis_blaze_url:
         for fhir_type, label in [("Patient", "Patient"), ("Organization", "Organization"), ("Group", "SampleCollection"), ("Specimen", "Specimen")]:
             fhir_resource_count.labels(service="miabis-blaze", resource_type=label).set(fetch_count(miabis_blaze_url, fhir_type))
 
