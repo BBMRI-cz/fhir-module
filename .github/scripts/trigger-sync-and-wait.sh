@@ -13,21 +13,22 @@ until curl -sf "$FHIR_MODULE_URL/sync-progress" > /dev/null 2>&1; do
 done
 
 wait_for_sync() {
-  local PROGRESS_ENDPOINT="$1"
-  local LABEL="$2"
-  echo "Waiting for $LABEL sync to complete..."
+  local progress_endpoint="$1"
+  local label="$2"
+  echo "Waiting for $label sync to complete..."
   START="$(date +%s)"
   while true; do
-    IN_PROGRESS=$(curl -sf "$PROGRESS_ENDPOINT" | jq -r '.in_progress')
+    IN_PROGRESS=$(curl -sf "$progress_endpoint" | jq -r '.in_progress')
     if [[ "$IN_PROGRESS" == "false" || "$IN_PROGRESS" == "0" ]]; then
-      echo "$LABEL sync completed."
+      echo "$label sync completed."
       break
     fi
     if [[ $(( $(date +%s) - START )) -ge $TIMEOUT ]]; then
-      echo "Timed out waiting for $LABEL sync to complete" && exit 1
+      echo "Timed out waiting for $label sync to complete" && exit 1
     fi
     sleep 3
   done
+  return 0
 }
 
 echo "Triggering standard sync..."
