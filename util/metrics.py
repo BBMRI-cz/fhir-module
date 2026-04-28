@@ -122,7 +122,8 @@ def update_fhir_resource_counts(blaze_url: str = None, miabis_blaze_url: str = N
     def fetch_count(base_url: str, resource_type: str) -> int:
         try:
             response = requests.get(
-                f"{base_url}/{resource_type}?_summary=count",
+                f"{base_url}/{resource_type}",
+                params={"_summary": "count"},
                 headers={"Accept": "application/fhir+json"},
                 timeout=10
             )
