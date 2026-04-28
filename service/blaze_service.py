@@ -386,19 +386,21 @@ class BlazeService:
         :param patient_id: Identifier of the sample donor
         :return: FHIR resource id
         """
-        return glom(self._session.get(url=self._blaze_url + "/Patient?identifier=" + patient_id,
+        return glom(self._session.get(url=f"{self._blaze_url}/Patient",
+                                      params={"identifier": patient_id},
                                       verify=False).json(), "**.resource.id")[0]
 
     def patient_has_condition(self, patient_identifier: str, icd_10_code: str) -> bool:
         """Checks if patient already has a condition with specific ICD-10 code (use a dot format)."""
         try:
-            patient_fhir_id = glom(self._session.get(url=f"{self._blaze_url}/Patient?identifier={patient_identifier}",
+            patient_fhir_id = glom(self._session.get(url=f"{self._blaze_url}/Patient",
+                                                     params={"identifier": patient_identifier},
                                                      verify=False).json(), "**.resource.id")[0]
         except IndexError:
             raise PatientNotFoundError
-        search_url = f"{self._blaze_url}/Condition?patient={patient_fhir_id}" \
-                     f"&code={icd_10_code}"
-        return self._session.get(search_url, verify=False).json().get("total") > 0
+        return self._session.get(f"{self._blaze_url}/Condition",
+                                 params={"patient": patient_fhir_id, "code": icd_10_code},
+                                 verify=False).json().get("total") > 0
 
     def __check_sample_and_patient_presence(self, sample) -> tuple[bool, bool]:
         """Check if sample and patient are present in Blaze store."""
@@ -546,7 +548,9 @@ class BlazeService:
     def __get_organization_fhir_id(self, organization_identifier: str):
         organization_fhir_id = \
             glom(self._session.get(
-                url=self._blaze_url + f"/Organization?identifier={organization_identifier}", verify=False)
+                url=f"{self._blaze_url}/Organization",
+                params={"identifier": organization_identifier},
+                verify=False)
                  .json(), "**.resource.id")[0]
         return organization_fhir_id
 
@@ -557,7 +561,8 @@ class BlazeService:
         :return: The number of resources in the Blaze store.
         """
         try:
-            return self._session.get(url=self._blaze_url + f"/{resource_type.capitalize()}?_summary=count",
+            return self._session.get(url=f"{self._blaze_url}/{resource_type.capitalize()}",
+                                     params={"_summary": "count"},
                                      verify=False).json().get("total")
         except requests.exceptions.ConnectionError:
             logger.error("Cannot connect to blaze!")
@@ -572,8 +577,8 @@ class BlazeService:
         :param resource_type: Type of FHIR resource to delete.
         :return: Status code of the http request.
         """
-        response = self._session.get(url=self._blaze_url + f"/{resource_type.capitalize()}"
-                                                           f"?{search_param}={param_value}",
+        response = self._session.get(url=f"{self._blaze_url}/{resource_type.capitalize()}",
+                                     params={search_param: param_value},
                                      verify=False)
         list_of_full_urls: list[str] = glom(response.json(), "**.fullUrl")
         if response.status_code == 404 or len(list_of_full_urls) == 0:
@@ -606,11 +611,11 @@ class BlazeService:
             logger.info(f"Donor with FHIR id {donor_fhir_id} is not present in the blaze store.")
         donor_entry = self.__create_delete_bundle_entry("Patient", donor_fhir_id)
         entries.append(donor_entry)
-        conditions_response = self._session.get(url=self._blaze_url + f"/Condition"
-                                                                      f"?subject=Patient/{donor_fhir_id}",
+        conditions_response = self._session.get(url=f"{self._blaze_url}/Condition",
+                                                params={"subject": f"Patient/{donor_fhir_id}"},
                                                 verify=False)
-        samples_response = self._session.get(url=self._blaze_url + f"/Specimen"
-                                                                   f"?subject=Patient/{donor_fhir_id}",
+        samples_response = self._session.get(url=f"{self._blaze_url}/Specimen",
+                                             params={"subject": f"Patient/{donor_fhir_id}"},
                                              verify=False)
         for condition_json in conditions_response.json().get("entry", []):
             condition_resource = condition_json.get("resource", {})
@@ -656,6 +661,21 @@ class BlazeService:
         logger.info("Delete successful")
         return True
 
+    def get_resource_count_by_identifier(self, resource_type: str, identifier: str) -> int:
+        """
+        Returns the count of FHIR resources of a given type matching an identifier.
+        Uses params= so identifiers with reserved URL characters are encoded correctly.
+        :param resource_type: FHIR resource type (e.g. "Specimen", "Patient").
+        :param identifier: Business identifier value (may contain &, ?, =, /, spaces, etc.).
+        :return: Total count reported by Blaze, or 0 on error.
+        """
+        response = self._session.get(
+            url=f"{self._blaze_url}/{resource_type.capitalize()}",
+            params={"identifier": identifier, "_summary": "count"},
+            verify=False,
+        )
+        return response.json().get("total", 0)
+
     def is_resource_present_in_blaze(self, resource_type: str, identifier: str) -> bool:
         """
         Checks if a resource of specific type with a specific identifier is present in the Blaze store.
@@ -665,11 +685,7 @@ class BlazeService:
         :return: bool
         """
         try:
-            count = (self._session.get(
-                url=self._blaze_url + f"/{resource_type.capitalize()}?identifier={identifier}&_summary=count",
-                verify=False)
-                     .json()
-                     .get("total"))
+            count = self.get_resource_count_by_identifier(resource_type, identifier)
             logger.debug(f"Count of resource : {count} of type: {resource_type} with identifier :{identifier} ")
             return count > 0
         except TypeError:
@@ -779,7 +795,8 @@ class BlazeService:
         :param sample_identifier: Identifier of the sample.
         :return: FHIR resource ID of the sample."""
 
-        sample = self._session.get(url=self._blaze_url + f"/Specimen?identifier={sample_identifier}",
+        sample = self._session.get(url=f"{self._blaze_url}/Specimen",
+                                   params={"identifier": sample_identifier},
                                    verify=False).json()
         return glom(sample, "**.resource.id")[0]
 
