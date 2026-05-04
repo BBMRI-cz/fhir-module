@@ -32,11 +32,7 @@ handlers:
     formatter: simple
     stream: ext://sys.stdout
 root:
-  level: DEBUG
-  handlers: [console, app_file]
-
-default:
-  level: DEBUG
+  level: INFO
   handlers: [console, app_file]
 
 loggers:
