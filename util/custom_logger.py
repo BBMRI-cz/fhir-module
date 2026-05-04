@@ -59,7 +59,7 @@ def setup_logger():
     with open(config_path, 'r') as config_file:
         log_cfg = yaml.safe_load(config_file.read())
         if "root" in log_cfg:
-            log_cfg["root"]["level"] = os.getenv("LOG_LEVEL","DEBUG").upper()
+            log_cfg["root"]["level"] = os.getenv("LOG_LEVEL","INFO").upper()
 
         handlers_with_files = [h for h in log_cfg.get("handlers", {}).values() if "filename" in h]
         if handlers_with_files:
