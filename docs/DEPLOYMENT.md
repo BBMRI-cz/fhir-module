@@ -16,6 +16,12 @@ For deploying to production, configure the application using environment variabl
 create the necessary configuration files (see documentation below) and mount the directory containing patient 
 records/data.
 
+
+> [!NOTE]
+> Depending on your system configuration, you may need to use sudo when running Docker commands.
+> If your user is part of the docker group, you can run Docker commands directly (e.g., docker run, docker compose up) without elevated privileges.
+
+
 ### Step 1: Find the Blaze Docker networks
 First, identify the running Blaze containers on your server (for example **bridgehead-bbmri-blaze**):
 ```shell
@@ -81,7 +87,6 @@ services:
     image: ghcr.io/bbmri-cz/fhir-module:latest
     container_name: fhir-module
     profiles:
-      - dev
       - prod
     restart: unless-stopped
     ports:
@@ -137,7 +142,7 @@ services:
 networks:
   main-blaze-network:
     external: true
-    name: bbmri-default # replace with the network of your Blaze container
+    name: bbmri_default # replace with the network of your Blaze container
 volumes:
   fhir-logs:
   ui-data:
