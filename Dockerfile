@@ -1,7 +1,7 @@
 # ============================================
 # Node.js Build Stage
 # ============================================
-FROM node:20-alpine AS node-builder
+FROM --platform=linux/amd64 node:20-alpine AS node-builder
 
 RUN apk add --no-cache g++ libc6-compat make python3
 
