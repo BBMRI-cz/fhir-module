@@ -1,5 +1,7 @@
 "use server";
 
+import { proxyFetch } from "@/lib/proxy-fetch";
+
 let _materialTypesCache: string[] | null = null;
 let _cacheTimestamp: Date | null = null;
 const CACHE_DURATION_MINUTES = 60;
@@ -121,7 +123,7 @@ export async function getMaterialTypes(isMiabis: boolean): Promise<string[]> {
   try {
     const url =
       "https://simplifier.net/bbmri.de/samplematerialtype/$download?format=json";
-    const response = await fetch(url, {
+    const response = await proxyFetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
