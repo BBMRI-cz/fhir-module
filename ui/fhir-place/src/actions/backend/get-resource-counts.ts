@@ -75,7 +75,14 @@ export async function fetchResourceCount(
   resourceType: string
 ): Promise<number> {
   try {
-    const response = await proxyFetch(`${blazeUrl}/${resourceType}?_summary=count`, {
+    if (!/^[A-Za-z][A-Za-z0-9]*$/.test(resourceType)) {
+      throw new Error(`Invalid FHIR resource type: ${resourceType}`);
+    }
+
+    const requestUrl = new URL(`${resourceType}`, blazeUrl.endsWith("/") ? blazeUrl : `${blazeUrl}/`);
+    requestUrl.searchParams.set("_summary", "count");
+
+    const response = await proxyFetch(requestUrl.toString(), {
       method: "GET",
       headers: {
         Accept: "application/fhir+xml",
