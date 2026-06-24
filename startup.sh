@@ -11,7 +11,9 @@ mkdir -p /app/data
 chown -R nextjs:nodejs /app/data
 
 mkdir -p /var/log/fhir-module
-chown -R nextjs:nodejs /var/log/fhir-module
+if [[ "$(stat -c '%u:%g' /var/log/fhir-module)" != "1001:1001" ]]; then
+  chown -R nextjs:nodejs /var/log/fhir-module
+fi
 
 # Fix permissions for shared_config.json if it exists
 if [[ -f "/opt/fhir-module/util/shared_config.json" ]]; then
