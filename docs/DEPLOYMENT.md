@@ -206,7 +206,7 @@ The FHIR module is configured via environment variables, all of which can be fou
 The following environment variables are used to configure the Next.js UI application:
 
 | Variable name                  | Default value                     | Description                                                                  |
-| ------------------------------ | --------------------------------- | ---------------------------------------------------------------------------- |
+|--------------------------------| --------------------------------- |------------------------------------------------------------------------------|
 | NODE_ENV                       | development                       | Node.js environment mode (development/production)                            |
 | PORT                           | 3000                              | Port on which the UI application runs                                        |
 | NEXTAUTH_SECRET                | _required_                        | Secret key for NextAuth.js session encryption. **Must be set in production** |
@@ -220,6 +220,8 @@ The following environment variables are used to configure the Next.js UI applica
 | PASSWORD_REQUIRE_NUMBERS       | false                             | Require numbers in passwords                                                 |
 | PASSWORD_REQUIRE_SPECIAL_CHARS | false                             | Require special characters in passwords                                      |
 | PASSWORD_SPECIAL_CHARS         | !@#$%^&\*()\_+-=[]{}&#124;;:,.<>? | Allowed special characters for passwords                                     |
+| HTTPS_PROXY                    | _empty_                           | Proxy URL for outbound HTTPS requests (e.g. `https://proxy:3128`)            |
+| HTTP_PROXY                     | _empty_                           | Proxy URL for outbound HTTP requests (e.g. `http://proxy:3128`)              |
 
 
 ## Object mapping
