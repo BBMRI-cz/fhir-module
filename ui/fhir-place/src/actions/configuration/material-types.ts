@@ -102,8 +102,46 @@ function extractConceptsFromFetch(data: unknown): string[] {
   return concepts;
 }
 
+// Fallback list from BBMRI.de SampleMaterialType CodeSystem v1.1.0, used when Simplifier is unreachable.
+const BLAZE_MATERIAL_TYPES_FALLBACK = [
+  "whole-blood",
+  "bone-marrow",
+  "buffy-coat",
+  "dried-whole-blood",
+  "peripheral-blood-cells-vital",
+  "blood-plasma",
+  "plasma-edta",
+  "plasma-citrat",
+  "plasma-heparin",
+  "plasma-cell-free",
+  "plasma-other",
+  "blood-serum",
+  "ascites",
+  "csf-liquor",
+  "saliva",
+  "stool-faeces",
+  "urine",
+  "swab",
+  "liquid-other",
+  "tissue-ffpe",
+  "tumor-tissue-ffpe",
+  "normal-tissue-ffpe",
+  "other-tissue-ffpe",
+  "tissue-frozen",
+  "tumor-tissue-frozen",
+  "normal-tissue-frozen",
+  "other-tissue-frozen",
+  "tissue-other",
+  "dna",
+  "cf-dna",
+  "g-dna",
+  "rna",
+  "derivative-other",
+];
+
 /**
  * Fetch material types from BBMRI.de Simplifier API with caching.
+ * Falls back to a hardcoded list when Simplifier is unreachable (e.g. air-gapped environments).
  * Returns a list of material type codes.
  */
 export async function getMaterialTypes(isMiabis: boolean): Promise<string[]> {
@@ -142,7 +180,10 @@ export async function getMaterialTypes(isMiabis: boolean): Promise<string[]> {
 
     return materialTypes;
   } catch (error) {
-    console.error("Error fetching material types from BBMRI.de API:", error);
-    throw error;
+    console.error(
+      "Error fetching material types from BBMRI.de API, using fallback list:",
+      error
+    );
+    return BLAZE_MATERIAL_TYPES_FALLBACK;
   }
 }
