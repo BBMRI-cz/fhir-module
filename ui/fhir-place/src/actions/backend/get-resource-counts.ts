@@ -1,6 +1,5 @@
 "use server";
 
-import { proxyFetch } from "@/lib/proxy-fetch";
 import {
   parseXMLTotal,
   type ResourceCount,
@@ -82,7 +81,7 @@ export async function fetchResourceCount(
     const requestUrl = new URL(`${resourceType}`, blazeUrl.endsWith("/") ? blazeUrl : `${blazeUrl}/`);
     requestUrl.searchParams.set("_summary", "count");
 
-    const response = await proxyFetch(requestUrl.toString(), {
+    const response = await fetch(requestUrl.toString(), {
       method: "GET",
       headers: {
         Accept: "application/fhir+xml",

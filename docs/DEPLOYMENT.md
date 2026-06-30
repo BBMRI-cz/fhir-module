@@ -222,7 +222,7 @@ The following environment variables are used to configure the Next.js UI applica
 | PASSWORD_SPECIAL_CHARS         | !@#$%^&\*()\_+-=[]{}&#124;;:,.<>? | Allowed special characters for passwords                                     |
 | HTTPS_PROXY                    | _empty_                           | Proxy URL for outbound HTTPS requests (e.g. `https://proxy:3128`)            |
 | HTTP_PROXY                     | _empty_                           | Proxy URL for outbound HTTP requests (e.g. `http://proxy:3128`)              |
-
+| NO_PROXY                       | _empty_                           | Comma-separated list of domains for which to bypass proxy                    |
 
 ## Object mapping
 

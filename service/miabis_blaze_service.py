@@ -38,6 +38,7 @@ class MiabisBlazeService(BlazeServiceInterface):
                  biobank_repository: BiobankRepository
                  ):
         self.blaze_client = BlazeClient(blaze_url=blaze_url, blaze_username=get_miabis_blaze_auth()[0], blaze_password=get_miabis_blaze_auth()[1])
+        self.blaze_client._session.trust_env = False
         self.patient_service = patient_service
         self.sample_service = sample_service
         self.sample_collection_repository = sample_collection_repository
@@ -120,7 +121,7 @@ class MiabisBlazeService(BlazeServiceInterface):
 
             logger.info("MIABIS on FHIR: Sync completed successfully!")
         except Exception as e:
-            logger.error(f"MIABIS on FHIR: Sync failed: {e}")
+            logger.exception(f"MIABIS on FHIR: Sync failed: {e}")
             
             sync_summary_obj = {
                 'patients': pat_summary,
@@ -156,17 +157,17 @@ class MiabisBlazeService(BlazeServiceInterface):
                 logger.info(f"MIABIS on FHIR: Biobank with identifier {biobank.identifier} not present in blaze. uploading...")
                 self.blaze_client.upload_biobank(biobank)
                 summary['biobank']['processed'] += 1
-                logger.info(f"MIABIS on FHIR: Successfully uploaded biobank.")
+                logger.info("MIABIS on FHIR: Successfully uploaded biobank.")
             else:
                 logger.info(f"MIABIS on FHIR: Biobank with identifier {biobank} is already present in blaze.")
                 summary['biobank']['skipped'] += 1
             return True
         except requests.exceptions.ConnectionError:
-            logger.error(f"Cannot connect to the blaze server!")
+            logger.error("Cannot connect to the blaze server!")
             summary['biobank']['failed'] += 1
             return False
         except (ValueError, KeyError, TypeError, HTTPError) as err:
-            logger.error(f"{err}")
+            logger.exception(f"{err}")
             summary['biobank']['failed'] += 1
             return False
 
@@ -190,12 +191,12 @@ class MiabisBlazeService(BlazeServiceInterface):
             summary['collections']['processed'] += 1
             logger.debug(f"MIABIS on FHIR: Successfully uploaded collection with identifier {collection.identifier}")
         except Exception as e:
-            logger.error(f"MIABIS on FHIR: Error uploading collection {collection.identifier}: {e}")
+            logger.exception(f"MIABIS on FHIR: Error uploading collection {collection.identifier}: {e}")
             summary['collections']['failed'] += 1
 
     def __upload_collections(self, summary: dict) -> None:
         """Upload all collections from repository."""
-        logger.info(f"MIABIS on FHIR: Starting upload of collections")
+        logger.info("MIABIS on FHIR: Starting upload of collections")
         
         for collection in self.sample_collection_repository.get_all():
             validated_collection = self.__validate_collection_type(collection)
@@ -218,7 +219,7 @@ class MiabisBlazeService(BlazeServiceInterface):
         if biobank_success:
             self.__upload_collections(summary)
         
-        logger.info(f"MIABIS on FHIR: Sync of biobank and collection resources is done.")
+        logger.info("MIABIS on FHIR: Sync of biobank and collection resources is done.")
         return summary
 
     def __validate_donor_type(self, donor) -> SampleDonorMiabis | None:
@@ -236,7 +237,7 @@ class MiabisBlazeService(BlazeServiceInterface):
             logger.debug(f"MIABIS ON FHIR: successfully uploaded patient with identifier {donor.identifier}")
             return 1, 0
         except HTTPError as e:
-            logger.error(f"Error uploading the patient: {e}")
+            logger.exception(f"Error uploading the patient: {e}")
             return 0, 1
 
     def __process_existing_donor_update(self, donor: SampleDonorMiabis) -> tuple[int, int, int]:
@@ -247,12 +248,12 @@ class MiabisBlazeService(BlazeServiceInterface):
         donor_from_blaze = self.blaze_client.build_donor_from_json(donor_fhir_id)
         
         if donor != donor_from_blaze:
-            logger.debug(f"MIABIS on FHIR: donor resource is different from donor that is already in blaze. Updating....")
+            logger.debug("MIABIS on FHIR: donor resource is different from donor that is already in blaze. Updating....")
             try:
                 self.blaze_client.update_donor(donor)
                 return 1, 0, 0
             except Exception as e:
-                logger.error(f"MIABIS on FHIR: Error updating donor {donor.identifier}: {e}")
+                logger.exception(f"MIABIS on FHIR: Error updating donor {donor.identifier}: {e}")
                 return 0, 1, 0
         else:
             return 0, 0, 1
@@ -262,7 +263,7 @@ class MiabisBlazeService(BlazeServiceInterface):
         This method posts all patients from the repository to the Blaze store. WARNING: can result in duplication of
         patients. This method should be called only once, specifically if there are no patients in the FHIR server.
         """
-        logger.info(f"MIABIS on FHIR: Starting upload of donors")
+        logger.info("MIABIS on FHIR: Starting upload of donors")
         processed = 0
         failed = 0
         skipped = 0
@@ -288,7 +289,7 @@ class MiabisBlazeService(BlazeServiceInterface):
             if self.metrics:
                 self.metrics.increment_sync_progress('patients')
                 
-        logger.info(f"MIABIS on FHIR: Upload of donor resources is done.")
+        logger.info("MIABIS on FHIR: Upload of donor resources is done.")
         logger.info(f"MIABIS on FHIR: Patients sync complete: {processed} processed, {failed} failed, {skipped} skipped")
         return {'processed': processed, 'failed': failed, 'skipped': skipped}
 
@@ -304,7 +305,7 @@ class MiabisBlazeService(BlazeServiceInterface):
         collection_with_new_samples_map = {}
         for sample in self.sample_service.get_all():
             if not isinstance(sample, SampleMiabis):
-                logger.error(f"MIABIS on FHIR: sample is not instance of MIABIS on FHIR model, "
+                logger.error("MIABIS on FHIR: sample is not instance of MIABIS on FHIR model, "
                              f"but rather its type is {type(sample)}. Skipping....")
                 skipped_samples += 1
                 if self.metrics:
@@ -330,13 +331,11 @@ class MiabisBlazeService(BlazeServiceInterface):
                                 self.blaze_client.upload_condition(sample.condition)
                                 processed_conditions += 1
                             except Exception as e:
-                                logger.error(f"MIABIS on FHIR: Error uploading condition {sample.condition.icd_10_code}: {e}")
+                                logger.exception(f"MIABIS on FHIR: Error uploading condition {sample.condition.icd_10_code}: {e}")
                                 failed_conditions += 1
-                            logger.debug(f"MIABIS on FHIR: Succesfully uploaded new Condition")
+                            logger.debug("MIABIS on FHIR: Succesfully uploaded new Condition")
                         else:
                             skipped_conditions += 1
-                            condition_fhir_id = self.blaze_client.get_condition_by_patient_fhir_id(patient_fhir_id)
-                            self.blaze_client.add_diagnoses_to_condition(condition_fhir_id, sample_fhir_id)
                         if sample.sample_collection_id is not None:
                             collection_with_new_samples_map.setdefault(sample.sample_collection_id, []).append(
                                 sample_fhir_id)
@@ -347,11 +346,8 @@ class MiabisBlazeService(BlazeServiceInterface):
                     sample_fhir_id = self.blaze_client.get_fhir_id("Specimen",sample.identifier)
                     sample_from_blaze = self.blaze_client.build_sample_from_json(sample_fhir_id)
                     if sample != sample_from_blaze:
-                        logger.debug(f"MIABIS on FHIR: sample is different than the sample already present in the blaze. Updating.")
+                        logger.debug("MIABIS on FHIR: sample is different than the sample already present in the blaze. Updating.")
                         sample_fhir_id = self.blaze_client.update_sample(sample)
-                        patient_fhir_id = self.blaze_client.get_fhir_id("Patient", sample.donor_identifier)
-                        condition_fhir_id = self.blaze_client.get_condition_by_patient_fhir_id(patient_fhir_id)
-                        self.blaze_client.add_diagnoses_to_condition(condition_fhir_id, sample_fhir_id)
 
                         if sample.sample_collection_id is not None:
                             collection_with_new_samples_map.setdefault(sample.sample_collection_id, []).append(
@@ -361,7 +357,7 @@ class MiabisBlazeService(BlazeServiceInterface):
                     else:
                         skipped_samples += 1
             except (NonExistentResourceException, HTTPError) as err:
-                logger.error(f"MIABIS on FHIR: {err}")
+                logger.exception(f"MIABIS on FHIR: {err}")
                 failed_samples += 1
             
             if self.metrics:
@@ -376,7 +372,7 @@ class MiabisBlazeService(BlazeServiceInterface):
                 logger.info(f"MIABIS on FHIR: Successfully updated Collection {collection_id} with new values")
             else:
                 logger.info(f"MIABIS on FHIR: Collection {collection_id}  was not updated.")
-        logger.info(f"MIABIS on FHIR: upload of samples is done.")
+        logger.info("MIABIS on FHIR: upload of samples is done.")
         logger.info(f"MIABIS on FHIR: Samples sync complete: {processed_samples} processed, {failed_samples} failed, {skipped_samples} skipped")
         return {'processed': processed_samples, 'failed': failed_samples, 'skipped': skipped_samples}, {'processed': processed_conditions, 'failed': failed_conditions, 'skipped': skipped_conditions}
 

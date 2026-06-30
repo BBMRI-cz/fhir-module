@@ -1,6 +1,5 @@
 "use server";
 
-import { proxyFetch } from "@/lib/proxy-fetch";
 import { SyncTarget } from "@/types/setup-wizard/types";
 
 async function isUrlReachable(url: string): Promise<boolean> {
@@ -10,7 +9,7 @@ async function isUrlReachable(url: string): Promise<boolean> {
   const timeout = setTimeout(() => controller.abort(), 5000);
 
   try {
-    const response = await proxyFetch(url, {
+    const response = await fetch(url, {
       method: "GET",
       signal: controller.signal,
     });

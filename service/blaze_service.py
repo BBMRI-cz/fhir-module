@@ -1,7 +1,7 @@
 import logging
 import threading
 import time
-from typing import cast
+from typing import Optional, cast
 
 import requests
 import schedule
@@ -28,6 +28,9 @@ import json
 setup_logger()
 logger = logging.getLogger()
 sync_logger = logging.getLogger("sync_logger")
+
+_CANNOT_CONNECT_MSG = "Cannot connect to blaze!"
+_RESOURCE_ID_PATH = "**.resource.id"
 
 
 class BlazeService:
@@ -57,6 +60,7 @@ class BlazeService:
         session = requests.session()
         session.mount('http://', HTTPAdapter(max_retries=retries))
         session.auth = get_blaze_auth()
+        session.trust_env = False
         self._session = session
         self._scheduler_thread = None
         self._sync_lock = threading.Lock()
@@ -136,7 +140,7 @@ class BlazeService:
 
             logger.info("Sync completed successfully!")
         except Exception as e:
-            logger.error(f"Sync failed: {e}")
+            logger.exception(f"Sync failed: {e}")
             
             sync_summary_obj = {
                 'patients': pat_summary,
@@ -205,7 +209,7 @@ class BlazeService:
                                           json=bundle.as_json(),
                                           verify=False)
         except requests.exceptions.ConnectionError:
-            logger.error("Cannot connect to blaze!")
+            logger.error(_CANNOT_CONNECT_MSG)
             return 404
         return response.status_code
 
@@ -233,10 +237,10 @@ class BlazeService:
             else:
                 return 0, 1
         except requests.exceptions.ConnectionError:
-            logger.error("Cannot connect to blaze!")
+            logger.error(_CANNOT_CONNECT_MSG)
             return 0, 1
         except Exception as e:
-            logger.error(f"Error uploading patient {donor.identifier}: {e}")
+            logger.exception(f"Error uploading patient {donor.identifier}: {e}")
             return 0, 1
 
     def sync_patients(self):
@@ -251,7 +255,7 @@ class BlazeService:
         try:
             self._patient_service.update_mappings()
         except WrongParsingMapException as e:
-            logger.error(f"Failed to update patient mappings: {e}")
+            logger.exception(f"Failed to update patient mappings: {e}")
             logger.error("Skipping patient sync due to parsing map error.")
             return {"processed": 0, "failed": 0, "skipped": 0}
         
@@ -320,7 +324,7 @@ class BlazeService:
             else:
                 return 0, 1
         except Exception as e:
-            logger.error(f"Error uploading condition: {e}")
+            logger.exception(f"Error uploading condition: {e}")
             return 0, 1
 
     def sync_conditions(self):
@@ -339,7 +343,7 @@ class BlazeService:
         try:
             self._condition_service.update_mappings()
         except WrongParsingMapException as e:
-            logger.error(f"Failed to update condition mappings: {e}")
+            logger.exception(f"Failed to update condition mappings: {e}")
             logger.error("Skipping condition sync due to parsing map error.")
             return {"processed": 0, "failed": 0, "skipped": 0}
         
@@ -388,14 +392,14 @@ class BlazeService:
         """
         return glom(self._session.get(url=f"{self._blaze_url}/Patient",
                                       params={"identifier": patient_id},
-                                      verify=False).json(), "**.resource.id")[0]
+                                      verify=False).json(), _RESOURCE_ID_PATH)[0]
 
     def patient_has_condition(self, patient_identifier: str, icd_10_code: str) -> bool:
         """Checks if patient already has a condition with specific ICD-10 code (use a dot format)."""
         try:
             patient_fhir_id = glom(self._session.get(url=f"{self._blaze_url}/Patient",
                                                      params={"identifier": patient_identifier},
-                                                     verify=False).json(), "**.resource.id")[0]
+                                                     verify=False).json(), _RESOURCE_ID_PATH)[0]
         except IndexError:
             raise PatientNotFoundError
         return self._session.get(f"{self._blaze_url}/Condition",
@@ -422,7 +426,7 @@ class BlazeService:
             else:
                 return 0, 1
         except Exception as e:
-            logger.error(f"Error uploading sample {sample.identifier}: {e}")
+            logger.exception(f"Error uploading sample {sample.identifier}: {e}")
             return 0, 1
 
     def __process_existing_sample_update(self, sample) -> tuple[int, int, int]:
@@ -431,7 +435,7 @@ class BlazeService:
                      f"Checking if the sample is up to date.")
         old_sample = self.__build_existing_sample(sample)
         if sample == old_sample:
-            logger.info(f"Sample is up to date. Skipping....")
+            logger.info("Sample is up to date. Skipping....")
             return 0, 0, 1
         
         try:
@@ -440,7 +444,7 @@ class BlazeService:
             self.__update_sample(sample, old_sample_id)
             return 1, 0, 0
         except Exception as e:
-            logger.error(f"Error updating sample {sample.identifier}: {e}")
+            logger.exception(f"Error updating sample {sample.identifier}: {e}")
             return 0, 1, 0
 
     def sync_samples(self):
@@ -457,7 +461,7 @@ class BlazeService:
         try:
             self._sample_service.update_mappings()
         except WrongParsingMapException as e:
-            logger.error(f"Failed to update sample mappings: {e}")
+            logger.exception(f"Failed to update sample mappings: {e}")
             logger.error("Skipping sample sync due to parsing map error.")
             return {"processed": 0, "failed": 0, "skipped": 0}
         
@@ -488,7 +492,7 @@ class BlazeService:
         return {'processed': processed, 'failed': failed, 'skipped': skipped}
 
     def __upload_sample(self, sample: Sample):
-        custodian_fhir_id: str = None
+        custodian_fhir_id: Optional[str] = None
         if (sample.sample_collection_id is not None and
                 self.is_resource_present_in_blaze("Organization", sample.sample_collection_id)):
             custodian_fhir_id = self.__get_organization_fhir_id(sample.sample_collection_id)
@@ -509,7 +513,7 @@ class BlazeService:
         :param sample: Sample object to update.
         :param sample_fhir_id: FHIR resource ID of the sample.
         """
-        custodian_fhir_id: str = None
+        custodian_fhir_id: Optional[str] = None
         if (updated_sample.sample_collection_id is not None and
                 self.is_resource_present_in_blaze("Organization", updated_sample.sample_collection_id)):
             custodian_fhir_id = self.__get_organization_fhir_id(updated_sample.sample_collection_id)
@@ -551,7 +555,7 @@ class BlazeService:
                 url=f"{self._blaze_url}/Organization",
                 params={"identifier": organization_identifier},
                 verify=False)
-                 .json(), "**.resource.id")[0]
+                 .json(), _RESOURCE_ID_PATH)[0]
         return organization_fhir_id
 
     def get_number_of_resources(self, resource_type: str) -> int:
@@ -565,7 +569,7 @@ class BlazeService:
                                      params={"_summary": "count"},
                                      verify=False).json().get("total")
         except requests.exceptions.ConnectionError:
-            logger.error("Cannot connect to blaze!")
+            logger.error(_CANNOT_CONNECT_MSG)
             return 0
 
     def delete_fhir_resource(self, resource_type: str, param_value: str, search_param: str = "identifier") -> int:
@@ -588,8 +592,8 @@ class BlazeService:
             resource_type, fhir_id = url.split("/")[-2:]
             if resource_type.capitalize() == "Patient":
                 patient_reference = url[url.find("Patient/"):]
-                logger.info(f"In order to delete Patient successfully, "
-                            f"all resources which reference this patient needs to be deleted as well.")
+                logger.info("In order to delete Patient successfully, "
+                            "all resources which reference this patient needs to be deleted as well.")
                 self.delete_fhir_resource("Condition", patient_reference, "reference")
                 self.delete_fhir_resource("Specimen", patient_reference, "reference")
             deleted_resource = self._session.get(url=f"{self._blaze_url}/{resource_type}/{fhir_id}",
@@ -798,7 +802,7 @@ class BlazeService:
         sample = self._session.get(url=f"{self._blaze_url}/Specimen",
                                    params={"identifier": sample_identifier},
                                    verify=False).json()
-        return glom(sample, "**.resource.id")[0]
+        return glom(sample, _RESOURCE_ID_PATH)[0]
 
     def __get_collection_identifier(self, fhir_collection_id: str) -> str | None:
         """Get the identifier of the Sample Collection to which a sample belongs.
