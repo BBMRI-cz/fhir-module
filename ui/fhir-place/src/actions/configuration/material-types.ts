@@ -166,6 +166,7 @@ export async function getMaterialTypes(isMiabis: boolean): Promise<string[]> {
       headers: {
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!response.ok) {
