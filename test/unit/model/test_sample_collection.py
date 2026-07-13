@@ -13,4 +13,6 @@ class TestSampleCollection(unittest.TestCase):
                                                                name="Test collection")
         self.assertEqual("test:collection:id", sample_collection.to_fhir().identifier[0].value)
         self.assertEqual("Test collection", sample_collection.to_fhir().name)
-        self.assertEqual("TC", sample_collection.to_fhir().alias)
+        # Organization.alias is 0..*; it must be a list so as_json() does not raise.
+        self.assertEqual(["TC"], sample_collection.to_fhir().alias)
+        self.assertEqual(["TC"], sample_collection.to_fhir().as_json()["alias"])

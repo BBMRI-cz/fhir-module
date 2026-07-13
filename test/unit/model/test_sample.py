@@ -31,6 +31,20 @@ class TestSample(unittest.TestCase):
         sample: Sample = Sample(identifier="sampleId", donor_id="patient")
         self.assertIsNone(sample.to_fhir().type)
 
+    def test_diagnosis_coding_has_icd10_system(self):
+        sample = Sample("sampleId", "patient", diagnoses=["C50"])
+        diagnosis_ext = [e for e in sample.to_fhir().extension
+                         if e.url == "https://fhir.bbmri.de/StructureDefinition/SampleDiagnosis"]
+        self.assertEqual("http://hl7.org/fhir/sid/icd-10",
+                         diagnosis_ext[0].valueCodeableConcept.coding[0].system)
+
+    def test_storage_temperature_coding_has_system(self):
+        sample = Sample("sampleId", "patient", storage_temperature=StorageTemperature.TEMPERATURE_LN)
+        temp_ext = [e for e in sample.to_fhir().extension
+                    if e.url == "https://fhir.bbmri.de/StructureDefinition/StorageTemperature"]
+        self.assertEqual("https://fhir.bbmri.de/CodeSystem/StorageTemperature",
+                         temp_ext[0].valueCodeableConcept.coding[0].system)
+
     def test_to_fhir_subject_ok(self):
         sample: Sample = Sample(identifier="sampleId", donor_id="patient")
         self.assertEqual("Patient/PatientFHIRId", sample.to_fhir(subject_id="PatientFHIRId").subject.reference)
