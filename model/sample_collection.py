@@ -28,7 +28,7 @@ class SampleCollection(CollectionInterface):
         if self._name is not None:
             fhir_organization.name = self._name
         if self._acronym is not None:
-            fhir_organization.alias = self._acronym
+            fhir_organization.alias = [self._acronym]
         return fhir_organization
 
     def __create_fhir_identifier(self):

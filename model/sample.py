@@ -142,6 +142,8 @@ class Sample(SampleInterface):
         storage_temperature_extension.url = "https://fhir.bbmri.de/StructureDefinition/StorageTemperature"
         storage_temperature_extension.valueCodeableConcept = CodeableConcept()
         storage_temperature_extension.valueCodeableConcept.coding = [Coding()]
+        storage_temperature_extension.valueCodeableConcept.coding[0].system = \
+            "https://fhir.bbmri.de/CodeSystem/StorageTemperature"
         storage_temperature_extension.valueCodeableConcept.coding[0].code = self.storage_temperature.value
         return storage_temperature_extension
 
@@ -152,6 +154,7 @@ class Sample(SampleInterface):
             fhir_diagnosis.url = "https://fhir.bbmri.de/StructureDefinition/SampleDiagnosis"
             fhir_diagnosis.valueCodeableConcept = CodeableConcept()
             fhir_diagnosis.valueCodeableConcept.coding = [Coding()]
+            fhir_diagnosis.valueCodeableConcept.coding[0].system = "http://hl7.org/fhir/sid/icd-10"
             fhir_diagnosis.valueCodeableConcept.coding[0].code = self.__diagnosis_with_period(diagnosis)
             diagnoses_extensions.append(fhir_diagnosis)
         return diagnoses_extensions
